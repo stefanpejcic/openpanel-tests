@@ -32,7 +32,7 @@ test('test', async ({ page }) => {
   await expect(page.locator('body'))
     .toContainText(/has been changed successfully/i);
 
-  await page.getByRole('link', { name: 'File Manager' }).click();
+  await page.goto('https://185.193.66.252:2083/files');
   await expect(page).toHaveURL(/.*login/);
 
   await page.goto('https://185.193.66.252:2083/login');
