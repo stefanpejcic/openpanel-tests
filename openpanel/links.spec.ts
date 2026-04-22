@@ -12,7 +12,6 @@ test('test', async ({ page }) => {
   await expect(page).toHaveURL(/.*dashboard/);
 
   // EMAIL CHANGE
-  await page.goto('https://185.193.66.252:2083/login');
   await page.getByRole('link', { name: ' Email & Password' }).click();
   await page.getByRole('textbox', { name: 'Email address*' }).click();
   await page.getByRole('textbox', { name: 'Email address*' }).fill('stefan@noviemail.rs');
