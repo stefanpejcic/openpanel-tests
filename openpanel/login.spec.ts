@@ -8,6 +8,6 @@ test('login as user', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill('testingpassword');
   await page.getByRole('button', { name: 'Sign In' }).click();
 
-  await expect(page).toHaveURL(/dashboard);
+  await expect(page).toHaveURL(/.*dashboard/);
 
 });
