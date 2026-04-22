@@ -1,1 +1,16 @@
 # openpanel-tests
+
+Generate new tests with:
+```bash
+cd ~/playwright-test && npx playwright codegen https://OPENPANEL_URI
+```
+
+Re-download tests from git:
+```bash
+cd ~/playwright-test && git pull
+```
+
+Run tests with:
+```bash
+cd ~/playwright-test && npx playwright test --ui
+```
