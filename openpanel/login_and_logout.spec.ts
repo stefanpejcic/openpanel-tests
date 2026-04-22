@@ -8,11 +8,11 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill('testingpassword');
   await page.getByRole('button', { name: 'Sign In' }).click();
 
-  await expect(page).toHaveURL(/.*dashboard);
+  await expect(page).toHaveURL(/.*dashboard/);
   
   await page.getByRole('button', { name: 'User settings' }).click();
   await page.getByRole('link', { name: 'Sign out' }).click();
 
-  await expect(page).toHaveURL(/.*login);
+  await expect(page).toHaveURL(/.*login/);
 
 });
