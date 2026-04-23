@@ -2,6 +2,20 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = 'https://185.193.66.252:2083';
 
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 8);
+}
+
+const suffix = randomSuffix();
+const FILE_NAME = `radovanfajl_${suffix}`;
+const FOLDER_NAME = `radovanfolder_${suffix}`;
+const TXT_FILE = `petarfajl_${suffix}.txt`;
+const TXT_FILE_BAK = `petarfajl_${suffix}.txt_bak`;
+const ZIP_FILE = `radozip_${suffix}`;
+const ZIP_FOLDER = `radofol_${suffix}`;
+const ZIP_ARCHIVE = `/rasizip_${suffix}`;
+const ZIP_ARCHIVE_NAME = `rasizip_${suffix}.zip`;
+
 async function navigateToFiles(page: any) {
   await page.goto(`${BASE_URL}/files`);
 }
@@ -18,22 +32,18 @@ async function createFile(page: any, fileName: string, openAfterCreate = false) 
 
 async function createFolder(page: any, folderName: string) {
   await navigateToFiles(page);
-
-	
   await page.getByRole('button', { name: ' New Folder' }).click();
   await page.locator('#foldername').fill(folderName);
   await page.getByRole('button', { name: 'Create' }).click();
 }
 
 async function selectItem(page: any, name: string, multiSelect = false) {
-
   await page.locator('#filemanager_table div').filter({ hasText: name }).click(
     multiSelect ? { modifiers: ['ControlOrMeta'] } : undefined
   );
 }
 
 async function deleteSelected(page: any, skipTrash = false) {
-
   await page.getByRole('button', { name: ' Delete' }).click();
   if (skipTrash) {
     await page.getByRole('checkbox', { name: 'Skip the trash and' }).check();
@@ -42,7 +52,6 @@ async function deleteSelected(page: any, skipTrash = false) {
 }
 
 async function cleanupAll(page: any) {
-
   await page.getByRole('button', { name: ' Select all' }).click();
   await page.getByRole('button', { name: ' Delete' }).click();
   await page.getByText('Skip the trash and').click();
@@ -54,15 +63,13 @@ async function cleanupAll(page: any) {
 test('create new file and folder', async ({ page }) => {
   await navigateToFiles(page);
 
-  
-
-  await createFile(page, 'radovanfajl');
+  await createFile(page, FILE_NAME);
   await expect(page.locator('body')).toContainText(/File created successfully/i);
-  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
-  await createFolder(page, 'radovanfolder');
+  await createFolder(page, FOLDER_NAME);
   await expect(page.locator('body')).toContainText(/Folder created successfully/i);
-  await expect(page.locator('body')).toContainText(/radovanfolder/i);
+  await expect(page.locator('body')).toContainText(new RegExp(FOLDER_NAME, 'i'));
 
   console.log('File and folder created successfully');
 });
@@ -71,15 +78,13 @@ test('create new file and folder', async ({ page }) => {
 test('copy file into folder', async ({ page }) => {
   await navigateToFiles(page);
 
-  
-
-  await selectItem(page, 'radovanfajl');
+  await selectItem(page, FILE_NAME);
   await page.getByRole('button', { name: ' Copy' }).click();
-  await page.locator('#copyfiletree').getByText('radovanfolder').click();
+  await page.locator('#copyfiletree').getByText(FOLDER_NAME).click();
   await page.getByRole('button', { name: 'Copy', exact: true }).click();
 
   await expect(page.locator('body')).toContainText(/Copy complete/i);
-  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
   console.log('File copied into folder successfully');
 });
@@ -88,22 +93,21 @@ test('copy file into folder', async ({ page }) => {
 test('move file out of folder', async ({ page }) => {
   await page.goto(`${BASE_URL}/files`);
 
-  
-  await page.getByRole('link', { name: 'radovanfolder' }).click();
+  await page.getByRole('link', { name: FOLDER_NAME }).click();
   await expect(page).toHaveURL(/files\/radovanfolder/);
-  await expect(page.locator('body')).toContainText(/radovanfajl/i);
-  await selectItem(page, 'radovanfajl');
+  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
+  await selectItem(page, FILE_NAME);
   await page.getByRole('button', { name: ' Move' }).click();
   await page.getByRole('textbox', { name: 'Where to:*' }).click();
   await page.getByRole('textbox', { name: 'Where to:*' }).fill('/');
   await page.getByRole('button', { name: 'Move', exact: true }).click();
 
   await expect(page.locator('body')).toContainText(/Move complete/i);
-  await expect(page.locator('body')).not.toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
   await expect(page.locator('body')).toContainText(/No items found/i);
 
   await page.getByRole('link', { name: '/var/www/html/' }).click();
-  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
   console.log('File moved out of folder successfully');
 });
@@ -112,47 +116,43 @@ test('move file out of folder', async ({ page }) => {
 test('delete file to trash and restore', async ({ page }) => {
   await navigateToFiles(page);
 
-  
-
-  await selectItem(page, 'radovanfajl');
+  await selectItem(page, FILE_NAME);
   await page.getByRole('button', { name: ' Delete' }).click();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(page.locator('body')).not.toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
 
   await page.getByRole('link', { name: 'Trash' }).click();
-  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
-  await selectItem(page, 'radovanfajl');
+  await selectItem(page, FILE_NAME);
   await page.click('#restoreButton');
   await page.getByRole('button', { name: 'Restore', exact: true }).click();
 
   await page.getByRole('link', { name: 'File Manager' }).click();
-  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
   console.log('File deleted to trash and restored successfully');
 });
 
 
 test('delete multiple items permanently', async ({ page }) => {
-  
   await navigateToFiles(page);
 
-  await selectItem(page, 'radovanfolder');
-  await selectItem(page, 'radovanfajl', true);
+  await selectItem(page, FOLDER_NAME);
+  await selectItem(page, FILE_NAME, true);
   await deleteSelected(page, true);
 
-  await expect(page.locator('body')).not.toContainText(/radovanfajl/i);
-  await expect(page.locator('body')).not.toContainText(/radovanfolder/i);
+  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
+  await expect(page.locator('body')).not.toContainText(new RegExp(FOLDER_NAME, 'i'));
 
   console.log('Multiple items permanently deleted successfully');
 });
 
 
 test('create file with editor, view and edit content', async ({ page }) => {
-  
   await navigateToFiles(page);
 
-  await createFile(page, 'petarfajl.txt', true);
+  await createFile(page, TXT_FILE, true);
   await page.locator('.view-lines').click();
   await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('nekitext');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -160,9 +160,9 @@ test('create file with editor, view and edit content', async ({ page }) => {
   await expect(page.locator('body')).toContainText(/File saved successfully/i);
 
   await navigateToFiles(page);
-  await expect(page.locator('body')).toContainText(/petarfajl.txt/i);
+  await expect(page.locator('body')).toContainText(new RegExp(TXT_FILE, 'i'));
 
-  await selectItem(page, 'petarfajl.txt');
+  await selectItem(page, TXT_FILE);
   const page2Promise = page.waitForEvent('popup');
   await page.getByRole('button', { name: ' View' }).click();
   const page2 = await page2Promise;
@@ -186,16 +186,15 @@ test('create file with editor, view and edit content', async ({ page }) => {
 
 
 test('rename file', async ({ page }) => {
-  
   await navigateToFiles(page);
 
-  await selectItem(page, 'petarfajl.txt');
+  await selectItem(page, TXT_FILE);
   await page.getByRole('button', { name: ' Rename' }).click();
   await page.locator('#renameInput').click();
-  await page.locator('#renameInput').fill('petarfajl.txt_bak');
+  await page.locator('#renameInput').fill(TXT_FILE_BAK);
   await page.getByRole('button', { name: 'Rename', exact: true }).click();
 
-  await expect(page.locator('body')).toContainText(/petarfajl.txt_bak/i);
+  await expect(page.locator('body')).toContainText(new RegExp(TXT_FILE_BAK, 'i'));
   await expect(page.locator('body')).toContainText(/File renamed successfully/i);
 
   console.log('File renamed successfully');
@@ -203,10 +202,9 @@ test('rename file', async ({ page }) => {
 
 
 test('change file permissions', async ({ page }) => {
-  
   await navigateToFiles(page);
 
-  await selectItem(page, 'petarfajl.txt_bak');
+  await selectItem(page, TXT_FILE_BAK);
   await page.getByRole('button', { name: ' Permissions' }).click();
   await page.getByPlaceholder('775').click();
   await page.getByPlaceholder('775').press('ControlOrMeta+a');
@@ -223,7 +221,6 @@ test('change file permissions', async ({ page }) => {
 test('upload file from URL', async ({ page }) => {
   test.setTimeout(180_000);
 
-  
   await navigateToFiles(page);
   await cleanupAll(page);
 
@@ -247,31 +244,30 @@ test('upload file from URL', async ({ page }) => {
 
 
 test('compress and extract files', async ({ page }) => {
-  
   await navigateToFiles(page);
 
-  await createFile(page, 'radozip');
-  await createFolder(page, 'radofol');
+  await createFile(page, ZIP_FILE);
+  await createFolder(page, ZIP_FOLDER);
 
-  await selectItem(page, 'radofol');
-  await selectItem(page, 'radozip', true);
+  await selectItem(page, ZIP_FOLDER);
+  await selectItem(page, ZIP_FILE, true);
   await page.getByRole('button', { name: ' Compress' }).click();
-  await page.getByRole('textbox', { name: 'Archive path*' }).fill('/rasizip');
+  await page.getByRole('textbox', { name: 'Archive path*' }).fill(ZIP_ARCHIVE);
   await page.getByRole('button', { name: 'Compress', exact: true }).click();
-  await expect(page.locator('body')).toContainText(/rasizip.zip/i);
+  await expect(page.locator('body')).toContainText(new RegExp(ZIP_ARCHIVE_NAME, 'i'));
 
-  await selectItem(page, 'radozip');
-  await selectItem(page, 'radofol', true);
+  await selectItem(page, ZIP_FILE);
+  await selectItem(page, ZIP_FOLDER, true);
   await deleteSelected(page);
-  await expect(page.locator('body')).not.toContainText(/radozip/i);
-  await expect(page.locator('body')).not.toContainText(/radofol/i);
+  await expect(page.locator('body')).not.toContainText(new RegExp(ZIP_FILE, 'i'));
+  await expect(page.locator('body')).not.toContainText(new RegExp(ZIP_FOLDER, 'i'));
 
-  await selectItem(page, 'rasizip.zip');
+  await selectItem(page, ZIP_ARCHIVE_NAME);
   await page.getByRole('button', { name: ' Extract' }).click();
   await page.getByRole('button', { name: 'Extract', exact: true }).click();
   await expect(page.locator('body')).toContainText(/File extracted successfully/i);
-  await expect(page.locator('body')).toContainText(/radozip/i);
-  await expect(page.locator('body')).toContainText(/radofol/i);
+  await expect(page.locator('body')).toContainText(new RegExp(ZIP_FILE, 'i'));
+  await expect(page.locator('body')).toContainText(new RegExp(ZIP_FOLDER, 'i'));
 
   await cleanupAll(page);
 
