@@ -17,11 +17,7 @@ test('create feature set', async ({ page }) => {
   await page.getByRole('textbox').fill('example');
   await page.getByRole('button', { name: 'Create' }).click();
 
-
-   expect getByText('feature set created successfully')).toBeVisible();
-
-  and body to contain 'example'
-
+  await expect getByText('feature set created successfully')).toBeVisible();
 
   console.log(`create feature set is working`);
 });
