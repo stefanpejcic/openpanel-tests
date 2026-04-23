@@ -35,7 +35,7 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
     }
 
     await page.goto('https://185.193.66.252:2083/dashboard');
-
+    await page.locator('body').click();
     await page.keyboard.press(parseShortcut(combo));
 
     await expect(page).toHaveURL(new RegExp(`${path}$`));
