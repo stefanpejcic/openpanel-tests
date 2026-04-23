@@ -1,13 +1,15 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
+  testDir: '.',
   projects: [
     {
       name: 'setup',
-      testMatch: '**/auth.setup.ts',
+      testMatch: /auth\.setup\.ts/,
     },
     {
       name: 'tests',
+      testDir: './openadmin',
       dependencies: ['setup'],
       use: {
         storageState: '.auth/session.json',
