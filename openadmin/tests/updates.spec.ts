@@ -39,6 +39,25 @@ test('check updates page', async ({ page, context }) => {
 });
   
 
+test('update notification preferences', async ({ page }) => {
+  await page.goto('/settings/updates/');
+  await expect(page).toHaveURL(/settings\/updates/);
+
+  const combobox = page.getByRole('combobox');
+  const saveBtn = page.getByRole('button', { name: 'Save' });
+
+  const options = ['major_only', 'minor_only', 'none', 'minor_and_major'];
+
+  for (const option of options) {
+    await combobox.selectOption(option);
+    await saveBtn.click();
+    await expect(page.getByText(/saved successfully/i)).toBeVisible();
+
+    await expect(combobox).toHaveValue(option);
+  }
+});
+
+
 
 test('check changelog link', async ({ page, context }) => {
   await page.goto('/settings/updates/');
