@@ -17,10 +17,6 @@ fi
 source "$ENV_FILE"
 
 
-echo "========================================="
-echo " OpenPanel Remote Setup"
-echo "========================================="
-
 # Check if sshpass is installed
 if ! command -v sshpass &> /dev/null; then
     echo "[INFO] Installing sshpass..."
@@ -35,6 +31,8 @@ echo "[1/4] Adding user '$USERNAME'..."
 sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" \
     "opencli user-add $USERNAME $PASSWORD $EMAIL \"$PLAN_NAME\""
 echo "[OK] User added successfully."
+
+sleep 5
 
 echo ""
 echo "[2/4] Starting MySQL container for user '$USERNAME'..."
@@ -81,23 +79,14 @@ sleep 10
 
 echo "Creating database '$USERNAME'..."
 
-COUNT=0
-MAX_RETRIES=5
 
-until docker --context $USERNAME exec $MYSQL_TYPE bash -c "$MYSQL_TYPE -e \"
+
+docker --context $USERNAME exec -e MYSQL_BIN=$MYSQL_TYPE $MYSQL_TYPE bash -c "\$MYSQL_BIN -e \"
     CREATE DATABASE IF NOT EXISTS \\\`$USERNAME\\\`;
     CREATE USER IF NOT EXISTS '$USERNAME'@'%' IDENTIFIED BY '$PASSWORD';
     GRANT ALL PRIVILEGES ON \\\`$USERNAME\\\`.* TO '$USERNAME'@'%';
     FLUSH PRIVILEGES;
-\""; do
-    COUNT=\$((COUNT + 1))
-    if [ "\$COUNT" -ge "\$MAX_RETRIES" ]; then
-        echo "[ERROR] Failed after \$MAX_RETRIES attempts"
-        exit 1
-    fi
-    echo "[WARN] Retry \$COUNT/\$MAX_RETRIES..."
-    sleep 5
-done
+\"";
 
 echo "[OK] Database '$USERNAME' and user '$USERNAME' created with full privileges."
 ENDSSH
