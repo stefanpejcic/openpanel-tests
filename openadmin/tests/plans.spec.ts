@@ -128,7 +128,7 @@ test('check columns for hosting plans', async ({ page }) => {
     const row = rows.nth(i);
 
     const label = row.locator('span');
-    const checkbox = row.locator('input[type="checkbox"]');
+    const checkbox = row.locator('input[type="checkbox"]').first();
 
     const labelText = (await label.textContent())?.trim();
     if (!labelText) continue;
@@ -137,20 +137,25 @@ test('check columns for hosting plans', async ({ page }) => {
       name: new RegExp(labelText, 'i'),
     });
 
+    // 🔥 IMPORTANT: resolve state before clicking
     const initialState = await checkbox.isChecked();
 
-    await row.click();
+    // click label area (more stable than row click)
+    await row.locator('label').click();
 
-    await expect(checkbox).toHaveChecked(!initialState);
+    // re-evaluate checkbox after UI update
+    await expect(checkbox).toHaveJSProperty('checked', !initialState);
 
+    // verify table change
     if (initialState) {
-      await expect(header).toHaveCount(0); // was ON → OFF
+      await expect(header).toHaveCount(0);
     } else {
-      await expect(header).toBeVisible(); // was OFF → ON
+      await expect(header).toBeVisible();
     }
 
-    await row.click();
-    await expect(checkbox).toHaveChecked(initialState);
+    // restore original state
+    await row.locator('label').click();
+    await expect(checkbox).toHaveJSProperty('checked', initialState);
   }
 
   console.log('Plan columns are functional');
