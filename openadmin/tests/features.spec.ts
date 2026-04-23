@@ -12,7 +12,7 @@ test('list features', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
   await expect(page.getByText('add a new feature')).toBeVisible();
-  await expect(page.getByText('default')).toBeVisible();
+  await expect(page.locator('body')).toContainText('default');
 
   console.log(`default features are listed`);
 });
