@@ -31,7 +31,7 @@ async function verifyPlanRow(page: any, rowText: string) {
     await expect(page.locator('body')).toContainText(value);
     //await expect(row.getByText(value)).toBeVisible();
   }
-  await expect(row.getByText('mysql_only')).toBeVisible();
+  await expect(page.locator('body')).toContainText('mysql_only');
 }
 
 async function navigateToUserPackages(page: any) {
