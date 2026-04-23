@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 
 
 test('check updates page', async ({ page, context }) => {
-  await page.goto('/settings/updates/');
+  await page.goto('/settings/updates');
   await expect(page).toHaveURL(/settings\/updates/);
 
   const versionEl = page.getByText(/Installed version \d+\.\d+\.\d+/);
@@ -40,7 +40,7 @@ test('check updates page', async ({ page, context }) => {
   
 
 test('update notification preferences', async ({ page }) => {
-  await page.goto('/settings/updates/');
+  await page.goto('/settings/updates');
   await expect(page).toHaveURL(/settings\/updates/);
 
   const combobox = page.getByRole('combobox');
@@ -60,7 +60,7 @@ test('update notification preferences', async ({ page }) => {
 
 
 test('check changelog link', async ({ page, context }) => {
-  await page.goto('/settings/updates/');
+  await page.goto('/settings/updates');
   await expect(page).toHaveURL(/settings\/updates/);
 
   const versionEl = page.getByText(/Installed version \d+\.\d+\.\d+/);
