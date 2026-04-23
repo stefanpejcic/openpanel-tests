@@ -8,12 +8,13 @@ function randomName() {
 
 let featureSetName: string;
 
-test('access features page', async ({ page }) => {
+test('list features', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
   await expect(page.getByText('add a new feature')).toBeVisible();
+  await expect(page.getByText('default')).toBeVisible();
 
-  console.log(`features manager is accessible`);
+  console.log(`default features are listed`);
 });
 
 test('create feature set', async ({ page }) => {
@@ -29,7 +30,9 @@ test('create feature set', async ({ page }) => {
 });
 
 
-test('edit feature set - random enable 3 features', async ({ page }) => {
+test('edit features', async ({ page }) => {
+  featureSetName = randomName();
+
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
 
