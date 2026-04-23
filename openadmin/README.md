@@ -4,5 +4,5 @@
 ```
 cd /root/playwright-test
 
-npx playwright test -c openadmin/playwright.config.ts --project=tests
+npx playwright test -c openadmin/playwright.config.ts --project=tests --project=tests --ui
 ```
