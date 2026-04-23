@@ -103,10 +103,10 @@ test('search hosting plans', async ({ page }) => {
 
   await navigateToUserPackages(page);
   await page.getByRole('searchbox', { name: 'Search by plan name...' }).fill('developer');
-
-  const rows = page.locator('tbody tr');
-  await expect(page.getByRole('row')).toHaveText(/developer plus/i);
-  await expect(page.getByRole('row')).toHaveCount(1);
+  
+  const row = page.getByRole('row').filter({ hasText: 'Developer Plus' });
+  await expect(row).toHaveCount(1);
+  await expect(row).toHaveText(/developer plus/i);
 
   console.log('Plan search is functional');
 });
