@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-
 function randomName() {
   return `feature-${Math.random().toString(36).substring(2, 10)}`;
 }
@@ -9,7 +7,7 @@ function randomName() {
 let featureSetName: string;
 
 test('list sets', async ({ page }) => {
-  await page.goto(`${BASE_URL}/features/`);
+  await page.goto(`/features/`);
   await expect(page).toHaveURL(/features/);
   await expect(page.getByText('add a new feature')).toBeVisible();
   await expect(page.locator('body')).toContainText('default');
@@ -20,7 +18,7 @@ test('list sets', async ({ page }) => {
 test('create a set', async ({ page }) => {
   featureSetName = randomName();
 
-  await page.goto(`${BASE_URL}/features/`);
+  await page.goto(`/features/`);
   await page.getByRole('textbox').fill(featureSetName);
   await page.getByRole('button', { name: 'Create' }).click();
 
@@ -43,7 +41,7 @@ const assertAllToggles = async (page, expected: 'true' | 'false') => {
 };
 
 test('edit features', async ({ page }) => {
-  await page.goto(`${BASE_URL}/features/`);
+  await page.goto(`/features/`);
   await expect(page).toHaveURL(/features/);
 
   const select = page.getByLabel('Manage feature set:');
@@ -111,7 +109,7 @@ test('edit features', async ({ page }) => {
 
 
 test('enable all features', async ({ page }) => {
-  await page.goto(`${BASE_URL}/features/`);
+  await page.goto(`/features/`);
   await expect(page).toHaveURL(/features/);
 
   const select = page.getByLabel('Manage feature set:');
@@ -141,7 +139,7 @@ test('enable all features', async ({ page }) => {
 
 
 test('disable all features', async ({ page }) => {
-  await page.goto(`${BASE_URL}/features/`);
+  await page.goto(`/features/`);
   await expect(page).toHaveURL(/features/);
 
   const select = page.getByLabel('Manage feature set:');
@@ -171,7 +169,7 @@ test('disable all features', async ({ page }) => {
 
 
 test('delete a set', async ({ page }) => {
-  await page.goto(`${BASE_URL}/features/`);
+  await page.goto(`/features/`);
   await expect(page).toHaveURL(/features/);
 
   const select = page.getByLabel('Manage feature set:');
@@ -201,7 +199,7 @@ test('delete a set', async ({ page }) => {
 
 
 test('prevent delete default set', async ({ page }) => {
-  await page.goto(`${BASE_URL}/features\/default/`);
+  await page.goto(`/features\/default/`);
   await expect(page).toHaveURL(/features\/default/);
   
   await expect(page.getByText('delete')).toBeHidden();
