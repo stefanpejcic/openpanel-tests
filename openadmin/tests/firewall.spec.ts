@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-
 function randomIp() {
   return Array.from({ length: 4 }, () =>
     Math.floor(Math.random() * 256)
@@ -12,7 +10,7 @@ function randomIp() {
 test('test firewall gui', async ({ page }) => {
   const ip = randomIp();
 
-  await page.goto(`${BASE_URL}/security/firewall`);
+  await page.goto(`/security/firewall`);
   await expect(page).toHaveURL(/security\/firewall/);
 
   const frame = page.frameLocator('iframe[name="myiframe"]');
@@ -26,7 +24,7 @@ test('test firewall gui', async ({ page }) => {
 test('whitelist an ip address', async ({ page }) => {
   const ip = randomIp();
 
-  await page.goto(`${BASE_URL}/security/firewall`);
+  await page.goto(`/security/firewall`);
   await expect(page).toHaveURL(/security\/firewall/);
 
   const frame = page.frameLocator('iframe[name="myiframe"]');
