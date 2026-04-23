@@ -6,7 +6,15 @@
 
 set -e
 
+# Load config from .env
+ENV_FILE="$(dirname "$0")/.env"
 
+if [ ! -f "$ENV_FILE" ]; then
+    echo "[ERROR] .env file not found at: $ENV_FILE"
+    exit 1
+fi
+
+source "$ENV_FILE"
 
 echo "========================================="
 echo " OpenPanel Remote Setup"
