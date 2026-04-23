@@ -16,6 +16,7 @@ fi
 
 source "$ENV_FILE"
 
+
 echo "========================================="
 echo " OpenPanel Remote Setup"
 echo "========================================="
@@ -49,8 +50,10 @@ sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_
 echo "[OK] $MYSQL_TYPE container started."
 
 echo ""
+echo ""
 echo "[3/4] Enabling Remote MySQL for user '$USERNAME'..."
 sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" bash << ENDSSH
+
 ENV_FILE="/home/$USERNAME/.env"
 
 if [ ! -f "\$ENV_FILE" ]; then
@@ -59,39 +62,44 @@ fi
 
 echo "Using env file: \$ENV_FILE"
 
-# Read current MYSQL_PORT value
-CURRENT=$(grep '^MYSQL_PORT=' "$ENV_FILE" | cut -d'=' -f2 | tr -d '"')
-echo "Current MYSQL_PORT: $CURRENT"
+CURRENT=\$(grep '^MYSQL_PORT=' "\$ENV_FILE" | cut -d'=' -f2 | tr -d '"')
+echo "Current MYSQL_PORT: \$CURRENT"
 
-# Extract port number only (strip 127.0.0.1: prefix if present)
-PORT_ONLY=$(echo "$CURRENT" | sed 's/127\.0\.0\.1://' | cut -d':' -f1)
-echo "Detected port: $PORT_ONLY"
+PORT_ONLY=\$(echo "\$CURRENT" | sed 's/127\.0\.0\.1://' | cut -d':' -f1)
+echo "Detected port: \$PORT_ONLY"
 
-# Set remote binding (remove 127.0.0.1 restriction)
-NEW_VALUE="${PORT_ONLY}:3306"
-sed -i "s|^MYSQL_PORT=.*|MYSQL_PORT=\"${NEW_VALUE}\"|" "$ENV_FILE"
-echo "New MYSQL_PORT: $NEW_VALUE"
+NEW_VALUE="\${PORT_ONLY}:3306"
+sed -i "s|^MYSQL_PORT=.*|MYSQL_PORT=\"\${NEW_VALUE}\"|" "\$ENV_FILE"
+echo "New MYSQL_PORT: \$NEW_VALUE"
 
-# Restart MySQL container to apply changes
-cd /home/$USERNAME && docker --context $USERNAME compose up -d $MYSQL_TYPE --force-recreate
+cd /home/$USERNAME && docker --context $USERNAME compose down $MYSQL_TYPE
+cd /home/$USERNAME && docker --context $USERNAME compose up -d $MYSQL_TYPE
 echo "[OK] Remote MySQL enabled."
 
-# Wait for MySQL to be ready
 echo "Waiting for MySQL to be ready..."
-sleep 5
+sleep 10
 
-# Get MySQL root password from env
-MYSQL_ROOT_PASS=\$(grep '^MYSQL_ROOT_PASSWORD=' "\$ENV_FILE" | cut -d'=' -f2)
+echo "Creating database '$USERNAME'..."
 
-# Create test database, user and grant permissions
-echo "Creating test database '$USERNAME' and user '$USERNAME'..."
-docker --context $USERNAME exec $MYSQL_TYPE $MYSQL_TYPE -uroot -p"\$MYSQL_ROOT_PASS" -e "
+COUNT=0
+MAX_RETRIES=5
+
+until docker --context $USERNAME exec $MYSQL_TYPE bash -c "$MYSQL_TYPE -e \"
     CREATE DATABASE IF NOT EXISTS \\\`$USERNAME\\\`;
     CREATE USER IF NOT EXISTS '$USERNAME'@'%' IDENTIFIED BY '$PASSWORD';
     GRANT ALL PRIVILEGES ON \\\`$USERNAME\\\`.* TO '$USERNAME'@'%';
     FLUSH PRIVILEGES;
-"
-echo "[OK] Database '$USERNAME', user '$USERNAME' created with full privileges."
+\""; do
+    COUNT=\$((COUNT + 1))
+    if [ "\$COUNT" -ge "\$MAX_RETRIES" ]; then
+        echo "[ERROR] Failed after \$MAX_RETRIES attempts"
+        exit 1
+    fi
+    echo "[WARN] Retry \$COUNT/\$MAX_RETRIES..."
+    sleep 5
+done
+
+echo "[OK] Database '$USERNAME' and user '$USERNAME' created with full privileges."
 ENDSSH
 
 echo ""
