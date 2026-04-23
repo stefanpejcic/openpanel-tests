@@ -32,7 +32,7 @@ test('create feature set', async ({ page }) => {
 
 
 // helper
-const assertAllToggles = async (expected: 'true' | 'false') => {
+const assertAllToggles = async (page, expected: 'true' | 'false') => {
   const rows = page.locator('tbody tr');
   const count = await rows.count();
 
@@ -135,9 +135,7 @@ test('enable all features', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();  
   
   await expect(page.getByText('features updated successfully')).toBeVisible();
-
-  await assertAllToggles('true');
-
+  await assertAllToggles(page, 'true');
   console.log('enable all features is working');
 });
 
@@ -167,9 +165,7 @@ test('disable all features', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();  
   
   await expect(page.getByText('features updated successfully')).toBeVisible();
-
-  await assertAllToggles('false');
-
+  await assertAllToggles(page, 'false');
   console.log('enable all features is working');
 });
 
