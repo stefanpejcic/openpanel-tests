@@ -2,32 +2,34 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
 
+function randomName() {
+  return `feature-${Math.random().toString(36).substring(2, 10)}`;
+}
 
+let featureSetName: string;
 
 test('create feature set', async ({ page }) => {
+  featureSetName = randomName();
 
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
+  await expect(page.getByText('add a new feature set')).toBeVisible();
 
-  await expect getByText('add a new feature set').toBeVisible();
-
-  await page.getByRole('textbox').fill('example');
+  await page.getByRole('textbox').fill(featureSetName);
   await page.getByRole('button', { name: 'Create' }).click();
 
-  await expect getByText('feature set created successfully').toBeVisible();
+  await expect(page.getByText('feature set created successfully')).toBeVisible();
 
-  console.log(`create feature set is working`);
+  console.log(`created feature set: ${featureSetName}`);
 });
-
 
 
 test('edit feature set - random enable 3 features', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
 
-  // Select feature set
-  await page.getByLabel('Manage feature set:').selectOption('example');
-  await expect(page).toHaveURL(/features\/example/);
+  await page.getByLabel('Manage feature set:').selectOption(featureSetName);
+  await expect(page).toHaveURL(new RegExp(`features/${featureSetName}`));
 
   const rows = page.locator('tbody tr');
   const count = await rows.count();
@@ -44,7 +46,6 @@ test('edit feature set - random enable 3 features', async ({ page }) => {
     const row = rows.nth(index);
 
     const name = await row.locator('td').nth(1).locator('span.font-medium').innerText();
-
     const toggle = row.locator('button[type="button"]');
 
     const before = await toggle.getAttribute('aria-checked');
@@ -64,10 +65,6 @@ test('edit feature set - random enable 3 features', async ({ page }) => {
     await expect(item.toggle).toHaveAttribute('aria-checked', 'true');
   }
 
-  console.log(
-    'Enabled features:',
-    selectedRows.map(f => f.name)
-  );
-
+  console.log('Enabled features:', selectedRows.map(f => f.name));
   console.log('editing features is working');
 });
