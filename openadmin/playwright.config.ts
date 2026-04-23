@@ -11,7 +11,7 @@ export default defineConfig({
       name: 'tests',
       testDir: './tests',
       testMatch: '**/*.spec.ts', 
-      dependencies: ['setup'],
+      //dependencies: ['setup'],
       use: {
         storageState: '.auth/session.json',
       },
