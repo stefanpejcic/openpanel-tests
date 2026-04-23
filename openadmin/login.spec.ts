@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, request as playwrightRequest } from '@playwright/test';
 
-test('all keyboard shortcuts work correctly', async ({ page, request }) => {
+test('all keyboard shortcuts work correctly', async ({ page }) => {
   // 🔐 LOGIN
   await page.goto('https://185.193.66.252:2087/login');
   await page.getByRole('textbox', { name: 'Username' }).fill('stefan');
@@ -9,28 +9,25 @@ test('all keyboard shortcuts work correctly', async ({ page, request }) => {
 
   await expect(page).toHaveURL(/.*dashboard/);
 
-  // 🍪 authenticated request
-  const context = await request.newContext({
+  // 🍪 create API context WITH auth
+  const apiContext = await playwrightRequest.newContext({
     storageState: await page.context().storageState(),
   });
 
-  const response = await context.get('https://185.193.66.252:2087/shortcuts.json');
+  const response = await apiContext.get('https://185.193.66.252:2087/shortcuts.json');
   const shortcuts = await response.json();
 
-  // helper
-  const parseShortcut = (shortcut: string) => {
-    return shortcut
+  const parseShortcut = (shortcut: string) =>
+    shortcut
       .replace(/ctrl/g, 'Control')
       .replace(/shift/g, 'Shift')
       .replace(/escape/g, 'Escape')
       .split('+')
-      .map(key => key.length === 1 ? key.toLowerCase() : key)
+      .map(k => (k.length === 1 ? k.toLowerCase() : k))
       .join('+');
-  };
 
   let logoutCombo: string | null = null;
 
-  // ▶️ test all except logout
   for (const [combo, path] of Object.entries(shortcuts)) {
     if (path === '/logout') {
       logoutCombo = combo;
@@ -44,7 +41,6 @@ test('all keyboard shortcuts work correctly', async ({ page, request }) => {
     await expect(page).toHaveURL(new RegExp(`${path}$`));
   }
 
-  // 🚪 logout last
   if (logoutCombo) {
     await page.keyboard.press(parseShortcut(logoutCombo));
     await expect(page).toHaveURL(/login/);
