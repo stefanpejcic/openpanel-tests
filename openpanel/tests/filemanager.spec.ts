@@ -45,7 +45,7 @@ async function cleanupAll(page: any) {
 
 
 test('create new file and folder', async ({ page }) => {
-  await login(page);
+  
 
   await createFile(page, 'radovanfajl');
   await expect(page.locator('body')).toContainText(/File created successfully/i);
@@ -60,7 +60,7 @@ test('create new file and folder', async ({ page }) => {
 
 
 test('copy file into folder', async ({ page }) => {
-  await login(page);
+  
 
   await selectItem(page, 'radovanfajl');
   await page.getByRole('button', { name: ' Copy' }).click();
@@ -75,7 +75,7 @@ test('copy file into folder', async ({ page }) => {
 
 
 test('move file out of folder', async ({ page }) => {
-  await login(page);
+  
 
   await page.getByRole('link', { name: 'radovanfolder' }).click();
   await expect(page.locator('body')).toContainText(/radovanfajl/i);
@@ -100,7 +100,7 @@ test('move file out of folder', async ({ page }) => {
 
 
 test('delete file to trash and restore', async ({ page }) => {
-  await login(page);
+  
 
   await selectItem(page, 'radovanfajl');
   await page.getByRole('button', { name: ' Delete' }).click();
@@ -122,7 +122,7 @@ test('delete file to trash and restore', async ({ page }) => {
 
 
 test('delete multiple items permanently', async ({ page }) => {
-  await login(page);
+  
   await navigateToFiles(page);
 
   await selectItem(page, 'radovanfolder');
@@ -137,7 +137,7 @@ test('delete multiple items permanently', async ({ page }) => {
 
 
 test('create file with editor, view and edit content', async ({ page }) => {
-  await login(page);
+  
   await navigateToFiles(page);
 
   await createFile(page, 'petarfajl.txt', true);
@@ -174,7 +174,7 @@ test('create file with editor, view and edit content', async ({ page }) => {
 
 
 test('rename file', async ({ page }) => {
-  await login(page);
+  
   await navigateToFiles(page);
 
   await selectItem(page, 'petarfajl.txt');
@@ -191,7 +191,7 @@ test('rename file', async ({ page }) => {
 
 
 test('change file permissions', async ({ page }) => {
-  await login(page);
+  
   await navigateToFiles(page);
 
   await selectItem(page, 'petarfajl.txt_bak');
@@ -211,7 +211,7 @@ test('change file permissions', async ({ page }) => {
 test('upload file from URL', async ({ page }) => {
   test.setTimeout(180_000);
 
-  await login(page);
+  
   await navigateToFiles(page);
   await cleanupAll(page);
 
@@ -235,7 +235,7 @@ test('upload file from URL', async ({ page }) => {
 
 
 test('compress and extract files', async ({ page }) => {
-  await login(page);
+  
   await navigateToFiles(page);
 
   await createFile(page, 'radozip');
