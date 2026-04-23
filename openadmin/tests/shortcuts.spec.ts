@@ -1,12 +1,10 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-
 test('all keyboard shortcuts work correctly', async ({ page }) => {
   const apiContext = await playwrightRequest.newContext({
     storageState: await page.context().storageState(),
   });
-  const response = await apiContext.get(`${BASE_URL}/shortcuts.json`);
+  const response = await apiContext.get(`/shortcuts.json`);
   const shortcuts = await response.json();
 
   const parseShortcut = (shortcut: string) =>
@@ -25,7 +23,7 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
       logoutCombo = combo;
       continue;
     }
-    await page.goto(`${BASE_URL}/dashboard`);
+    await page.goto(`/dashboard`);
     await expect(page).toHaveURL(/dashboard/);
     await page.locator('body').click();
     await Promise.all([
@@ -37,7 +35,7 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
   }
 
   if (logoutCombo) {
-    await page.goto(`${BASE_URL}/dashboard`);
+    await page.goto(`/dashboard`);
     await page.locator('body').click();
     await Promise.all([
       page.waitForURL(/login/, { timeout: 3000 }),
