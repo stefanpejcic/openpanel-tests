@@ -1,173 +1,276 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2083';
-
-const USER = {
-  username: 'testinguser',
-  password: 'testingpassword',
-};
-
-const FILES = {
-  fileName: 'radovanfajl',
-  folderName: 'radovanfolder',
-  editorFile: 'petarfajl.txt',
-  editorContent: 'nekitext',
-  editorContentUpdated: 'nekitext2',
-};
-
-// ---------------- HELPERS ----------------
+const BASE_URL = 'https://185.193.66.252:2083';
 
 async function login(page: any) {
   await page.goto(`${BASE_URL}/login`);
-  await page.getByRole('textbox', { name: 'Username' }).fill(USER.username);
-  await page.getByRole('textbox', { name: 'Password' }).fill(USER.password);
+  await page.getByRole('textbox', { name: 'Username' }).fill('testinguser');
+  await page.getByRole('textbox', { name: 'Username' }).press('Tab');
+  await page.getByRole('textbox', { name: 'Password' }).fill('testingpassword');
   await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.locator('.size-9.items-center.justify-center.rounded-xl').first().click();
 }
 
-async function openFileManager(page: any) {
+async function navigateToFiles(page: any) {
   await page.goto(`${BASE_URL}/files`);
 }
 
-async function createFile(page: any, name: string) {
-  await page.getByRole('button', { name: ' New File' }).click();
-  await page.getByRole('textbox', { name: 'File Name*' }).fill(name);
+async function createFile(page: any, fileName: string, openAfterCreate = false) {
+  await page.getByRole('button', { name: ' New File' }).click();
+  await page.getByRole('textbox', { name: 'File Name*' }).fill(fileName);
+  if (openAfterCreate) {
+    await page.locator('#open').check();
+  }
   await page.getByRole('button', { name: 'Create' }).click();
 }
 
-async function createFolder(page: any, name: string) {
-  await page.getByRole('button', { name: ' New Folder' }).click();
-  await page.locator('#foldername').fill(name);
+async function createFolder(page: any, folderName: string) {
+  await page.getByRole('button', { name: ' New Folder' }).click();
+  await page.locator('#foldername').fill(folderName);
   await page.getByRole('button', { name: 'Create' }).click();
 }
 
-async function selectFile(page: any, name: string) {
-  await page.locator('#filemanager_table div').filter({ hasText: name }).click();
+async function selectItem(page: any, name: string, multiSelect = false) {
+  await page.locator('#filemanager_table div').filter({ hasText: name }).click(
+    multiSelect ? { modifiers: ['ControlOrMeta'] } : undefined
+  );
 }
 
-async function copyFile(page: any, file: string, targetFolder: string) {
-  await selectFile(page, file);
-  await page.getByRole('button', { name: ' Copy' }).click();
-  await page.locator('#copyfiletree').getByText(targetFolder).click();
-  await page.getByRole('button', { name: 'Copy', exact: true }).click();
-}
-
-async function moveFileToRoot(page: any, file: string) {
-  await selectFile(page, file);
-  await page.getByRole('button', { name: ' Move' }).click();
-  await page.getByRole('textbox', { name: 'Where to:*' }).fill('/');
-  await page.getByRole('button', { name: 'Move', exact: true }).click();
-}
-
-async function deleteSelected(page: any) {
-  await page.getByRole('button', { name: ' Delete' }).click();
+async function deleteSelected(page: any, skipTrash = false) {
+  await page.getByRole('button', { name: ' Delete' }).click();
+  if (skipTrash) {
+    await page.getByRole('checkbox', { name: 'Skip the trash and' }).check();
+  }
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
 }
 
-async function restoreFromTrash(page: any, file: string) {
-  await page.getByRole('link', { name: 'Trash' }).click();
-  await selectFile(page, file);
-  await page.getByRole('button', { name: ' Restore' }).click();
-  await page.getByRole('button', { name: 'Restore', exact: true }).click();
+async function cleanupAll(page: any) {
+  await page.getByRole('button', { name: ' Select all' }).click();
+  await page.getByRole('button', { name: ' Delete' }).click();
+  await page.getByText('Skip the trash and').click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.locator('body')).toContainText(/No items found/i);
 }
 
-async function openEditorAndSave(page: any, content: string) {
-  await page.locator('.view-lines').click();
-  await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(content);
-  await page.getByRole('button', { name: 'Save' }).click();
-}
 
-// ---------------- TESTS ----------------
-
-test('file and folder lifecycle (create, copy, move, delete, restore)', async ({ page }) => {
-  test.setTimeout(180_000);
-
+test('create new file and folder', async ({ page }) => {
   await login(page);
 
-  // Create file + folder
-  await createFile(page, FILES.fileName);
+  await createFile(page, 'radovanfajl');
   await expect(page.locator('body')).toContainText(/File created successfully/i);
+  await expect(page.locator('body')).toContainText(/radovanfajl/i);
 
-  await createFolder(page, FILES.folderName);
+  await createFolder(page, 'radovanfolder');
   await expect(page.locator('body')).toContainText(/Folder created successfully/i);
+  await expect(page.locator('body')).toContainText(/radovanfolder/i);
 
-  // Copy file into folder
-  await copyFile(page, FILES.fileName, FILES.folderName);
-  await expect(page.locator('body')).toContainText(/Copy complete/i);
-
-  // Verify inside folder
-  await page.getByRole('link', { name: FILES.folderName }).click();
-  await expect(page.locator('body')).toContainText(FILES.fileName);
-
-  // Move file to root
-  await moveFileToRoot(page, FILES.fileName);
-  await expect(page.locator('body')).toContainText(/Move complete/i);
-
-  // Verify removed from folder
-  await page.getByRole('link', { name: 'File Manager' }).click();
-  await expect(page.locator('body')).not.toContainText(FILES.fileName);
-
-  // Delete file
-  await selectFile(page, FILES.fileName);
-  await deleteSelected(page);
-  await expect(page.locator('body')).not.toContainText(FILES.fileName);
-
-  // Restore file
-  await restoreFromTrash(page, FILES.fileName);
-  await expect(page.locator('body')).toContainText(FILES.fileName);
+  console.log('File and folder created successfully');
 });
 
-test('file editor, view, edit, rename and permissions', async ({ page }) => {
-  test.setTimeout(180_000);
 
+test('copy file into folder', async ({ page }) => {
   await login(page);
-  await openFileManager(page);
 
-  // Create editable file
-  await createFile(page, FILES.editorFile);
-  await page.locator('#open').check();
+  await selectItem(page, 'radovanfajl');
+  await page.getByRole('button', { name: ' Copy' }).click();
+  await page.locator('#copyfiletree').getByText('radovanfolder').click();
+  await page.getByRole('button', { name: 'Copy', exact: true }).click();
 
-  await openEditorAndSave(page, FILES.editorContent);
+  await expect(page.locator('body')).toContainText(/Copy complete/i);
+  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+
+  console.log('File copied into folder successfully');
+});
+
+
+test('move file out of folder', async ({ page }) => {
+  await login(page);
+
+  await page.getByRole('link', { name: 'radovanfolder' }).click();
+  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+
+  await selectItem(page, 'radovanfajl');
+  await page.getByRole('button', { name: ' Move' }).click();
+  await page.getByRole('textbox', { name: 'Where to:*' }).click();
+  await page.getByRole('textbox', { name: 'Where to:*' }).press('ControlOrMeta+Shift+ArrowLeft');
+  await page.getByRole('textbox', { name: 'Where to:*' }).press('ControlOrMeta+Shift+ArrowLeft');
+  await page.getByRole('textbox', { name: 'Where to:*' }).fill('/');
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
+
+  await expect(page.locator('body')).toContainText(/Move complete/i);
+  await expect(page.locator('body')).not.toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).toContainText(/No items found/i);
+
+  await page.getByRole('link', { name: '/var/www/html/' }).click();
+  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+
+  console.log('File moved out of folder successfully');
+});
+
+
+test('delete file to trash and restore', async ({ page }) => {
+  await login(page);
+
+  await selectItem(page, 'radovanfajl');
+  await page.getByRole('button', { name: ' Delete' }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(page.locator('body')).not.toContainText(/radovanfajl/i);
+
+  await page.getByRole('link', { name: 'Trash' }).click();
+  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+
+  await selectItem(page, 'radovanfajl');
+  await page.click('#restoreButton');
+  await page.getByRole('button', { name: 'Restore', exact: true }).click();
+
+  await page.getByRole('link', { name: 'File Manager' }).click();
+  await expect(page.locator('body')).toContainText(/radovanfajl/i);
+
+  console.log('File deleted to trash and restored successfully');
+});
+
+
+test('delete multiple items permanently', async ({ page }) => {
+  await login(page);
+  await navigateToFiles(page);
+
+  await selectItem(page, 'radovanfolder');
+  await selectItem(page, 'radovanfajl', true);
+  await deleteSelected(page, true);
+
+  await expect(page.locator('body')).not.toContainText(/radovanfajl/i);
+  await expect(page.locator('body')).not.toContainText(/radovanfolder/i);
+
+  console.log('Multiple items permanently deleted successfully');
+});
+
+
+test('create file with editor, view and edit content', async ({ page }) => {
+  await login(page);
+  await navigateToFiles(page);
+
+  await createFile(page, 'petarfajl.txt', true);
+  await page.locator('.view-lines').click();
+  await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('nekitext');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await page.locator('#fullscreenButton').click();
   await expect(page.locator('body')).toContainText(/File saved successfully/i);
 
-  // View file
-  await selectFile(page, FILES.editorFile);
-  const viewPage = await page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' View' }).click();
-  await expect(viewPage.locator('body')).toContainText(FILES.editorContent);
+  await navigateToFiles(page);
+  await expect(page.locator('body')).toContainText(/petarfajl.txt/i);
 
-  // Edit file
-  const editPage = await page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' Edit' }).click();
-  await expect(editPage.locator('body')).toContainText(FILES.editorContent);
+  await selectItem(page, 'petarfajl.txt');
+  const page2Promise = page.waitForEvent('popup');
+  await page.getByRole('button', { name: ' View' }).click();
+  const page2 = await page2Promise;
+  await expect(page2.locator('body')).toContainText(/nekitext/i);
 
-  await editPage.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(FILES.editorContentUpdated);
-  await editPage.getByRole('button', { name: 'Save' }).click();
+  const page3Promise = page.waitForEvent('popup');
+  await page.getByRole('button', { name: ' Edit' }).click();
+  const page3 = await page3Promise;
+  await expect(page3.locator('body')).toContainText(/nekitext/i);
+  await page3.locator('div').filter({ hasText: /^nekitext$/ }).nth(2).click();
+  await page3.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('nekitext2');
+  await page3.getByRole('button', { name: 'Save' }).click();
 
-  // Verify updated content
-  const viewPage2 = await page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' View' }).click();
-  await expect(viewPage2.locator('body')).toContainText(FILES.editorContentUpdated);
+  const page4Promise = page.waitForEvent('popup');
+  await page.getByRole('button', { name: ' View' }).click();
+  const page4 = await page4Promise;
+  await expect(page4.locator('body')).toContainText(/nekitext2/i);
 
-  // Rename file
-  await page.getByRole('button', { name: ' Rename' }).click();
-  await page.locator('#renameInput').fill(`${FILES.editorFile}_bak`);
+  console.log('File created, viewed, and edited successfully');
+});
+
+
+test('rename file', async ({ page }) => {
+  await login(page);
+  await navigateToFiles(page);
+
+  await selectItem(page, 'petarfajl.txt');
+  await page.getByRole('button', { name: ' Rename' }).click();
+  await page.locator('#renameInput').click();
+  await page.locator('#renameInput').fill('petarfajl.txt_bak');
   await page.getByRole('button', { name: 'Rename', exact: true }).click();
 
+  await expect(page.locator('body')).toContainText(/petarfajl.txt_bak/i);
   await expect(page.locator('body')).toContainText(/File renamed successfully/i);
 
-  // Permissions
-  await selectFile(page, `${FILES.editorFile}_bak`);
-  await page.getByRole('button', { name: ' Permissions' }).click();
+  console.log('File renamed successfully');
+});
 
+
+test('change file permissions', async ({ page }) => {
+  await login(page);
+  await navigateToFiles(page);
+
+  await selectItem(page, 'petarfajl.txt_bak');
+  await page.getByRole('button', { name: ' Permissions' }).click();
+  await page.getByPlaceholder('775').click();
+  await page.getByPlaceholder('775').press('ControlOrMeta+a');
   await page.getByPlaceholder('775').fill('755');
   await page.getByRole('button', { name: 'Confirm' }).click();
 
   await expect(page.locator('body')).toContainText(/Permissions changed/i);
+  await expect(page.locator('body')).toContainText(/-rwxr-xr-x/i);
 
-  // Cleanup: delete everything
-  await page.getByRole('button', { name: ' Delete' }).click();
-  await page.getByText('Skip the trash and').click();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+  console.log('File permissions changed successfully');
+});
 
-  await expect(page.locator('body')).toContainText(/No items found/i);
+
+test('upload file from URL', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await login(page);
+  await navigateToFiles(page);
+  await cleanupAll(page);
+
+  const page5Promise = page.waitForEvent('popup');
+  await page.getByRole('button', { name: ' Upload' }).click();
+  const page5 = await page5Promise;
+
+  await page5.getByRole('button', { name: 'Download from URL instead' }).click();
+  await page5.getByRole('textbox', { name: 'https://' }).fill('http://ipv4.download.thinkbroadband.com/20MB.zip');
+  await page5.getByRole('button', { name: 'Download' }).click();
+  await expect(page5.locator('body')).toContainText(/downloaded from URL successfully/i);
+
+  await page5.getByRole('link', { name: 'File Manager' }).click();
+  await page5.getByRole('heading', { name: '20MB.zip', exact: true }).click();
+
+  await navigateToFiles(page);
+  await expect(page.locator('body')).toContainText(/20MB.zip/i);
+
+  console.log('File uploaded from URL successfully');
+});
+
+
+test('compress and extract files', async ({ page }) => {
+  await login(page);
+  await navigateToFiles(page);
+
+  await createFile(page, 'radozip');
+  await createFolder(page, 'radofol');
+
+  await selectItem(page, 'radofol');
+  await selectItem(page, 'radozip', true);
+  await page.getByRole('button', { name: ' Compress' }).click();
+  await page.getByRole('textbox', { name: 'Archive path*' }).fill('/rasizip');
+  await page.getByRole('button', { name: 'Compress', exact: true }).click();
+  await expect(page.locator('body')).toContainText(/rasizip.zip/i);
+
+  await selectItem(page, 'radozip');
+  await selectItem(page, 'radofol', true);
+  await deleteSelected(page);
+  await expect(page.locator('body')).not.toContainText(/radozip/i);
+  await expect(page.locator('body')).not.toContainText(/radofol/i);
+
+  await selectItem(page, 'rasizip.zip');
+  await page.getByRole('button', { name: ' Extract' }).click();
+  await page.getByRole('button', { name: 'Extract', exact: true }).click();
+  await expect(page.locator('body')).toContainText(/File extracted successfully/i);
+  await expect(page.locator('body')).toContainText(/radozip/i);
+  await expect(page.locator('body')).toContainText(/radofol/i);
+
+  await cleanupAll(page);
+
+  console.log('Files compressed and extracted successfully');
 });
