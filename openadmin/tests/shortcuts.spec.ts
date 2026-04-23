@@ -1,19 +1,8 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-const USERNAME  = process.env.USERNAME  ?? 'stefan';
-const PASSWORD  = process.env.PASSWORD  ?? 'stefan';
 
 test('all keyboard shortcuts work correctly', async ({ page }) => {
-  // LOGIN
-  await page.goto(`${BASE_URL}/login`);
-  await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME);
-  await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/.*dashboard/);
-  await page.waitForTimeout(1000);
-
-  // SHORTCUTS
   const apiContext = await playwrightRequest.newContext({
     storageState: await page.context().storageState(),
   });
