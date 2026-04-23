@@ -15,7 +15,9 @@ test('test firewall gui', async ({ page }) => {
   await page.goto(`${BASE_URL}/security/firewall`);
   await expect(page).toHaveURL(/security\/firewall/);
 
-  await expect(page.getByText('enabled and running')).toBeVisible();
+  const frame = page.frameLocator('iframe[name="myiframe"]');
+
+  await expect(frame.getByText('enabled and running')).toBeVisible();
 
   console.log(`CSF perl GUI is working`);
 });
@@ -35,8 +37,7 @@ test('whitelist an ip address', async ({ page }) => {
   await allowIpInput.fill(ip);
 
   await frame.getByRole('button', { name: 'Quick Allow' }).click();
-
-  await expect(page.getByText('done')).toBeVisible();
+  await expect(frame.getByText('done')).toBeVisible();
 
   console.log(`Whitelisted IP: ${ip}`);
 });
