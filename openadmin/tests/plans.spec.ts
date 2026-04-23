@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-
 const PLAN_DATA = {
   name: 'probni',
   description: 'plan za test',
@@ -40,7 +38,7 @@ async function navigateToUserPackages(page: any) {
 }
 
 test('create new hosting plan and verify all fields', async ({ page }) => {
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
@@ -60,7 +58,7 @@ test('create new hosting plan and verify all fields', async ({ page }) => {
 });
 
 test('delete hosting plan', async ({ page }) => {
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
@@ -75,7 +73,7 @@ test('delete hosting plan', async ({ page }) => {
 });
 
 test('edit hosting plan and verify all fields', async ({ page }) => {
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
@@ -98,7 +96,7 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
 
 
 test('search hosting plans', async ({ page }) => {
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
@@ -114,7 +112,7 @@ test('search hosting plans', async ({ page }) => {
 
 
 test('check columns for hosting plans', async ({ page }) => {
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
