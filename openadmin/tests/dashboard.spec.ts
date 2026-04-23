@@ -2,11 +2,8 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-
-
 async function navigateToDashboardPage(page: any) {
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 }
 
@@ -18,7 +15,7 @@ test('access dashboard', async ({ page }) => {
 
 
 test('/json/system', async ({ page }) => {
-  await page.goto(`${BASE_URL}/json/system`);
+  await page.goto(`/json/system`);
   await expect(page).toHaveURL(/json\/system/);
 
   const raw = await page.locator('body').innerText();
@@ -56,7 +53,7 @@ test('/json/system', async ({ page }) => {
 
 
 test('/json/cpu', async ({ page }) => {
-  await page.goto(`${BASE_URL}/json/cpu`);
+  await page.goto(`/json/cpu`);
   await expect(page).toHaveURL(/json\/cpu/);
 
   const data = JSON.parse(await page.locator('body').innerText());
@@ -82,7 +79,7 @@ test('/json/cpu', async ({ page }) => {
 
 
 test('/json/memory', async ({ page }) => {
-  await page.goto(`${BASE_URL}/json/memory`);
+  await page.goto(`/json/memory`);
   await expect(page).toHaveURL(/json\/memory/);
 
   const data = JSON.parse(await page.locator('body').innerText());
@@ -132,7 +129,7 @@ test('/json/memory', async ({ page }) => {
 
 
 test('/json/load', async ({ page }) => {
-  await page.goto(`${BASE_URL}/json/load`);
+  await page.goto(`/json/load`);
   await expect(page).toHaveURL(/json\/load/);
 
   const data = JSON.parse(await page.locator('body').innerText());
@@ -156,7 +153,7 @@ test('/json/load', async ({ page }) => {
 
 
 test('/json/disk', async ({ page }) => {
-  await page.goto(`${BASE_URL}/json/disk`);
+  await page.goto(`/json/disk`);
   await expect(page).toHaveURL(/json\/disk/);
 
   const data = JSON.parse(await page.locator('body').innerText());
