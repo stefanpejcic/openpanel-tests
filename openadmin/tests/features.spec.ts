@@ -8,7 +8,7 @@ function randomName() {
 
 let featureSetName: string;
 
-test('list features', async ({ page }) => {
+test('list sets', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
   await expect(page.getByText('add a new feature')).toBeVisible();
@@ -17,7 +17,7 @@ test('list features', async ({ page }) => {
   console.log(`default features are listed`);
 });
 
-test('create feature set', async ({ page }) => {
+test('create a set', async ({ page }) => {
   featureSetName = randomName();
 
   await page.goto(`${BASE_URL}/features/`);
@@ -170,7 +170,7 @@ test('disable all features', async ({ page }) => {
 });
 
 
-test('delete feature set', async ({ page }) => {
+test('delete a set', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
 
@@ -197,3 +197,14 @@ test('delete feature set', async ({ page }) => {
 
   console.log('deleting features is working');
 });
+
+
+
+test('prevent delete default set', async ({ page }) => {
+  await page.goto(`${BASE_URL}/features\/default/`);
+  await expect(page).toHaveURL(/features\/default/);
+  
+  await expect(page.getByText('delete')).toBeHidden();
+  console.log('deleting default feature set is not permited');
+});
+
