@@ -94,3 +94,64 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
 
   console.log('Plan "Standard plan" edited successfully with all fields verified in table');
 });
+
+
+
+test('search hosting plans', async ({ page }) => {
+  await page.goto(`${BASE_URL}/dashboard`);
+  await expect(page).toHaveURL(/dashboard/);
+
+  await navigateToUserPackages(page);
+  await page.getByRole('searchbox', { name: 'Search by plan name...' }).fill('developer');
+
+  await expect(page.getByRole('row')).toHaveText(/developer plus/i);
+  await expect(page.getByRole('row')).toHaveCount(1);
+
+  console.log('Plan search is functional');
+});
+
+
+
+test('check columns for hosting plans', async ({ page }) => {
+  await page.goto(`${BASE_URL}/dashboard`);
+  await expect(page).toHaveURL(/dashboard/);
+
+  await navigateToUserPackages(page);
+
+  await page.getByRole('button', { name: 'Show Columns' }).click();
+
+  const rows = page.locator('ul[aria-labelledby="dropdownToggleButton"] li');
+
+  const count = await rows.count();
+
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+
+    const label = row.locator('span');
+    const checkbox = row.locator('input[type="checkbox"]');
+
+    const labelText = (await label.textContent())?.trim();
+    if (!labelText) continue;
+
+    const header = page.getByRole('columnheader', {
+      name: new RegExp(labelText, 'i'),
+    });
+
+    const initialState = await checkbox.isChecked();
+
+    await row.click();
+
+    await expect(checkbox).toHaveChecked(!initialState);
+
+    if (initialState) {
+      await expect(header).toHaveCount(0); // was ON → OFF
+    } else {
+      await expect(header).toBeVisible(); // was OFF → ON
+    }
+
+    await row.click();
+    await expect(checkbox).toHaveChecked(initialState);
+  }
+
+  console.log('Plan columns are functional');
+});
