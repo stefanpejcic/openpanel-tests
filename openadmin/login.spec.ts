@@ -9,6 +9,9 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
 
   await expect(page).toHaveURL(/.*dashboard/);
 
+  await page.waitForTimeout(1000);
+
+  
   // 🍪 create API context WITH auth
   const apiContext = await playwrightRequest.newContext({
     storageState: await page.context().storageState(),
