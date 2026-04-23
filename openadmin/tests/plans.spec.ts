@@ -158,4 +158,5 @@ test('check columns for hosting plans', async ({ page }) => {
       await expect(th).toBeHidden();
     }
   }
+  console.log('column toggle is working'); 
 });
