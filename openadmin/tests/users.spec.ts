@@ -1,11 +1,8 @@
 // NOT FINISHED!
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
-
-
 async function navigateToUsersPage(page: any) {
-  await page.goto(`${BASE_URL}/users`);
+  await page.goto(`/users`);
   await expect(page).toHaveURL(/users/);
 }
 
