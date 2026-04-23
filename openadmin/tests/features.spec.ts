@@ -192,7 +192,7 @@ test('delete feature set', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`features/${firstFeature}`));
   
   await page.getByRole('button', { name: 'Delete' }).click();
-  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('deleted successfully')).toBeVisible();
 
   console.log('deleting features is working');
