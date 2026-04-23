@@ -10,7 +10,7 @@ export default defineConfig({
     {
       name: 'tests',
       testDir: './tests',
-      testMatch: /.*\.spec\.ts/,
+      testMatch: '**/*.spec.ts', 
       dependencies: ['setup'],
       use: {
         storageState: '.auth/session.json',
