@@ -28,6 +28,16 @@ polkit.addRule(function(action, subject) {
 });
 EOF
 
+
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+gsettings set org.gnome.desktop.session idle-delay 0
+gsettings set org.gnome.desktop.screensaver lock-enabled false
+gsettings set org.gnome.desktop.screensaver idle-activation-enabled false
+
+
 sudo tee /etc/polkit-1/localauthority/50-network-manager.d/xrdp-color-manager.pkla >/dev/null <<EOF
 [Allow colord for all users]
 Identity=unix-user:*
