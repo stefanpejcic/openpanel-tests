@@ -11,7 +11,7 @@ let featureSetName: string;
 test('access features page', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
-  await expect(page.getByText('add a new feature set')).toBeVisible();
+  await expect(page.getByText('add a new feature')).toBeVisible();
 
   console.log(`features manager is accessible`);
 });
