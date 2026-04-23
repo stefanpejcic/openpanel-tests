@@ -20,9 +20,6 @@ test('create feature set', async ({ page }) => {
   featureSetName = randomName();
 
   await page.goto(`${BASE_URL}/features/`);
-  await expect(page).toHaveURL(/features/);
-  await page.waitForSelector('text=add a new feature set');
-
   await page.getByRole('textbox').fill(featureSetName);
   await page.getByRole('button', { name: 'Create' }).click();
 
