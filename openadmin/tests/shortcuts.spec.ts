@@ -40,7 +40,7 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
     await page.goto(`${BASE_URL}/dashboard`);
     await page.locator('body').click();
     await Promise.all([
-      page.waitForURL(/login/, { timeout: 5000 }),
+      page.waitForURL(/login/, { timeout: 3000 }),
       page.keyboard.press(parseShortcut(logoutCombo)),
     ]);
     await expect(page).toHaveURL(/login/);
