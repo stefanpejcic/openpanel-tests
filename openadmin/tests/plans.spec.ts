@@ -44,7 +44,7 @@ test('create new hosting plan and verify all fields', async ({ page }) => {
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
-  await expect(page.getByText('standard plan')).toBeVisible();
+  await expect(page.getByText('developer plus')).toBeVisible();
 
   await page.getByRole('link', { name: 'Create New' }).click();
   await expect(page).toHaveURL(/\/plans\/new/);
