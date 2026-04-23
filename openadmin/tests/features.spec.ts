@@ -31,13 +31,26 @@ test('create feature set', async ({ page }) => {
 
 
 test('edit features', async ({ page }) => {
-  featureSetName = randomName();
-
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
 
-  await page.getByLabel('Manage feature set:').selectOption(featureSetName);
-  await expect(page).toHaveURL(new RegExp(`features/${featureSetName}`));
+  const select = page.getByLabel('Manage feature set:');
+  await expect(select).toBeVisible();
+
+  // pick first option that starts with "feature-"
+  const firstFeature = await select.locator('option').evaluateAll(opts =>
+    opts.find(o =>
+      (o.value || o.textContent || '').startsWith('feature-')
+    )?.value
+  );
+
+  if (!firstFeature) {
+    throw new Error('No feature-* option found in dropdown');
+  }
+
+  await select.selectOption(firstFeature);
+
+  await expect(page).toHaveURL(new RegExp(`features/${firstFeature}`));
 
   const rows = page.locator('tbody tr');
   const count = await rows.count();
@@ -53,7 +66,12 @@ test('edit features', async ({ page }) => {
   for (const index of selectedIndexes) {
     const row = rows.nth(index);
 
-    const name = await row.locator('td').nth(1).locator('span.font-medium').innerText();
+    const name = await row
+      .locator('td')
+      .nth(1)
+      .locator('span.font-medium')
+      .innerText();
+
     const toggle = row.locator('button[type="button"]');
 
     const before = await toggle.getAttribute('aria-checked');
