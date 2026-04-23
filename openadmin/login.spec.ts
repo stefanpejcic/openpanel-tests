@@ -37,7 +37,7 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
       continue;
     }
 
-    await page.goto('https://185.193.66.252:2083/dashboard');
+    await page.goto('https://185.193.66.252:2087/dashboard');
     await page.locator('body').click();
     await Promise.all([
       page.waitForURL(/.*dashboard/),
