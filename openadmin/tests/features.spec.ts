@@ -9,15 +9,12 @@ test('create feature set', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
 
-
-   expect getByText('add a new feature set')).toBeVisible();
-
-
+  await expect getByText('add a new feature set').toBeVisible();
 
   await page.getByRole('textbox').fill('example');
   await page.getByRole('button', { name: 'Create' }).click();
 
-  await expect getByText('feature set created successfully')).toBeVisible();
+  await expect getByText('feature set created successfully').toBeVisible();
 
   console.log(`create feature set is working`);
 });
