@@ -19,11 +19,17 @@ const PLAN_DATA = {
   ftp_limit: '22',
 };
 
-async function fillPlanForm(page: any) {
+async function fillPlanForm(page: any, mode: 'create' | 'edit' = 'create') {
   for (const [field, value] of Object.entries(PLAN_DATA)) {
-    await page.locator(`input[name="${field}"]`).fill(value);
+    const inputName =
+      mode === 'edit' && field !== 'name' && field !== 'description'
+        ? `edit_${field}`
+        : field;
+
+    await page.locator(`input[name="${inputName}"]`).fill(value);
   }
 }
+
 
 async function verifyPlanRow(page: any, rowText: string) {
   const row = page.locator('tr', { hasText: rowText });
@@ -83,7 +89,7 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
   await page.locator('[id="1"]').click();
   await page.getByRole('link', { name: 'Edit' }).click();
 
-  await fillPlanForm(page);
+  await fillPlanForm(page, 'edit');
   await page.getByRole('button', { name: 'Save changes' }).click();
 
   await expect(page.getByText('updated successfully')).toBeVisible();
