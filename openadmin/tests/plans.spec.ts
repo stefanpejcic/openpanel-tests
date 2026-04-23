@@ -128,30 +128,29 @@ test('check columns for hosting plans', async ({ page }) => {
   for (let i = 0; i < count; i++) {
     const row = rows.nth(i);
 
-    const label = row.locator('span');
-    const checkbox = row.locator('input[type="checkbox"]').first();
+    const checkbox = row.locator('input[type="checkbox"]');
 
-    const labelText = (await label.textContent())?.trim();
-    if (!labelText) continue;
+    // 🔥 extract exact Alpine key: columns.max_hourly_email
+    const xModel = await checkbox.getAttribute('x-model');
+    if (!xModel) continue;
 
-    const header = page.getByRole('columnheader', {
-      name: new RegExp(labelText, 'i'),
-    });
+    const columnKey = xModel.replace('columns.', '');
 
-    // 🔥 IMPORTANT: resolve state before clicking
+    const th = page.locator(`th[x-show="columns.${columnKey}"]`);
+
     const initialState = await checkbox.isChecked();
 
-    // click label area (more stable than row click)
+    // toggle via UI
     await row.locator('label').click();
 
-    // re-evaluate checkbox after UI update
+    // verify checkbox flipped
     await expect(checkbox).toHaveJSProperty('checked', !initialState);
 
-    // verify table change
+    // verify column visibility via x-show
     if (initialState) {
-      await expect(header).toHaveCount(0);
+      await expect(th).toHaveCount(0); // hidden
     } else {
-      await expect(header).toBeVisible();
+      await expect(th).toBeVisible(); // visible
     }
 
     // restore original state
@@ -161,3 +160,4 @@ test('check columns for hosting plans', async ({ page }) => {
 
   console.log('Plan columns are functional');
 });
+
