@@ -84,6 +84,7 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
   await page.getByRole('link', { name: 'Edit' }).click();
 
   await fillPlanForm(page);
+  await page.getByRole('combobox').selectOption('mysql_only');
   await page.getByRole('button', { name: 'Save changes' }).click();
 
   await expect(page.getByText('successfully updated plan id')).toBeVisible();
