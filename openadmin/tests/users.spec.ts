@@ -12,8 +12,7 @@ async function navigateToUsersPage(page: any) {
 
 test('access users page', async ({ page }) => {
   await navigateToUsersPage(page);
-  //await expect(page.locator('body')).toContainText('no users');
-  await expect(page.locator('body')).toContainText('create new');
+  await expect(page.getByText(/create new/i)).toBeVisible();
   console.log('Users page is accessible');
 });
 
