@@ -30,6 +30,18 @@ test('create feature set', async ({ page }) => {
 });
 
 
+
+// helper
+const assertAllToggles = async (expected: 'true' | 'false') => {
+  const rows = page.locator('tbody tr');
+  const count = await rows.count();
+
+  for (let i = 0; i < count; i++) {
+    const toggle = rows.nth(i).locator('button[type="button"]');
+    await expect(toggle).toHaveAttribute('aria-checked', expected);
+  }
+};
+
 test('edit features', async ({ page }) => {
   await page.goto(`${BASE_URL}/features/`);
   await expect(page).toHaveURL(/features/);
@@ -37,7 +49,6 @@ test('edit features', async ({ page }) => {
   const select = page.getByLabel('Manage feature set:');
   await expect(select).toBeVisible();
 
-  // pick first option that starts with "feature-"
   const firstFeature = await select.locator('option').evaluateAll(opts =>
     opts.find(o =>
       (o.value || o.textContent || '').startsWith('feature-')
@@ -93,4 +104,100 @@ test('edit features', async ({ page }) => {
 
   console.log('Enabled features:', selectedRows.map(f => f.name));
   console.log('editing features is working');
+});
+
+
+
+
+
+test('enable all features', async ({ page }) => {
+  await page.goto(`${BASE_URL}/features/`);
+  await expect(page).toHaveURL(/features/);
+
+  const select = page.getByLabel('Manage feature set:');
+  await expect(select).toBeVisible();
+
+  const firstFeature = await select.locator('option').evaluateAll(opts =>
+    opts.find(o =>
+      (o.value || o.textContent || '').startsWith('feature-')
+    )?.value
+  );
+
+  if (!firstFeature) {
+    throw new Error('No feature-* option found in dropdown');
+  }
+
+  await select.selectOption(firstFeature);
+
+  await expect(page).toHaveURL(new RegExp(`features/${firstFeature}`));
+
+  await page.getByRole('button', { name: 'Enable All' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();  
+  
+  await expect(page.getByText('features updated successfully')).toBeVisible();
+
+  await assertAllToggles('true');
+
+  console.log('enable all features is working');
+});
+
+
+test('disable all features', async ({ page }) => {
+  await page.goto(`${BASE_URL}/features/`);
+  await expect(page).toHaveURL(/features/);
+
+  const select = page.getByLabel('Manage feature set:');
+  await expect(select).toBeVisible();
+
+  const firstFeature = await select.locator('option').evaluateAll(opts =>
+    opts.find(o =>
+      (o.value || o.textContent || '').startsWith('feature-')
+    )?.value
+  );
+
+  if (!firstFeature) {
+    throw new Error('No feature-* option found in dropdown');
+  }
+
+  await select.selectOption(firstFeature);
+
+  await expect(page).toHaveURL(new RegExp(`features/${firstFeature}`));
+
+  await page.getByRole('button', { name: 'Disable All' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();  
+  
+  await expect(page.getByText('features updated successfully')).toBeVisible();
+
+  await assertAllToggles('false');
+
+  console.log('enable all features is working');
+});
+
+
+test('delete feature set', async ({ page }) => {
+  await page.goto(`${BASE_URL}/features/`);
+  await expect(page).toHaveURL(/features/);
+
+  const select = page.getByLabel('Manage feature set:');
+  await expect(select).toBeVisible();
+
+  const firstFeature = await select.locator('option').evaluateAll(opts =>
+    opts.find(o =>
+      (o.value || o.textContent || '').startsWith('feature-')
+    )?.value
+  );
+
+  if (!firstFeature) {
+    throw new Error('No feature-* option found in dropdown');
+  }
+
+  await select.selectOption(firstFeature);
+
+  await expect(page).toHaveURL(new RegExp(`features/${firstFeature}`));
+  
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByText('deleted successfully')).toBeVisible();
+
+  console.log('deleting features is working');
 });
