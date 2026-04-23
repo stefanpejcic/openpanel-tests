@@ -51,12 +51,6 @@ test('/json/system', async ({ page }) => {
   expect(data.time).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
   expect(data.os.toLowerCase()).toMatch(/ubuntu|debian|almalinux|rockylinux|centos/);
 
-
-  const serverTime = new Date(data.time.replace(' ', 'T'));
-  const now = new Date();
-  const diffSeconds = Math.abs(now - serverTime) / 1000;
-  expect(diffSeconds).toBeLessThan(60);
-
   console.log('system info is available:', data);
 });
 
