@@ -37,9 +37,16 @@ echo "[OK] User added successfully."
 
 echo ""
 echo "[2/4] Starting MySQL container for user '$USERNAME'..."
+
+# Fetch MYSQL_TYPE from remote .env
+MYSQL_TYPE=$(sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" \
+    "grep '^MYSQL_TYPE=' \$(find /home/$USERNAME -name '.env' | head -1) | cut -d'=' -f2 | tr -d '\"'")
+
+echo "Detected MySQL type: $MYSQL_TYPE"
+
 sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" \
-    "cd /home/$USERNAME && docker --context $USERNAME compose up -d mysql"
-echo "[OK] MySQL container started."
+    "cd /home/$USERNAME && docker --context $USERNAME compose up -d $MYSQL_TYPE"
+echo "[OK] $MYSQL_TYPE container started."
 
 echo ""
 echo "[3/4] Enabling Remote MySQL for user '$USERNAME'..."
@@ -53,20 +60,20 @@ fi
 echo "Using env file: \$ENV_FILE"
 
 # Read current MYSQL_PORT value
-CURRENT=\$(grep '^MYSQL_PORT=' "\$ENV_FILE" | cut -d'=' -f2)
-echo "Current MYSQL_PORT: \$CURRENT"
+CURRENT=$(grep '^MYSQL_PORT=' "$ENV_FILE" | cut -d'=' -f2 | tr -d '"')
+echo "Current MYSQL_PORT: $CURRENT"
 
 # Extract port number only (strip 127.0.0.1: prefix if present)
-PORT_ONLY=\$(echo "\$CURRENT" | sed 's/127\.0\.0\.1://' | cut -d':' -f1)
-echo "Detected port: \$PORT_ONLY"
+PORT_ONLY=$(echo "$CURRENT" | sed 's/127\.0\.0\.1://' | cut -d':' -f1)
+echo "Detected port: $PORT_ONLY"
 
 # Set remote binding (remove 127.0.0.1 restriction)
-NEW_VALUE="\${PORT_ONLY}:3306"
-sed -i "s|^MYSQL_PORT=.*|MYSQL_PORT=\${NEW_VALUE}|" "\$ENV_FILE"
-echo "New MYSQL_PORT: \$NEW_VALUE"
+NEW_VALUE="${PORT_ONLY}:3306"
+sed -i "s|^MYSQL_PORT=.*|MYSQL_PORT=\"${NEW_VALUE}\"|" "$ENV_FILE"
+echo "New MYSQL_PORT: $NEW_VALUE"
 
 # Restart MySQL container to apply changes
-cd /home/$USERNAME && docker --context $USERNAME compose up -d mysql --force-recreate
+cd /home/$USERNAME && docker --context $USERNAME compose up -d $MYSQL_TYPE --force-recreate
 echo "[OK] Remote MySQL enabled."
 
 # Wait for MySQL to be ready
@@ -78,7 +85,7 @@ MYSQL_ROOT_PASS=\$(grep '^MYSQL_ROOT_PASSWORD=' "\$ENV_FILE" | cut -d'=' -f2)
 
 # Create test database, user and grant permissions
 echo "Creating test database '$USERNAME' and user '$USERNAME'..."
-docker --context $USERNAME exec mysql mysql -uroot -p"\$MYSQL_ROOT_PASS" -e "
+docker --context $USERNAME exec $MYSQL_TYPE $MYSQL_TYPE -uroot -p"\$MYSQL_ROOT_PASS" -e "
     CREATE DATABASE IF NOT EXISTS \\\`$USERNAME\\\`;
     CREATE USER IF NOT EXISTS '$USERNAME'@'%' IDENTIFIED BY '$PASSWORD';
     GRANT ALL PRIVILEGES ON \\\`$USERNAME\\\`.* TO '$USERNAME'@'%';
