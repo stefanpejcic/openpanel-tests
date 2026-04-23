@@ -21,7 +21,7 @@ test('access users page', async ({ page }) => {
 
 test('search users', async ({ page }) => {
   await navigateToUsersPage(page);
-  await page.getByRole('searchbox', { name: 'Search...' }).fill('testinguser');
+  await page.locator('[x-model="searchQuery"]').fill('testinguser');
   
   const row = page.getByRole('row').filter({ hasText: 'testinguser' });
   await expect(row).toHaveCount(1);
