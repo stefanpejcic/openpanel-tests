@@ -2,15 +2,6 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = 'https://185.193.66.252:2083';
 
-async function login(page: any) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.getByRole('textbox', { name: 'Username' }).fill('testinguser');
-  await page.getByRole('textbox', { name: 'Username' }).press('Tab');
-  await page.getByRole('textbox', { name: 'Password' }).fill('testingpassword');
-  await page.getByRole('button', { name: 'Sign In' }).click();
-  await page.locator('.size-9.items-center.justify-center.rounded-xl').first().click();
-}
-
 async function navigateToFiles(page: any) {
   await page.goto(`${BASE_URL}/files`);
 }
