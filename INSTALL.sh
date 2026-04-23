@@ -1,13 +1,20 @@
 #!/bin/bash
-sudo apt update && sudo apt upgrade -y
 
-sudo apt install ubuntu-desktop -y
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export CI=true
+export npm_config_yes=true
 
-sudo apt install xrdp -y
+sudo apt update -y && sudo apt upgrade -y
+
+sudo apt install -y ubuntu-desktop
+
+sudo apt install -y xrdp
 sudo systemctl enable xrdp
+sudo systemctl restart xrdp
 sudo adduser xrdp ssl-cert
 
-sudo tee /etc/polkit-1/rules.d/45-allow-colord.rules <<EOF
+sudo tee /etc/polkit-1/rules.d/45-allow-colord.rules >/dev/null <<EOF
 polkit.addRule(function(action, subject) {
     if ((action.id == "org.freedesktop.color-manager.create-device" ||
          action.id == "org.freedesktop.color-manager.create-profile" ||
@@ -21,25 +28,28 @@ polkit.addRule(function(action, subject) {
 });
 EOF
 
-sudo tee /etc/polkit-1/localauthority/50-network-manager.d/xrdp-color-manager.pkla <<EOF
+sudo tee /etc/polkit-1/localauthority/50-network-manager.d/xrdp-color-manager.pkla >/dev/null <<EOF
 [Allow colord for all users]
 Identity=unix-user:*
 Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile
-ResultAny=no
-ResultInactive=no
+ResultAny=yes
+ResultInactive=yes
 ResultActive=yes
 EOF
 
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+
+sudo apt install -y nodejs git
 
 mkdir -p ~/playwright-test
-git clone https://github.com/stefanpejcic/openpanel-tests/  ~/playwright-test
+git clone https://github.com/stefanpejcic/openpanel-tests/ ~/playwright-test
 
 cd ~/playwright-test
+
 npm init -y
-npx playwright install --with-deps
-npm install @playwright/test
+npm install -y @playwright/test
+
+npx --yes playwright install --with-deps
 
 if [ -d "node_modules/@playwright/test" ]; then
   echo "--- Setup Complete ---"
