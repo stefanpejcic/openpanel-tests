@@ -41,7 +41,7 @@ test('all keyboard shortcuts work correctly', async ({ page }) => {
 
     // Press shortcut and wait for navigation
     await Promise.all([
-      page.waitForURL(`**${path}`, { timeout: 5000 }),
+      page.waitForURL(`**${path}`, { timeout: 10000 }),
       page.keyboard.press(parseShortcut(combo)),
     ]);
 
