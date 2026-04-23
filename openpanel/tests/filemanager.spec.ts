@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'https://185.193.66.252:2083';
-
 function randomSuffix() {
   return Math.random().toString(36).slice(2, 8);
 }
@@ -17,7 +15,7 @@ const ZIP_ARCHIVE = `/rasizip_${suffix}`;
 const ZIP_ARCHIVE_NAME = `rasizip_${suffix}.zip`;
 
 async function navigateToFiles(page: any) {
-  await page.goto(`${BASE_URL}/files`);
+  await page.goto(`/files`);
 }
 
 async function createFile(page: any, fileName: string, openAfterCreate = false) {
@@ -91,7 +89,7 @@ test('copy file into folder', async ({ page }) => {
 
 
 test('move file out of folder', async ({ page }) => {
-  await page.goto(`${BASE_URL}/files`);
+  await page.goto(`/files`);
 
   await page.getByRole('link', { name: FOLDER_NAME }).click();
   await expect(page).toHaveURL(/files\/radovanfolder/);
