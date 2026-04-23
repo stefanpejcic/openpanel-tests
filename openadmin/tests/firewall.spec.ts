@@ -1,0 +1,42 @@
+import { test, expect } from '@playwright/test';
+
+const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
+
+function randomIp() {
+  return Array.from({ length: 4 }, () =>
+    Math.floor(Math.random() * 256)
+  ).join('.');
+}
+
+
+test('test firewall gui', async ({ page }) => {
+  const ip = randomIp();
+
+  await page.goto(`${BASE_URL}/security/firewall`);
+  await expect(page).toHaveURL(/security\/firewall/);
+
+  await expect(page.getByText('enabled and running')).toBeVisible();
+
+  console.log(`CSF perl GUI is working`);
+});
+
+
+test('whitelist an ip address', async ({ page }) => {
+  const ip = randomIp();
+
+  await page.goto(`${BASE_URL}/security/firewall`);
+  await expect(page).toHaveURL(/security\/firewall/);
+
+  const frame = page.frameLocator('iframe[name="myiframe"]');
+
+  const allowIpInput = frame.locator('#allowip');
+  await expect(allowIpInput).toBeVisible();
+
+  await allowIpInput.fill(ip);
+
+  await frame.getByRole('button', { name: 'Quick Allow' }).click();
+
+  await expect(page.getByText('done')).toBeVisible();
+
+  console.log(`Whitelisted IP: ${ip}`);
+});
