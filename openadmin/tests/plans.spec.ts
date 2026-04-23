@@ -138,23 +138,17 @@ test('check columns for hosting plans', async ({ page }) => {
 
     const initialState = await checkbox.isChecked();
 
-    // toggle
     await row.locator('label').click();
-
-    // IMPORTANT: wait for Alpine update
-    await page.waitForTimeout(100); // small but necessary for x-show
+    await page.waitForTimeout(100); // needed for alpine.js x-show
 
     const expectedStateAfterToggle = !initialState;
 
     if (expectedStateAfterToggle) {
-      // column should be visible
       await expect(th).toBeVisible();
     } else {
-      // column should be hidden (but still in DOM!)
       await expect(th).toBeHidden();
     }
 
-    // restore original state
     await row.locator('label').click();
     await page.waitForTimeout(100);
 
@@ -165,4 +159,3 @@ test('check columns for hosting plans', async ({ page }) => {
     }
   }
 });
-
