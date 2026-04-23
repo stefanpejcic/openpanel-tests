@@ -104,6 +104,7 @@ test('search hosting plans', async ({ page }) => {
   await navigateToUserPackages(page);
   await page.getByRole('searchbox', { name: 'Search by plan name...' }).fill('developer');
 
+  const rows = page.locator('tbody tr');
   await expect(page.getByRole('row')).toHaveText(/developer plus/i);
   await expect(page.getByRole('row')).toHaveCount(1);
 
