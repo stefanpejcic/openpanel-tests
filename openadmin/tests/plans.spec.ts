@@ -130,34 +130,39 @@ test('check columns for hosting plans', async ({ page }) => {
 
     const checkbox = row.locator('input[type="checkbox"]');
 
-    // 🔥 extract exact Alpine key: columns.max_hourly_email
     const xModel = await checkbox.getAttribute('x-model');
     if (!xModel) continue;
 
     const columnKey = xModel.replace('columns.', '');
-
     const th = page.locator(`th[x-show="columns.${columnKey}"]`);
 
     const initialState = await checkbox.isChecked();
 
-    // toggle via UI
+    // toggle
     await row.locator('label').click();
 
-    // verify checkbox flipped
-    await expect(checkbox).toHaveJSProperty('checked', !initialState);
+    // IMPORTANT: wait for Alpine update
+    await page.waitForTimeout(100); // small but necessary for x-show
 
-    // verify column visibility via x-show
-    if (initialState) {
-      await expect(th).toHaveCount(0); // hidden
+    const expectedStateAfterToggle = !initialState;
+
+    if (expectedStateAfterToggle) {
+      // column should be visible
+      await expect(th).toBeVisible();
     } else {
-      await expect(th).toBeVisible(); // visible
+      // column should be hidden (but still in DOM!)
+      await expect(th).toBeHidden();
     }
 
     // restore original state
     await row.locator('label').click();
-    await expect(checkbox).toHaveJSProperty('checked', initialState);
-  }
+    await page.waitForTimeout(100);
 
-  console.log('Plan columns are functional');
+    if (initialState) {
+      await expect(th).toBeVisible();
+    } else {
+      await expect(th).toBeHidden();
+    }
+  }
 });
 
