@@ -61,6 +61,8 @@ npm install -y @playwright/test
 
 npx --yes playwright install --with-deps
 
+npm install dotenv
+
 if [ -d "node_modules/@playwright/test" ]; then
   echo "--- Setup Complete ---"
   echo "1. Reboot your machine: sudo reboot"
