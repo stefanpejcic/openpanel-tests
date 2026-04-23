@@ -7,6 +7,7 @@ async function navigateToFiles(page: any) {
 }
 
 async function createFile(page: any, fileName: string, openAfterCreate = false) {
+  await navigateToFiles(page);
   await page.getByRole('button', { name: ' New File' }).click();
   await page.getByRole('textbox', { name: 'File Name*' }).fill(fileName);
   if (openAfterCreate) {
@@ -16,18 +17,23 @@ async function createFile(page: any, fileName: string, openAfterCreate = false) 
 }
 
 async function createFolder(page: any, folderName: string) {
+  await navigateToFiles(page);
+
+	
   await page.getByRole('button', { name: ' New Folder' }).click();
   await page.locator('#foldername').fill(folderName);
   await page.getByRole('button', { name: 'Create' }).click();
 }
 
 async function selectItem(page: any, name: string, multiSelect = false) {
+
   await page.locator('#filemanager_table div').filter({ hasText: name }).click(
     multiSelect ? { modifiers: ['ControlOrMeta'] } : undefined
   );
 }
 
 async function deleteSelected(page: any, skipTrash = false) {
+
   await page.getByRole('button', { name: ' Delete' }).click();
   if (skipTrash) {
     await page.getByRole('checkbox', { name: 'Skip the trash and' }).check();
@@ -36,6 +42,7 @@ async function deleteSelected(page: any, skipTrash = false) {
 }
 
 async function cleanupAll(page: any) {
+
   await page.getByRole('button', { name: ' Select all' }).click();
   await page.getByRole('button', { name: ' Delete' }).click();
   await page.getByText('Skip the trash and').click();
@@ -45,6 +52,8 @@ async function cleanupAll(page: any) {
 
 
 test('create new file and folder', async ({ page }) => {
+  await navigateToFiles(page);
+
   
 
   await createFile(page, 'radovanfajl');
@@ -60,6 +69,8 @@ test('create new file and folder', async ({ page }) => {
 
 
 test('copy file into folder', async ({ page }) => {
+  await navigateToFiles(page);
+
   
 
   await selectItem(page, 'radovanfajl');
@@ -75,16 +86,15 @@ test('copy file into folder', async ({ page }) => {
 
 
 test('move file out of folder', async ({ page }) => {
+  await page.goto(`${BASE_URL}/files`);
+
   
-
   await page.getByRole('link', { name: 'radovanfolder' }).click();
+  await expect(page).toHaveURL(/files\/radovanfolder/);
   await expect(page.locator('body')).toContainText(/radovanfajl/i);
-
   await selectItem(page, 'radovanfajl');
   await page.getByRole('button', { name: ' Move' }).click();
   await page.getByRole('textbox', { name: 'Where to:*' }).click();
-  await page.getByRole('textbox', { name: 'Where to:*' }).press('ControlOrMeta+Shift+ArrowLeft');
-  await page.getByRole('textbox', { name: 'Where to:*' }).press('ControlOrMeta+Shift+ArrowLeft');
   await page.getByRole('textbox', { name: 'Where to:*' }).fill('/');
   await page.getByRole('button', { name: 'Move', exact: true }).click();
 
@@ -100,6 +110,8 @@ test('move file out of folder', async ({ page }) => {
 
 
 test('delete file to trash and restore', async ({ page }) => {
+  await navigateToFiles(page);
+
   
 
   await selectItem(page, 'radovanfajl');
