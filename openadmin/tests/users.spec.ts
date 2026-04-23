@@ -9,6 +9,16 @@ async function navigateToUsersPage(page: any) {
 }
 
 
+
+test('access users page', async ({ page }) => {
+  await navigateToUsersPage(page);
+  await expect(page.locator('body')).toContainText('no users');
+  await expect(page.locator('body')).toContainText('create new');
+  console.log('Users page is accessible');
+});
+
+
+
 test('search users', async ({ page }) => {
   await navigateToUsersPage(page);
   await page.getByRole('searchbox', { name: 'Search...' }).fill('testinguser');
