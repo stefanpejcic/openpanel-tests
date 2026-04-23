@@ -6,15 +6,7 @@
 
 set -e
 
-# Config
-REMOTE_HOST="185.119.89.25"
-REMOTE_USER="root"
-REMOTE_PASS="DrvenaNoga123!"
 
-USERNAME="optest"
-PASSWORD="optest123"
-EMAIL="optest@optest.rs"
-PLAN_NAME="Standard plan"
 
 echo "========================================="
 echo " OpenPanel Remote Setup"
