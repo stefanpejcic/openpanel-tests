@@ -6,7 +6,7 @@ test('check updates page', async ({ page, context }) => {
   await page.goto('/settings/updates');
   await expect(page).toHaveURL(/settings\/updates/);
 
-  const versionEl = page.getByText(/Installed version \d+\.\d+\.\d+/);
+  const versionEl = page.locator('#installed_version');
   await expect(versionEl).toBeVisible();
   const versionText = await versionEl.textContent();
   const version = versionText?.match(/(\d+\.\d+\.\d+)/)?.[1];
@@ -63,7 +63,7 @@ test('check changelog link', async ({ page, context }) => {
   await page.goto('/settings/updates');
   await expect(page).toHaveURL(/settings\/updates/);
 
-  const versionEl = page.getByText(/Installed version \d+\.\d+\.\d+/);
+  const versionEl = page.locator('#latest_version');
   await expect(versionEl).toBeVisible();
   const versionText = await versionEl.textContent();
   const version = versionText?.match(/(\d+\.\d+\.\d+)/)?.[1];
