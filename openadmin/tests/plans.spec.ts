@@ -86,7 +86,7 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
   await fillPlanForm(page);
   await page.getByRole('button', { name: 'Save changes' }).click();
 
-  await expect(page.getByText('updated successfully')).toBeVisible();
+  await expect(page.getByText('successfully updated plan id')).toBeVisible();
 
   await navigateToUserPackages(page);
   await verifyPlanRow(page, 'probni');
