@@ -1,4 +1,5 @@
-// NOT FINISHED!
+// TODO: /json/combined_activity
+
 import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2087';
