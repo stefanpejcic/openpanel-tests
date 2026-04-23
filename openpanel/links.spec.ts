@@ -28,7 +28,6 @@ test('test', async ({ page }) => {
   
   await page.getByRole('button', { name: 'Update' }).click();
   
-  await page.getByText('Notification Password for').click();
   await expect(page.locator('body'))
     .toContainText(/has been changed successfully/i);
 
@@ -39,7 +38,7 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Username' }).click();
   await page.getByRole('textbox', { name: 'Username' }).fill('testinguser');
   await page.getByRole('textbox', { name: 'Password' }).click();
-  await page.getByRole('textbox', { name: 'Password' }).fill('testingpassword');
+  await page.getByRole('textbox', { name: 'Password' }).fill('novipassword');
   await page.getByRole('button', { name: 'Sign In' }).click();
 
   await expect(page).toHaveURL(/.*dashboard/);
