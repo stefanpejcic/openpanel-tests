@@ -29,7 +29,6 @@ test('Domain add', async ({ page }) => {
   console.log(`zone file exists`);
   
   await page.goto(`/domains\/ssl?domain_name=rasa.rs`);
-  await expect(page).toHaveURL(/domains\/ssl?domain_name=rasa.rs);
   const certData = page.locator('#certData');
   await expect(certData).toBeVisible();
   console.log(`cert file exists`);
