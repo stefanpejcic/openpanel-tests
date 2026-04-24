@@ -7,10 +7,8 @@ test('manage crons', async ({ page }) => {
   const saveButton = page.getByRole('button', { name: /save/i });
   const successToast = page.getByText('Cron jobs updated successfully');
 
-  // first schedule input in the table
-  const firstInput = page.locator('tbody tr td:first-child input[type="text"]').first();
-
-  const originalValue = await firstInput.inputValue();
+  const rows = page.locator('tbody tr');
+  const rowCount = await rows.count();
 
   const nextValue = (val: string) => {
     if (val === '*') return '1';
@@ -19,17 +17,24 @@ test('manage crons', async ({ page }) => {
     return '1';
   };
 
-  const updatedValue = nextValue(originalValue);
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
 
-  // EDIT
-  await firstInput.fill(updatedValue);
-  await saveButton.click();
-  await expect(successToast).toBeVisible();
-  await expect(firstInput).toHaveValue(updatedValue);
+    const firstInput = row.locator('td:first-child input[type="text"]').first();
 
-  // REVERT
-  await firstInput.fill(originalValue);
-  await saveButton.click();
-  await expect(successToast).toBeVisible();
-  await expect(firstInput).toHaveValue(originalValue);
+    const originalValue = await firstInput.inputValue();
+    const updatedValue = nextValue(originalValue);
+
+    // EDIT
+    await firstInput.fill(updatedValue);
+    await saveButton.click();
+    await expect(successToast).toBeVisible();
+    await expect(firstInput).toHaveValue(updatedValue);
+
+    // REVERT
+    await firstInput.fill(originalValue);
+    await saveButton.click();
+    await expect(successToast).toBeVisible();
+    await expect(firstInput).toHaveValue(originalValue);
+  }
 });
