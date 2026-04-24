@@ -115,5 +115,5 @@ test('kill', async ({ page }) => {
     new RegExp(`Process with PID ${pid} killed successfully`)
   );
 
-  await expect(userRow).toHaveCount(0);
+  await expect(page.locator('#processes_table tbody tr td:nth-child(1) span', { hasText: pid })).toHaveCount(0);
 });
