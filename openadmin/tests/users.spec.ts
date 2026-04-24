@@ -8,7 +8,7 @@ async function navigateToUsersPage(page: any) {
 
 
 
-test('access users page', async ({ page }) => {
+test('ciew users', async ({ page }) => {
   await navigateToUsersPage(page);
   await expect(page.getByText(/create new/i)).toBeVisible();
   console.log('Users page is accessible');
@@ -229,7 +229,7 @@ test('search users', async ({ page }) => {
 
 
 
-test('check columns for users', async ({ page }) => {
+test('toggle columns', async ({ page }) => {
   await navigateToUsersPage(page);
 
   await page.getByRole('button', { name: 'Show Columns' }).click();
