@@ -50,6 +50,30 @@ test('test autologin', async ({ page, context }) => {
 });
 
 
+test('list user page', async ({ page }) => {
+  await page.goto(`/users/testinguser`);
+  await expect(page).toHaveURL(/users\/testinguser/);
+
+  const expectedItems = [
+    /statistics/i,
+    /services/i,
+    /storage/i,
+    /overview/i,
+    /edit/i,
+    /transfer/i,
+    /suspend/i,
+    /delete/i,
+    /activity log/i,
+    /login log/i,
+  ];
+
+  for (const item of expectedItems) {
+    await expect(page.getByText(item)).toBeVisible();
+  }
+  console.log('single user page working');
+  // todo: /get_resource_usage_history/testinguser
+});
+
 
 test('search users', async ({ page }) => {
   await navigateToUsersPage(page);
