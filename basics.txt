@@ -3,6 +3,9 @@ Install playwright via npm or another source from https://playwright.dev/docs/in
 
 Confirm additional browser installation when prompted during install
 
+Install dotenv:
+npm install dotenv
+
 Pull https://github.com/stefanpejcic/openpanel-tests  and
 
 Create a new .env file inside openpanel/.env or openadmin/.env to setup the authentication params:
