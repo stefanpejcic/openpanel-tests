@@ -48,42 +48,20 @@ for (const config of testConfigs) {
 
 test('edit zone for a domain', async ({ page }) => {
   await page.goto('/domains/dns');
-
   const domainSelect = page.locator('#domains');
-
-  // get first valid (non-disabled) option
   const options = domainSelect.locator('option:not([disabled])');
   await expect(options.first()).toBeVisible();
-
   const firstOption = options.first();
   const domainValue = await firstOption.getAttribute('value');
   const domainName = (await firstOption.textContent())?.trim();
-
-  // select it (triggers onchange redirect)
   await domainSelect.selectOption(domainValue!);
-
-  // wait for redirect
   await expect(page).toHaveURL(new RegExp(`/domains/dns/${domainValue}`));
-
-  // work with textarea
   const textarea = page.locator('[name="bind_content"]');
   await expect(textarea).toBeVisible();
-
   const existingContent = await textarea.inputValue();
   const updatedContent = `${existingContent}\n;added a comment`;
-
   await textarea.fill(updatedContent);
-
-  // click save
   await page.getByRole('button', { name: 'Save' }).click();
-
-  // verify success message
-  await expect(
-    page.getByText(
-      `Zone file for ${domainName} saved successfully and DNS service reloaded.`
-    )
-  ).toBeVisible();
-
-  // verify comment persisted
+  await expect(page.getByText(`Zone file for ${domainName} saved successfully and DNS service reloaded.`)).toBeVisible();
   await expect(textarea).toHaveValue(/;added a comment/);
 });
