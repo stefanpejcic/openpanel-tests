@@ -1,32 +1,44 @@
 import { test, expect } from '@playwright/test';
 
-const templates = [
-  { type: 'ipv4', selector: 'textarea#zone_template_ipv4', restoreIndex: 0 },
-  { type: 'ipv6', selector: 'textarea#zone_template_ipv6', restoreIndex: 1 },
+
+const testConfigs = [
+  // /domains/zone-templates
+  { url: '/domains/zone-templates', id: 'zone_template_ipv4', name: 'IPv4 Zone', restoreIndex: 0 },
+  { url: '/domains/zone-templates', id: 'zone_template_ipv6', name: 'IPv6 Zone', restoreIndex: 1 },
+  
+  // /domains/file-templates
+  { url: '/domains/file-templates', id: 'default_page', name: 'Default Page', restoreIndex: 0 },
+  { url: '/domains/file-templates', id: 'suspended_website', name: 'Suspended Website', restoreIndex: 1 },
+  { url: '/domains/file-templates', id: 'suspended_user', name: 'Suspended User', restoreIndex: 2 },
+  { url: '/domains/file-templates', id: 'docker_apache_domain', name: 'Apache VHost', restoreIndex: 3 },
+  { url: '/domains/file-templates', id: 'docker_nginx_domain', name: 'Nginx VHost', restoreIndex: 4 },
+  { url: '/domains/file-templates', id: 'docker_openresty_domain', name: 'OpenResty VHost', restoreIndex: 5 },
+  { url: '/domains/file-templates', id: 'docker_varnish', name: 'Varnish Template', restoreIndex: 6 },
+  { url: '/domains/file-templates', id: 'docker_caddy', name: 'Caddy VHosts', restoreIndex: 7 },
 ];
 
-for (const { type, selector, restoreIndex } of templates) {
-  test(`edit ${type} zone template`, async ({ page }) => {
-    await page.goto('/domains/zone-templates');
+for (const config of testConfigs) {
+  test(`edit and restore template: ${config.name}`, async ({ page }) => {
+    await page.goto(config.url);
 
-    const textarea = page.locator(selector);
-    const comment = `;${type} comment added`;
+    const textarea = page.locator(`textarea#${config.id}`);
+    const comment = `\n;test comment for ${config.id}`;
     const saveButton = page.getByRole('button', { name: 'Save Files' });
     const successMsg = page.getByText('Template updated successfully!');
 
-    // 1. Add and Save
+    // EDIT AND SAVE
     const originalValue = await textarea.inputValue();
-    await textarea.fill(`${originalValue}\n${comment}`);
+    await textarea.fill(originalValue + comment);
     await saveButton.click();
 
     await expect(successMsg).toBeVisible();
     await expect(textarea).toHaveValue(new RegExp(comment));
 
-    // 2. Restore and Save
-    await page.getByRole('button', { name: 'Restore Default' }).nth(restoreIndex).click();
+    // RESTORE AND SAVE
+    await page.getByRole('button', { name: 'Restore Default' }).nth(config.restoreIndex).click();
     await expect(textarea).not.toHaveValue(new RegExp(comment));
-    
     await saveButton.click();
+
     await expect(successMsg).toBeVisible();
     await expect(textarea).not.toHaveValue(new RegExp(comment));
   });
