@@ -128,19 +128,19 @@ test('test tabs', async ({ page }) => {
     { label: 'Username:',        validate: v => /^[a-z0-9_-]+$/i.test(v) },
     { label: 'Email address:',   validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
     { label: 'Locale:',          validate: v => v.length > 0 },
-    { label: '2FA status:',      validate: v => ['Active', 'Inactive'].includes(v),  badge: true },
+    { label: '2FA status:',      validate: v => ['Active', 'Inactive'].includes(v), badge: true },
     { label: 'User ID (UID):',   validate: v => /^\d+$/.test(v) },
     { label: 'IP address:',      validate: v => /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v) },
     { label: 'Geo Location:',    validate: v => /^[A-Z]{2}$/.test(v) },
     { label: 'Server:',          validate: v => v.length > 0 },
     { label: 'Docker Context:',  validate: v => v.length > 0 },
     { label: 'Home dir:',        validate: v => v.startsWith('/home/') },
-    { label: 'Web server:',      validate: v => ['apache', 'nginx', 'openlitespeed', 'openresty'].includes(v.toLowerCase()),
+    { label: 'Web server:',      validate: v => ['apache', 'nginx', 'openlitespeed', 'openresty'].includes(v.toLowerCase())},
     { label: 'Varnish Caching:', validate: v => ['Enabled', 'Disabled'].includes(v), badge: true },
-    { label: 'Database type:',   validate: v => ['mariadb', 'mysql'].includes(v.toLowerCase()),
+    { label: 'Database type:',   validate: v => ['mariadb', 'mysql'].includes(v.toLowerCase())},
     { label: 'Setup time:',      validate: v => /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(v) },
   ];
-  
+
   for (const { label, validate, badge } of fields) {
     const row = getRow(infoPanel, label);
     await expect(row).toBeVisible();
