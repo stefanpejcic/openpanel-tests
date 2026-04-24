@@ -7,7 +7,7 @@ test('Domain add', async ({ page }) => {
   await expect(page).toHaveURL(/domains\/new/);
   await page.getByRole('textbox', { name: 'Domain*' }).fill('wp1.jecmenica.rs');
   await page.getByRole('button', { name: 'Add Domain' }).click();
-  await expect(page.getByText(/success/i)).toBeVisible();
+  await expect(page.getByText(/Domain name wp1.jecmenica.rs added successfully/i)).toBeVisible();
   console.log(`domain add successfull`);
 
   await page.goto(`/domains`);
