@@ -80,7 +80,7 @@ test('test tabs on single user', async ({ page }) => {
   await expect(page).toHaveURL(/users\/testinguser/);
 
   // SERVICES
-  await page.getByRole('link', { name: /services/i }).click();
+  await page.locator('a', { hasText: 'Services' }).click();
   await expect(page).toHaveURL(/#services/);
 
   const expectedServices = [
@@ -94,7 +94,8 @@ test('test tabs on single user', async ({ page }) => {
   console.log('services tab ok');
 
   // STORAGE
-  await page.getByRole('link', { name: /storage/i }).click();
+  await page.locator('a', { hasText: 'Storage' }).click();
+
   await expect(page).toHaveURL(/#storage/);
 
   const expectedStorage = [
@@ -108,7 +109,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('storage tab ok');
 
   // OVERVIEW
-  await page.getByRole('link', { name: /overview/i }).click();
+  await page.locator('a', { hasText: 'Overview' }).click();
   await expect(page).toHaveURL(/#info/);
 
   const expectedData = [
@@ -122,7 +123,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('overview tab ok');
 
   // EDIT
-  await page.getByRole('link', { name: /edit/i }).click();
+  await page.locator('a', { hasText: 'Edit' }).click();
   await expect(page).toHaveURL(/#edit/);
 
   const expectedFields = [
@@ -136,7 +137,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('edit tab ok');
 
   // TRANSFER
-  await page.getByRole('link', { name: /transfer/i }).click();
+  await page.locator('a', { hasText: 'Transfer' }).click();
   await expect(page).toHaveURL(/#transfer/);
 
   const expectedTransfer = [
@@ -150,7 +151,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('transfer tab ok');
 
   // SUSPEND
-  await page.getByRole('link', { name: /suspend/i }).click();
+  await page.locator('a', { hasText: 'Suspend' }).click();
   await expect(page).toHaveURL(/#suspend/);
   
   await expect(page.getByText('confirm', { exact: false })).toBeVisible();
@@ -160,7 +161,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('suspend tab ok');
 
   // DELETE
-  await page.getByRole('link', { name: /delete/i }).click();
+  await page.locator('a', { hasText: 'Delete' }).click();
   await expect(page).toHaveURL(/#delete/);
   
   await expect(page.getByText('confirm', { exact: false })).toBeVisible();
@@ -170,7 +171,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('delete tab ok');
 
   // ACTIVITY LOG
-  await page.getByRole('link', { name: /activity log/i }).click();
+  await page.locator('a', { hasText: 'Activity Log' }).click();
   await expect(page).toHaveURL(/#activity/);
   
   const expectedActivity= [
@@ -183,7 +184,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('activity tab ok');
 
   // LOGIN LOG
-  await page.getByRole('link', { name: /login log/i }).click();
+  await page.locator('a', { hasText: 'Login Log' }).click();
   await expect(page).toHaveURL(/#logins/);
   
   const expectedLoginLog = [
