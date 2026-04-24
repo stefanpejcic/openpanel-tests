@@ -43,3 +43,27 @@ for (const config of testConfigs) {
     await expect(textarea).not.toHaveValue(new RegExp(comment));
   });
 }
+
+
+
+test('edit zone for a domain', async ({ page }) => {
+  await page.goto('/domains/dns');
+
+  const domainSelect = page.locator('#domains');
+  const firstOption = domainSelect.locator('option').first();
+  const domainValue = await firstOption.getAttribute('value');
+  const domainName = await firstOption.textContent();
+  await domainSelect.selectOption(domainValue!);
+
+  await expect(page).toHaveURL(new RegExp(`/domains/dns/${domainValue}`));
+
+  const textarea = page.locator('[name="bind_content"]');
+  const existingContent = await textarea.inputValue();
+  const updatedContent = `${existingContent}\n;added a comment`;
+  await textarea.fill(updatedContent);
+  await page.locator('button:has-text("Save")').click();
+
+  await expect(page.getByText(`Zone file for ${domainName?.trim()} saved successfully and DNS service reloaded.`)).toBeVisible();
+
+  await expect(textarea).toHaveValue(/;added a comment/);
+});
