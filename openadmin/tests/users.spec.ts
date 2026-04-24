@@ -110,7 +110,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('storage tab ok');
 
   // OVERVIEW
-  await page.locator('a', { hasText: 'Overview' }).click();
+  await nav.getByText('Overview').click();
   await expect(page).toHaveURL(/#info/);
 
   const expectedData = [
@@ -124,7 +124,8 @@ test('test tabs on single user', async ({ page }) => {
   console.log('overview tab ok');
 
   // EDIT
-  await page.locator('a', { hasText: 'Edit' }).click();
+  await nav.getByText('Edit').click();
+
   await expect(page).toHaveURL(/#edit/);
 
   const expectedFields = [
@@ -138,7 +139,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('edit tab ok');
 
   // TRANSFER
-  await page.locator('a', { hasText: 'Transfer' }).click();
+  await nav.getByText('Transfer').click();
   await expect(page).toHaveURL(/#transfer/);
 
   const expectedTransfer = [
@@ -152,7 +153,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('transfer tab ok');
 
   // SUSPEND
-  await page.locator('a', { hasText: 'Suspend' }).click();
+  await nav.getByText('Suspend').click();
   await expect(page).toHaveURL(/#suspend/);
   
   await expect(page.getByText('confirm', { exact: false })).toBeVisible();
@@ -162,7 +163,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('suspend tab ok');
 
   // DELETE
-  await page.locator('a', { hasText: 'Delete' }).click();
+  await nav.getByText('Delete').click();
   await expect(page).toHaveURL(/#delete/);
   
   await expect(page.getByText('confirm', { exact: false })).toBeVisible();
@@ -172,7 +173,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('delete tab ok');
 
   // ACTIVITY LOG
-  await page.locator('a', { hasText: 'Activity Log' }).click();
+  await nav.getByText('Activity Log').click();
   await expect(page).toHaveURL(/#activity/);
   
   const expectedActivity= [
@@ -185,7 +186,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('activity tab ok');
 
   // LOGIN LOG
-  await page.locator('a', { hasText: 'Login Log' }).click();
+  await nav.getByText('Login Log').click();
   await expect(page).toHaveURL(/#logins/);
   
   const expectedLoginLog = [
