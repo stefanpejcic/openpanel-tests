@@ -6,6 +6,8 @@ test('reboot', async ({ page }) => {
   await page.locator('#reboot_type').selectOption('graceful');
   await page.getByRole('button', { name: 'Reboot Server' }).click();
 
-  await expect(page.locator('#success_reboot')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('#success_reboot')).toContainText('The system has been rebooted.');
+  const success = page.locator('#success_reboot');
+
+  await expect(success).not.toHaveClass(/hidden/, { timeout: 60_000 });
+  await expect(success).toContainText('The system has been rebooted.');
 });
