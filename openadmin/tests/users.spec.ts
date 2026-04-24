@@ -277,13 +277,6 @@ test('check columns for users', async ({ page }) => {
 
 
 
-
-
-
-
-
-
-
 test('delete user', async ({ page }) => {
   await navigateToUsersPage(page);
 
@@ -298,6 +291,9 @@ test('delete user', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/users\/?$/);
   await expect(page.getByText("User 'testinguser' deleted successfully", { exact: false })).toBeVisible();
+
+  const userRows = page.locator('table tbody tr');
+  await expect(userRows.filter({ hasText: 'testinguser' })).toHaveCount(0);
 
   console.log('delete user is working');
 });
