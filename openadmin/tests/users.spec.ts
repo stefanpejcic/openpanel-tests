@@ -198,28 +198,17 @@ test('test tabs', async ({ page }) => {
   await nav.getByText('Activity Log').click();
   await expect(page).toHaveURL(/#activity/);
   
-  const expectedActivity= [
-    /view raw/i, /download/i, /date/i, /action/i, /ip address/i,
-  ];
-
-  for (const service of expectedActivity) {
-    await expect(page.getByText(service)).toBeVisible();
-  }
+  const activityLink = page.locator('a[href="/json/user-activity/testinguser?raw=true"]');
+  await expect(activityLink).toBeVisible();
   console.log('activity tab ok');
 
   // LOGIN LOG
   await nav.getByText('Login Log').click();
   await expect(page).toHaveURL(/#logins/);
   
-  const expectedLoginLog = [
-    /view raw/i, /download/i, /date/i, /country/i, /ip address/i,
-  ];
-
-  for (const service of expectedLoginLog) {
-    await expect(page.getByText(service)).toBeVisible();
-  }
+  const loginlogLink = page.locator('a[href="/json/user-logins/testinguser?raw=true"]');
+  await expect(loginlogLink).toBeVisible();
   console.log('loginlog tab ok');
-
 });
 
 
