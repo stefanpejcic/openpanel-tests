@@ -288,7 +288,7 @@ test('delete user', async ({ page }) => {
   await navigateToUsersPage(page);
 
   await page.goto('/users/testinguser#delete');
-  await expect(page).toHaveURL('**/users/testinguser#delete');
+  await expect(page).toHaveURL(/\/users\/testinguser#delete$/);
 
   await expect(page.getByText('delete user account', { exact: false })).toBeVisible();
   await page.locator('[x-model="confirmationText"]:visible').fill('testinguser');
