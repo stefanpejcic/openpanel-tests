@@ -4,8 +4,8 @@ import path from 'path';
 export const AUTH_FILE = path.join(__dirname, '../.auth/session.json');
 
 const BASE_URL = process.env.BASE_URL;
-const USERNAME = process.env.USERNAME;
-const PASSWORD = process.env.PASSWORD;
+const USERNAME = process.env.PANEL_USERNAME;
+const PASSWORD = process.env.PANEL_PASSWORD;
 
 setup('authenticate', async ({ page }) => {
   if (!BASE_URL || !USERNAME || !PASSWORD) {
