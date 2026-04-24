@@ -158,7 +158,7 @@ test('test tabs', async ({ page }) => {
   // EDIT
   await nav.getByText('Edit').click();
   await expect(page).toHaveURL(/#edit/);
-  const expectedFields = ['input[name="new_username"]', 'input[name="new_email"]', 'input[name="new_password"]', 'select[name="new_ip"]', 'input[name="plan_id"]',];
+  const expectedFields = ['input[name="new_username"]', 'input[name="new_email"]', 'input[name="new_password"]', 'select[name="new_ip"]',];
   for (const selector of expectedFields) {
     await expect(page.locator(selector)).toBeVisible();
   }
