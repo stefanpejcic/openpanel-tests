@@ -16,7 +16,7 @@ test('access users page', async ({ page }) => {
 
 
 
-test('create new user', async ({ page }) => {
+test('create user', async ({ page }) => {
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
 
