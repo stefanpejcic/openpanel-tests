@@ -91,7 +91,7 @@ test('test tabs', async ({ page }) => {
   // STORAGE
   await nav.getByText('Storage').click();
   await expect(page).toHaveURL(/#storage/);
-  const expectedStorage = ['volumes', 'containers', 'images', 'files'];
+  const expectedStorage = ['name/id', 'details', 'size'];
   for (const col of expectedStorage) {
     await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
@@ -100,10 +100,38 @@ test('test tabs', async ({ page }) => {
   // OVERVIEW
   await nav.getByText('Overview').click();
   await expect(page).toHaveURL(/#info/);
-  const expectedData = ['username', 'locale', 'email', '2fa', 'uid', 'ip_address', 'context', 'geo_location', 'home_dir', 'varnish', 'server', 'time', 'message'];
-  for (const col of expectedData) {
-    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
+  
+  const fieldValidators = {
+    'Username:':      (v) => /^[a-z0-9_-]+$/i.test(v),
+    'Email address:': (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    'Locale:':        (v) => v.length > 0,
+    '2FA status:':    (v) => ['Active', 'Inactive'].includes(v),
+    'User ID (UID):': (v) => /^\d+$/.test(v),
+    'IP address:':    (v) => /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v),
+    'Geo Location:':  (v) => /^[A-Z]{2}$/.test(v),
+    'Server:':        (v) => v.length > 0,
+    'Docker Context:': (v) => v.length > 0,
+    'Home dir:':      (v) => v.startsWith('/home/'),
+    'Web server:':    (v) => v.length > 0,
+    'Varnish Caching:': (v) => ['Enabled', 'Disabled'].includes(v),
+    'Database type:': (v) => v.length > 0,
+    'Setup time:':    (v) => /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(v),
+  };
+  
+  const infoPanel = page.locator('[x-show="activeTab === \'info\'"]');
+  
+  for (const [label, validator] of Object.entries(fieldValidators)) {
+    const row = infoPanel.locator('.rounded-lg', { hasText: label });
+    await expect(row).toBeVisible();
+  
+    const valueEl = row.locator('span.font-medium');
+    const value = (await valueEl.innerText()).trim();
+  
+    if (!validator(value)) {
+      throw new Error(`Field "${label}" has unexpected value: "${value}"`);
+    }
   }
+  
   console.log('overview tab ok');
 
   // EDIT
