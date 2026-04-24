@@ -27,7 +27,7 @@ test('Domain add', async ({ page }) => {
   
 
   await page.goto(`/domains\/vhosts?domain=wp1.jecmenica.rs`);
-  await expect(page.getByText(/index.php/i)).toBeVisible();
+  await expect(page.locator('#editor')).toContainText('index.php');  
   console.log(`vhost file exists`);
   
   await page.goto(`/domains\/ssl?domain_name=wp1.jecmenica.rs`);
