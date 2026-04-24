@@ -30,7 +30,7 @@ test('edit ipv6 zone template', async ({ page }) => {
     const comment = ';ipv6 comment added';
 
     const originalValue = await ipv6Textarea.inputValue();
-    await ipv4Textarea.fill(originalValue + '\n' + comment);
+    await ipv6Textarea.fill(originalValue + '\n' + comment);
     await page.getByRole('button', { name: 'Save Files' }).click();
 
     await expect(page.getByText('Template updated successfully!')).toBeVisible();
