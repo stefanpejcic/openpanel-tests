@@ -18,7 +18,7 @@ const testConfigs = [
 ];
 
 for (const config of testConfigs) {
-  test(`edit and restore template: ${config.name}`, async ({ page }) => {
+  test(`edit template: ${config.name}`, async ({ page }) => {
     await page.goto(config.url);
 
     const textarea = page.locator(`textarea#${config.id}`);
