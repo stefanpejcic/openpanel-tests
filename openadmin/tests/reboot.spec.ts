@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('reboot', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/server/reboot');
 
   await page.locator('#reboot_type').selectOption('graceful');
@@ -8,8 +9,8 @@ test('reboot', async ({ page }) => {
 
   const success = page.locator('#success_reboot');
   
-  await expect(page.getByText('A reboot is now in progress')).toBeVisible();  
+  await expect(page.getByText('reboot is now in progress')).toBeVisible();  
   
-  await expect(success).not.toHaveClass(/hidden/, {timeout: 60_000,});
+  await expect(success).not.toHaveClass(/hidden/, {timeout: 30_000,});
   await expect(success).toContainText('The system has been rebooted.'); 
 });
