@@ -106,14 +106,16 @@ test('strace', async ({ page }) => {
 test('kill', async ({ page }) => {
   await page.goto('/server/processes');
 
-  const rows = page.locator('#processes_table tbody tr:visible');
-  const userRow = rows.filter({ hasText: 'testinguser' }).first();
-  const pid = (await userRow.locator('td').first().locator('span').innerText()).trim();
+  const userRow = page.locator('#processes_table tr', { hasText: 'testinguser' }).first();
+  
+  const pidCell = userRow.locator('td').first();
+  const pid = (await pidCell.innerText()).trim();
+
   await userRow.getByRole('link', { name: 'Kill' }).click();
 
   await expect(page.locator('body')).toContainText(
     new RegExp(`Process with PID ${pid} killed successfully`)
   );
 
-  await expect(page.locator('#processes_table tbody tr td:nth-child(1) span', { hasText: pid })).toHaveCount(0);
+  await expect(page.locator('#processes_table')).not.toContainText(pid);
 });
