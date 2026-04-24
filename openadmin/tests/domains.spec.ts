@@ -1,45 +1,33 @@
 import { test, expect } from '@playwright/test';
 
-test('edit ipv4 zone template', async ({ page }) => {
-    await page.goto(`/domains/zone-templates`);
+const templates = [
+  { type: 'ipv4', selector: 'textarea#zone_template_ipv4', restoreIndex: 0 },
+  { type: 'ipv6', selector: 'textarea#zone_template_ipv6', restoreIndex: 1 },
+];
 
-    const ipv4Textarea = page.locator('textarea#zone_template_ipv4');
-    const comment = ';ipv4 comment added';
+for (const { type, selector, restoreIndex } of templates) {
+  test(`edit ${type} zone template`, async ({ page }) => {
+    await page.goto('/domains/zone-templates');
 
-    const originalValue = await ipv4Textarea.inputValue();
-    await ipv4Textarea.fill(originalValue + '\n' + comment);
-    await page.getByRole('button', { name: 'Save Files' }).click();
+    const textarea = page.locator(selector);
+    const comment = `;${type} comment added`;
+    const saveButton = page.getByRole('button', { name: 'Save Files' });
+    const successMsg = page.getByText('Template updated successfully!');
 
-    await expect(page.getByText('Template updated successfully!')).toBeVisible();
-    await expect(ipv4Textarea).toHaveValue(new RegExp(comment));
+    // 1. Add and Save
+    const originalValue = await textarea.inputValue();
+    await textarea.fill(`${originalValue}\n${comment}`);
+    await saveButton.click();
 
-    await page.getByRole('button', { name: 'Restore Default' }).nth(0).click();
-    await expect(ipv4Textarea).not.toHaveValue(new RegExp(comment));
-    await page.getByRole('button', { name: 'Save Files' }).click();
+    await expect(successMsg).toBeVisible();
+    await expect(textarea).toHaveValue(new RegExp(comment));
 
-    await expect(page.getByText('Template updated successfully!')).toBeVisible();
-    await expect(ipv4Textarea).not.toHaveValue(new RegExp(comment));
-});
-
-
-
-test('edit ipv6 zone template', async ({ page }) => {
-    await page.goto(`/domains/zone-templates`);
-
-    const ipv6Textarea = page.locator('textarea#zone_template_ipv6');
-    const comment = ';ipv6 comment added';
-
-    const originalValue = await ipv6Textarea.inputValue();
-    await ipv6Textarea.fill(originalValue + '\n' + comment);
-    await page.getByRole('button', { name: 'Save Files' }).click();
-
-    await expect(page.getByText('Template updated successfully!')).toBeVisible();
-    await expect(ipv6Textarea).toHaveValue(new RegExp(comment));
-
-    await page.getByRole('button', { name: 'Restore Default' }).nth(1).click();
-    await expect(ipv6Textarea).not.toHaveValue(new RegExp(comment));
-    await page.getByRole('button', { name: 'Save Files' }).click();
-
-    await expect(page.getByText('Template updated successfully!')).toBeVisible();
-    await expect(ipv6Textarea).not.toHaveValue(new RegExp(comment));
-});
+    // 2. Restore and Save
+    await page.getByRole('button', { name: 'Restore Default' }).nth(restoreIndex).click();
+    await expect(textarea).not.toHaveValue(new RegExp(comment));
+    
+    await saveButton.click();
+    await expect(successMsg).toBeVisible();
+    await expect(textarea).not.toHaveValue(new RegExp(comment));
+  });
+}
