@@ -27,27 +27,27 @@ test('process table sorting - verifies asc/desc direction only', async ({ page }
     const colIndex = columns.indexOf(col);
     const header = table.locator('th', { hasText: col.name });
 
-    // ================= ASC =================
     await header.locator(`a[href*="sort=${col.asc}"]`).click();
     await page.waitForURL(`**sort=${col.asc}**`);
 
     const asc = normalize(await getValues(colIndex));
-    expect(asc.length).toBeGreaterThan(0);
-
     const ascFirst = asc[0];
     const ascLast = asc[asc.length - 1];
 
-    // ================= DESC =================
     await header.locator(`a[href*="sort=${col.desc}"]`).click();
     await page.waitForURL(`**sort=${col.desc}**`);
 
     const desc = normalize(await getValues(colIndex));
-    expect(desc.length).toBeGreaterThan(0);
-
     const descFirst = desc[0];
     const descLast = desc[desc.length - 1];
 
-    // ================= SIMPLE SORT DIRECTION CHECK =================
+    console.log(`\n[${col.name}]`);
+    console.log(`ASC  -> first: ${ascFirst}, last: ${ascLast}`);
+    console.log(`DESC -> first: ${descFirst}, last: ${descLast}`);
+
+    expect(asc.length).toBeGreaterThan(0);
+    expect(desc.length).toBeGreaterThan(0);
+
     expect(ascFirst).not.toBe(descFirst);
     expect(ascLast).not.toBe(descLast);
   }
