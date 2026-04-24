@@ -36,6 +36,20 @@ test('search', async ({ page }) => {
 
 
 
+test('strace', async ({ page }) => {
+  await page.goto('/server/processes');
+
+  const rows = page.locator('#processes_table tbody tr:visible');
+  const userRow = rows.filter({ hasText: 'testinguser' }).first();
+  await userRow.getByRole('link', { name: 'Trace' }).click();
+  await expect(page).toHaveURL(/\/server\/processes\/\d+\/strace/);
+  await expect(page.locator('body')).toContainText(
+    /strace:\s*Process\s+\d+\s+attached/
+  );
+});
+
+
+
 test('asc/desc sorting', async ({ page }) => {
   await page.goto('/server/processes');
   await expect(page).toHaveURL(/server\/processes/);
