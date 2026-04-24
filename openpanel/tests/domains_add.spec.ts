@@ -12,7 +12,8 @@ test('Domain add', async ({ page }) => {
 
   await page.goto(`/domains`);
   await expect(page.getByRole('cell', { name: /wp1\.jecmenica\.rs/ })).toBeVisible();
-  
+  console.log(`domain visible`);
+
   await page.goto(`/files`);
   await expect(page).toHaveURL(/files/);
   await expect(page.getByText(/wp1.jecmenica.rs/i)).toBeVisible();
