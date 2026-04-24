@@ -26,7 +26,8 @@ test('create new user', async ({ page }) => {
 
   await page.click('#CreateUserButton');
 
-  await expect(page.getByText('created successfully')).toBeVisible();
+  const successMessage = page.getByText('created successfully');
+  await expect(successMessage).toBeVisible();
 
   console.log('User created successfully');
 });
