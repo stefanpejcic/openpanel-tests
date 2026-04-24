@@ -22,7 +22,7 @@ test('create new user', async ({ page }) => {
 
   await page.fill('[name="admin_username"]', 'testinguser');
   await page.fill('[name="admin_password"]', 'testingpassword');
-  await page.fill('[name="admin_email"]', 'testingpassword');
+  await page.fill('[name="admin_email"]', 'stefan@test.rs');
 
   await page.click('#CreateUserButton');
 
