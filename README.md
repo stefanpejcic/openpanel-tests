@@ -10,7 +10,3 @@ Re-download tests from git:
 cd ~/playwright-test && git pull
 ```
 
-Run tests with:
-```bash
-cd ~/playwright-test && npx playwright test --ui
-```
