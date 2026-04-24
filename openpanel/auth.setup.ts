@@ -3,16 +3,19 @@ import path from 'path';
 
 export const AUTH_FILE = path.join(__dirname, '../.auth/session.json');
 
-const BASE_URL = process.env.BASE_URL ?? 'https://185.193.66.252:2083';
-const USERNAME  = process.env.USERNAME  ?? 'testinguser';
-const PASSWORD  = process.env.PASSWORD  ?? 'testingpassword';
+const BASE_URL = process.env.BASE_URL;
+const USERNAME = process.env.USERNAME;
+const PASSWORD = process.env.PASSWORD;
 
 setup('authenticate', async ({ page }) => {
+  if (!BASE_URL || !USERNAME || !PASSWORD) {
+    throw new Error('BASE_URL, USERNAME and PASSWORD must be set in .env');
+  }
+
   await page.goto(`${BASE_URL}/login`);
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/.*dashboard/);
-
   await page.context().storageState({ path: AUTH_FILE });
 });
