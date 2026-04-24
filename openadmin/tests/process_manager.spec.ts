@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('search updates table rows', async ({ page }) => {
+test('search', async ({ page }) => {
   await page.goto('/server/processes');
   await expect(page).toHaveURL(/server\/processes/);
 
@@ -38,7 +38,7 @@ test('search updates table rows', async ({ page }) => {
 
 
 
-test('process table sorting - verifies asc/desc direction only', async ({ page }) => {
+test('asc/desc sorting', async ({ page }) => {
   await page.goto('/server/processes');
   await expect(page).toHaveURL(/server\/processes/);
 
