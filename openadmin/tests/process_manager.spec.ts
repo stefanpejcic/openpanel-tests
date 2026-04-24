@@ -10,7 +10,6 @@ test('search', async ({ page }) => {
 
   const getRowCount = async () => {
     const count = await rows.count();
-    console.log('Row count:', count);
     return count;
   };
 
@@ -22,7 +21,8 @@ test('search', async ({ page }) => {
   await expect(rows.first()).toContainText('testinguser');
   const testingUserCount = await getRowCount();
   console.log(`After "testinguser": ${testingUserCount}`);
-
+  
+  console.log(`\nsearch for "testinguser" -> total was: ${initialCount}, results: ${testingUserCount}`);
   expect(testingUserCount).toBeGreaterThanOrEqual(0);
   expect(testingUserCount).not.toBe(initialCount);
 
@@ -31,8 +31,9 @@ test('search', async ({ page }) => {
   await expect(rows.first()).toContainText('dockerd');
   
   const dockerdCount = await getRowCount();
-  console.log(`After "dockerd": ${dockerdCount}`);
+  console.log(`\nsearch for "dockerd" -> total was: ${initialCount}, results: ${dockerdCount}`);
   expect(dockerdCount).toBeGreaterThanOrEqual(0);
+  expect(dockerdCount).not.toBe(initialCount);
 
   await expect(table).toBeVisible();
 });
@@ -80,9 +81,7 @@ test('asc/desc sorting', async ({ page }) => {
     const descFirst = desc[0];
     const descLast = desc[desc.length - 1];
 
-    console.log(`\n[${col.name}]`);
-    console.log(`ASC  -> first: ${ascFirst}, last: ${ascLast}`);
-    console.log(`DESC -> first: ${descFirst}, last: ${descLast}`);
+    console.log(`\n[${col.name}] | ASC  -> first: ${ascFirst}, last: ${ascLast} | DESC -> first: ${descFirst}, last: ${descLast}`);
 
     expect(asc.length).toBeGreaterThan(0);
     expect(desc.length).toBeGreaterThan(0);
