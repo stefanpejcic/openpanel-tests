@@ -24,7 +24,7 @@ for (const config of testConfigs) {
     const textarea = page.locator(`textarea#${config.id}`);
     const comment = `\n;test comment for ${config.id}`;
     const saveButton = page.getByRole('button', { name: 'Save Files' });
-    const successMsg = page.getByText('Template updated successfully!');
+    const successMsg = page.getByText(/Templates? updated successfully!/);
 
     // EDIT AND SAVE
     const originalValue = await textarea.inputValue();
