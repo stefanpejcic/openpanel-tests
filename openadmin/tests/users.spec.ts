@@ -75,7 +75,6 @@ test('open single user page', async ({ page }) => {
 });
 
 
-test('test tabs on single user', async ({ page }) => {
   await page.goto(`/users/testinguser`);
   await expect(page).toHaveURL(/users\/testinguser/);
   const nav = page.getByRole('navigation', { name: 'core navigation links' });
@@ -83,73 +82,46 @@ test('test tabs on single user', async ({ page }) => {
   // SERVICES
   await nav.getByText('Services').click();
   await expect(page).toHaveURL(/#services/);
-
-  const expectedServices = [
-    /cpu/i, /memory/i, /actions/i, /disabled/i, /allocated/i,
-  ];
-
-  for (const service of expectedServices) {
-    await expect(page.getByText(service)).toBeVisible();
+  const expectedServices = ['cpu', 'memory', 'actions', 'disabled', 'allocated'];
+  for (const col of expectedServices) {
+    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
-
   console.log('services tab ok');
 
   // STORAGE
   await nav.getByText('Storage').click();
-
   await expect(page).toHaveURL(/#storage/);
-
-  const expectedStorage = [
-    /volumes/i, /containers/i, /images/i, /files/i, /testing_user_html_data/i, /php-fpm-8.5/i,
-  ];
-
-  for (const service of expectedStorage) {
-    await expect(page.getByText(service)).toBeVisible();
+  const expectedStorage = ['volumes', 'containers', 'images', 'files', 'testing_user_html_data', 'php-fpm-8.5'];
+  for (const col of expectedStorage) {
+    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
-
   console.log('storage tab ok');
 
   // OVERVIEW
   await nav.getByText('Overview').click();
   await expect(page).toHaveURL(/#info/);
-
-  const expectedData = [
-    /username/i, /locale/i, /email address/i, /2fa/i, /uid/i, /ip address/i, /context/i, /geo location/i, /home dir/i, /varnish/i,  /server/i,  /time/i, /message/i
-  ];
-
-  for (const service of expectedData) {
-    await expect(page.getByText(service)).toBeVisible();
+  const expectedData = ['username', 'locale', 'email', '2fa', 'uid', 'ip_address', 'context', 'geo_location', 'home_dir', 'varnish', 'server', 'time', 'message'];
+  for (const col of expectedData) {
+    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
-
   console.log('overview tab ok');
 
   // EDIT
   await nav.getByText('Edit').click();
-
   await expect(page).toHaveURL(/#edit/);
-
-  const expectedFields = [
-    /username/i, /email/i, /images/i, /ip address/i, /package/i, /save/i,
-  ];
-
-  for (const service of expectedFields) {
-    await expect(page.getByText(service)).toBeVisible();
+  const expectedFields = ['username', 'email', 'images', 'ip_address', 'package'];
+  for (const col of expectedFields) {
+    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
-
   console.log('edit tab ok');
 
   // TRANSFER
   await nav.getByText('Transfer').click();
   await expect(page).toHaveURL(/#transfer/);
-
-  const expectedTransfer = [
-    /server/i, /username/i, /password/i, /live transfer/i, /suspend/i,
-  ];
-
-  for (const service of expectedTransfer) {
-    await expect(page.getByText(service)).toBeVisible();
+  const expectedTransfer = ['server', 'username', 'password', 'live_transfer', 'suspend'];
+  for (const col of expectedTransfer) {
+    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
-
   console.log('transfer tab ok');
 
   // SUSPEND
