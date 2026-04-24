@@ -36,20 +36,6 @@ test('search', async ({ page }) => {
 
 
 
-test('strace', async ({ page }) => {
-  await page.goto('/server/processes');
-
-  const rows = page.locator('#processes_table tbody tr:visible');
-  const userRow = rows.filter({ hasText: 'testinguser' }).first();
-  await userRow.getByRole('link', { name: 'Trace' }).click();
-  await expect(page).toHaveURL(/\/server\/processes\/\d+\/strace/);
-  await expect(page.locator('body')).toContainText(
-    /strace:\s*Process\s+\d+\s+attached/
-  );
-});
-
-
-
 test('asc/desc sorting', async ({ page }) => {
   await page.goto('/server/processes');
   await expect(page).toHaveURL(/server\/processes/);
@@ -99,4 +85,35 @@ test('asc/desc sorting', async ({ page }) => {
     expect(ascFirst).not.toBe(descFirst);
     expect(ascLast).not.toBe(descLast);
   }
+});
+
+
+
+test('strace', async ({ page }) => {
+  await page.goto('/server/processes');
+
+  const rows = page.locator('#processes_table tbody tr:visible');
+  const userRow = rows.filter({ hasText: 'testinguser' }).first();
+  await userRow.getByRole('link', { name: 'Trace' }).click();
+  await expect(page).toHaveURL(/\/server\/processes\/\d+\/strace/);
+  await expect(page.locator('body')).toContainText(
+    /strace:\s*Process\s+\d+\s+attached/
+  );
+});
+
+
+
+test('kill', async ({ page }) => {
+  await page.goto('/server/processes');
+
+  const rows = page.locator('#processes_table tbody tr:visible');
+  const userRow = rows.filter({ hasText: 'testinguser' }).first();
+  const pid = (await userRow.locator('td').first().locator('span').innerText()).trim();
+  await userRow.getByRole('link', { name: 'Kill' }).click();
+
+  await expect(page.locator('body')).toContainText(
+    new RegExp(`Process with PID ${pid} killed successfully`)
+  );
+
+  await expect(userRow).toHaveCount(0);
 });
