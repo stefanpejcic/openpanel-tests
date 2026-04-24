@@ -46,8 +46,6 @@ for (const config of testConfigs) {
 
 
 
-import { test, expect } from '@playwright/test';
-
 test('edit zone for a domain', async ({ page }) => {
   await page.goto('/domains/dns');
 
