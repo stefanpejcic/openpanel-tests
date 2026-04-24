@@ -167,10 +167,11 @@ test('test tabs', async ({ page }) => {
   // TRANSFER
   await nav.getByText('Transfer').click();
   await expect(page).toHaveURL(/#transfer/);
-  const expectedTransfer = ['server', 'username', 'password', 'live_transfer', 'suspend'];
-  for (const col of expectedTransfer) {
-    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
-  }
+  await expect(page.locator('#server')).toBeVisible();
+  await expect(page.locator('#port')).toBeVisible();
+  await expect(page.locator('#username')).toBeVisible();
+  await expect(page.locator('#password')).toBeVisible();
+  await expect(page.locator('#live_transfer')).toBeVisible();
   console.log('transfer tab ok');
 
   // SUSPEND
