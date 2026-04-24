@@ -158,9 +158,9 @@ test('test tabs', async ({ page }) => {
   // EDIT
   await nav.getByText('Edit').click();
   await expect(page).toHaveURL(/#edit/);
-  const expectedFields = ['username', 'email', 'images', 'ip_address', 'package'];
-  for (const col of expectedFields) {
-    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
+  const expectedFields = ['input[name="new_username"]', 'input[name="new_email"]', 'input[name="new_password"]', 'select[name="new_ip"]', 'input[name="plan_id"]',];
+  for (const selector of expectedFields) {
+    await expect(page.locator(selector)).toBeVisible();
   }
   console.log('edit tab ok');
 
