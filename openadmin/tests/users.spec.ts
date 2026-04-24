@@ -178,7 +178,7 @@ test('test tabs', async ({ page }) => {
   await nav.getByText('Suspend').click();
   await expect(page).toHaveURL(/#suspend/);
   
-  await expect(page.getByText('confirm', { exact: false })).toBeVisible();
+  await expect(page.getByText('suspend user account', { exact: false })).toBeVisible();
   await page.locator('[x-model="confirmationText"]').fill('testinguser');
   await expect(page.getByRole('button', { name: /suspend account/i })).toBeVisible();
   
@@ -188,7 +188,7 @@ test('test tabs', async ({ page }) => {
   await nav.getByText('Delete').click();
   await expect(page).toHaveURL(/#delete/);
   
-  await expect(page.getByText('confirm', { exact: false })).toBeVisible();
+  await expect(page.getByText('delete user account', { exact: false })).toBeVisible();
   await page.locator('[x-model="confirmationText"]').fill('testinguser');
   await expect(page.getByRole('button', { name: /delete account permanently/i })).toBeVisible();
   
