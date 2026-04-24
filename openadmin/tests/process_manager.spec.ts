@@ -27,27 +27,28 @@ test('test processes sorting asc/desc for each column', async ({ page }) => {
       .filter(Boolean)
       .map(v => (type === 'number' ? Number(v) : v.toLowerCase()));
 
-  const isMonotonicAsc = (arr: any[], type: string) => {
-    for (let i = 1; i < arr.length; i++) {
-      if (type === 'number') {
-        if (arr[i] < arr[i - 1]) return false;
-      } else {
-        if (arr[i] < arr[i - 1]) return false;
-      }
+const isMonotonicAsc = (arr: any[], type: string) => {
+  for (let i = 1; i < arr.length; i++) {
+    if (type === 'number') {
+      if (arr[i] < arr[i - 1]) return false;
+    } else {
+      if (String(arr[i]) < String(arr[i - 1])) return false;
     }
-    return true;
-  };
+  }
+  return true;
+};
 
-  const isMonotonicDesc = (arr: any[], type: string) => {
-    for (let i = 1; i < arr.length; i++) {
-      if (type === 'number') {
-        if (arr[i] > arr[i - 1]) return false;
-      } else {
-        if (arr[i] > arr[i - 1]) return false;
-      }
+const isMonotonicDesc = (arr: any[], type: string) => {
+  for (let i = 1; i < arr.length; i++) {
+    if (type === 'number') {
+      if (arr[i] > arr[i - 1]) return false;
+    } else {
+      if (String(arr[i]) > String(arr[i - 1])) return false;
     }
-    return true;
-  };
+  }
+  return true;
+};
+
 
   for (const col of columns) {
     const header = table.locator('th', { hasText: col.name });
