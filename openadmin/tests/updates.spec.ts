@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-
-
 test('check updates page', async ({ page, context }) => {
   await page.goto('/settings/updates');
   await expect(page).toHaveURL(/settings\/updates/);
