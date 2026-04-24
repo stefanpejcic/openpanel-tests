@@ -271,3 +271,30 @@ test('check columns for users', async ({ page }) => {
 
   console.log('column toggle is working');
 });
+
+
+
+
+
+
+
+
+
+
+test('delete user', async ({ page }) => {
+  await navigateToUsersPage(page);
+
+  await page.goto('/users/testinguser#delete');
+  await expect(page).toHaveURL('**/users/testinguser#delete');
+
+  await expect(page.getByText('delete user account', { exact: false })).toBeVisible();
+  await page.locator('[x-model="confirmationText"]:visible').fill('testinguser');
+  const deleteButton = page.getByRole('button', {name: /delete account permanently/i,});
+  await expect(deleteButton).toBeVisible();
+  await deleteButton.click();
+
+  await expect(page).toHaveURL(/\/users\/?$/);
+  await expect(page.getByText("User 'testinguser' deleted successfully", { exact: false })).toBeVisible();
+
+  console.log('delete user is working');
+});
