@@ -97,11 +97,11 @@ test('test tabs on single user', async ({ page }) => {
   await page.getByRole('link', { name: /storage/i }).click();
   await expect(page).toHaveURL(/#storage/);
 
-  const expectedServices = [
+  const expectedStorage = [
     /volumes/i, /containers/i, /images/i, /files/i, /testing_user_html_data/i, /php-fpm-8.5/i,
   ];
 
-  for (const service of expectedServices) {
+  for (const service of expectedStorage) {
     await expect(page.getByText(service)).toBeVisible();
   }
 
@@ -111,11 +111,11 @@ test('test tabs on single user', async ({ page }) => {
   await page.getByRole('link', { name: /overview/i }).click();
   await expect(page).toHaveURL(/#info/);
 
-  const expectedServices = [
+  const expectedData = [
     /username/i, /locale/i, /email address/i, /2fa/i, /uid/i, /ip address/i, /context/i, /geo location/i, /home dir/i, /varnish/i,  /server/i,  /time/i, /message/i
   ];
 
-  for (const service of expectedServices) {
+  for (const service of expectedData) {
     await expect(page.getByText(service)).toBeVisible();
   }
 
@@ -125,11 +125,11 @@ test('test tabs on single user', async ({ page }) => {
   await page.getByRole('link', { name: /edit/i }).click();
   await expect(page).toHaveURL(/#edit/);
 
-  const expectedServices = [
+  const expectedFields = [
     /username/i, /email/i, /images/i, /ip address/i, /package/i, /save/i,
   ];
 
-  for (const service of expectedServices) {
+  for (const service of expectedFields) {
     await expect(page.getByText(service)).toBeVisible();
   }
 
@@ -139,11 +139,11 @@ test('test tabs on single user', async ({ page }) => {
   await page.getByRole('link', { name: /transfer/i }).click();
   await expect(page).toHaveURL(/#transfer/);
 
-  const expectedServices = [
+  const expectedTransfer = [
     /server/i, /username/i, /password/i, /live transfer/i, /suspend/i,
   ];
 
-  for (const service of expectedServices) {
+  for (const service of expectedTransfer) {
     await expect(page.getByText(service)).toBeVisible();
   }
 
@@ -173,11 +173,11 @@ test('test tabs on single user', async ({ page }) => {
   await page.getByRole('link', { name: /activity log/i }).click();
   await expect(page).toHaveURL(/#activity/);
   
-  const expectedServices = [
+  const expectedActivity= [
     /view raw/i, /download/i, /date/i, /action/i, /ip address/i,
   ];
 
-  for (const service of expectedServices) {
+  for (const service of expectedActivity) {
     await expect(page.getByText(service)).toBeVisible();
   }
   console.log('activity tab ok');
@@ -186,11 +186,11 @@ test('test tabs on single user', async ({ page }) => {
   await page.getByRole('link', { name: /login log/i }).click();
   await expect(page).toHaveURL(/#logins/);
   
-  const expectedServices = [
+  const expectedLoginLog = [
     /view raw/i, /download/i, /date/i, /country/i, /ip address/i,
   ];
 
-  for (const service of expectedServices) {
+  for (const service of expectedLoginLog) {
     await expect(page.getByText(service)).toBeVisible();
   }
   console.log('loginlog tab ok');
