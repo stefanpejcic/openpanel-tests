@@ -135,7 +135,7 @@ test('test tabs', async ({ page }) => {
     { label: 'Server:',          validate: v => v.length > 0 },
     { label: 'Docker Context:',  validate: v => v.length > 0 },
     { label: 'Home dir:',        validate: v => v.startsWith('/home/') },
-    { label: 'Web server:',      validate: v => v => ['apache', 'nginx', 'openlitespeed', 'openresty'].includes(v.toLowerCase()),
+    { label: 'Web server:',      validate: v => ['apache', 'nginx', 'openlitespeed', 'openresty'].includes(v.toLowerCase()),
     { label: 'Varnish Caching:', validate: v => ['Enabled', 'Disabled'].includes(v), badge: true },
     { label: 'Database type:',   validate: v => ['mariadb', 'mysql'].includes(v.toLowerCase()),
     { label: 'Setup time:',      validate: v => /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(v) },
