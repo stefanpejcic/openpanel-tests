@@ -16,6 +16,41 @@ test('access users page', async ({ page }) => {
 
 
 
+test('create new user', async ({ page }) => {
+  await page.goto(`/user/new`);
+  await expect(page).toHaveURL(/user\/new/);
+
+  await page.fill('[name="admin_username"]', 'testinguser');
+  await page.fill('[name="admin_password"]', 'testingpassword');
+  await page.fill('[name="admin_email"]', 'testingpassword');
+
+  await page.click('#CreateUserButton');
+
+  await expect(page.getByText('created successfully')).toBeVisible();
+
+  console.log('User created successfully');
+});
+
+
+
+test('test autologin', async ({ page, context }) => {
+  await navigateToUsersPage(page);
+  await expect(page.getByText(/create new/i)).toBeVisible();
+
+  const [newTab] = await Promise.all([
+    context.waitForEvent('page'),
+    page.click('a[href="/login/token/testinguser"]'),
+  ]);
+
+  await newTab.waitForLoadState();
+  await expect(newTab).toHaveURL(/dashboard/);
+  await expect(newTab.getByText(/last login ip address/i)).toBeVisible();
+
+  console.log('autologin is working');
+});
+
+
+
 test('search users', async ({ page }) => {
   await navigateToUsersPage(page);
   await page.locator('[x-model="searchQuery"]').fill('testinguser');
