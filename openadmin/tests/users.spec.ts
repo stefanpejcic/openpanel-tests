@@ -8,7 +8,7 @@ async function navigateToUsersPage(page: any) {
 
 
 
-test('ciew users', async ({ page }) => {
+test('view users', async ({ page }) => {
   await navigateToUsersPage(page);
   await expect(page.getByText(/create new/i)).toBeVisible();
   console.log('Users page is accessible');
