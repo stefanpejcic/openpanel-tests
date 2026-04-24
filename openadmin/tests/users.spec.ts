@@ -74,7 +74,7 @@ test('open single user page', async ({ page }) => {
   // todo: /get_resource_usage_history/testinguser
 });
 
-
+test('test tabs', async ({ page }) => {
   await page.goto(`/users/testinguser`);
   await expect(page).toHaveURL(/users\/testinguser/);
   const nav = page.getByRole('navigation', { name: 'core navigation links' });
