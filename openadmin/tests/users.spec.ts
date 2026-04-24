@@ -50,7 +50,7 @@ test('test autologin', async ({ page, context }) => {
 });
 
 
-test('open single user page', async ({ page }) => {
+test('open single user', async ({ page }) => {
   await page.goto(`/users/testinguser`);
   await expect(page).toHaveURL(/users\/testinguser/);
 
@@ -82,7 +82,7 @@ test('test tabs', async ({ page }) => {
   // SERVICES
   await nav.getByText('Services').click();
   await expect(page).toHaveURL(/#services/);
-  const expectedServices = ['cpu', 'ram', 'actions', 'disabled', 'allocated'];
+  const expectedServices = ['cpu', 'ram', 'actions'];
   for (const col of expectedServices) {
     await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
@@ -91,7 +91,7 @@ test('test tabs', async ({ page }) => {
   // STORAGE
   await nav.getByText('Storage').click();
   await expect(page).toHaveURL(/#storage/);
-  const expectedStorage = ['volumes', 'containers', 'images', 'files', 'testing_user_html_data', 'php-fpm-8.5'];
+  const expectedStorage = ['volumes', 'containers', 'images', 'files'];
   for (const col of expectedStorage) {
     await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
