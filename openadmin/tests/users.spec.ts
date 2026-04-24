@@ -78,9 +78,10 @@ test('open single user page', async ({ page }) => {
 test('test tabs on single user', async ({ page }) => {
   await page.goto(`/users/testinguser`);
   await expect(page).toHaveURL(/users\/testinguser/);
-
+  const nav = page.getByRole('navigation', { name: 'core navigation links' });
+  
   // SERVICES
-  await page.locator('a', { hasText: 'Services' }).click();
+  await nav.getByText('Services').click();
   await expect(page).toHaveURL(/#services/);
 
   const expectedServices = [
@@ -94,7 +95,7 @@ test('test tabs on single user', async ({ page }) => {
   console.log('services tab ok');
 
   // STORAGE
-  await page.locator('a', { hasText: 'Storage' }).click();
+  await nav.getByText('Storage').click();
 
   await expect(page).toHaveURL(/#storage/);
 
