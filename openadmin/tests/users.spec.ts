@@ -56,23 +56,25 @@ test('open single user', async ({ page }) => {
   await expect(page).toHaveURL(/users\/testinguser/);
 
   const expectedItems = [
-    /statistics/i,
-    /services/i,
-    /storage/i,
-    /overview/i,
-    /edit/i,
-    /transfer/i,
-    /suspend/i,
-    /delete/i,
-    /activity log/i,
-    /login log/i,
+    'Statistics',
+    'Services',
+    'Storage',
+    'Overview',
+    'Edit',
+    'Transfer',
+    'Suspend',
+    'Delete',
+    'Activity Log',
+    'Login Log',
   ];
 
   for (const item of expectedItems) {
-    await expect(page.locator('nav a', { hasText: item })).toHaveCount(1);
+    await expect(
+      page.locator('nav[aria-label="core navigation links"] a').filter({ hasText: item })
+    ).toHaveCount(1);
   }
+
   console.log('single user page working');
-  // todo: /get_resource_usage_history/testinguser
 });
 
 test('test tabs', async ({ page }) => {
