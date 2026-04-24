@@ -91,9 +91,9 @@ test('test tabs', async ({ page }) => {
   // STORAGE
   await nav.getByText('Storage').click();
   await expect(page).toHaveURL(/#storage/);
-  await expect(page.getByText('Volumes')).toBeVisible();
-  await expect(page.getByText('Containers')).toBeVisible();
-  await expect(page.getByText('Images')).toBeVisible();
+  await expect(page.getByText('Volumes').first()).toBeVisible();
+  await expect(page.getByText('Containers').first()).toBeVisible();
+  await expect(page.getByText('Images').first()).toBeVisible();
   console.log('storage tab ok');
 
   // OVERVIEW
