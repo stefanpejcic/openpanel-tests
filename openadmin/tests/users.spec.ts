@@ -69,7 +69,7 @@ test('open single user', async ({ page }) => {
   ];
 
   for (const item of expectedItems) {
-    await expect(page.getByText(item)).toBeVisible();
+    await expect(page.locator('li', { hasText: item })).toBeVisible();
   }
   console.log('single user page working');
   // todo: /get_resource_usage_history/testinguser
