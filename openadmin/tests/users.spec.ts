@@ -97,83 +97,60 @@ test('test tabs', async ({ page }) => {
   // OVERVIEW
   await nav.getByText('Overview').click();
   await expect(page).toHaveURL(/#info/);
-  
+    
   const infoPanel = page.locator('[x-show="activeTab === \'info\'"]');
   
-  // Extract only direct text nodes, ignoring nested child elements
-  async function getFieldValue(row, selector = 'span.font-medium') {
-    return await row.locator(selector).first().evaluate(el => {
-      return Array.from(el.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent.trim())
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-    });
+  // Get row by matching the label span text exactly (case-insensitive)
+  function getRow(panel, labelText) {
+    return panel.locator('.rounded-lg').filter({
+      has: panel.page().locator('span.text-sm', { hasText: labelText })
+    }).first();
   }
   
-  const fieldValidators = {
-    'Username:':        { validate: (v) => /^[a-z0-9_-]+$/i.test(v) },
-    'Email address:':   { validate: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-    'Locale:':          { validate: (v) => v.length > 0 },
-    '2FA status:':      { validate: (v) => ['Active', 'Inactive'].includes(v),
-                          extract: (el) => el.querySelector('span span')?.textContent.trim() },
-    'User ID (UID):':   { validate: (v) => /^\d+$/.test(v) },
-    'IP address:':      { validate: (v) => /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v),
-                          extract: (el) => Array.from(el.childNodes).find(n => n.nodeType === 3)?.textContent.trim() },
-    'Geo Location:':    { validate: (v) => /^[A-Z]{2}$/.test(v),
-                          extract: (el) => Array.from(el.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent.trim()).filter(Boolean).join('') },
-    'Server:':          { validate: (v) => v.length > 0 },
-    'Docker Context:':  { validate: (v) => v.length > 0 },
-    'Home dir:':        { validate: (v) => v.startsWith('/home/') },
-    'Web server:':      { validate: (v) => v.length > 0,
-                          extract: (el) => Array.from(el.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent.trim()).filter(Boolean).join('') },
-    'Varnish Caching:': { validate: (v) => ['Enabled', 'Disabled'].includes(v),
-                          extract: (el) => el.querySelector('span span')?.textContent.trim() },
-    'Database type:':   { validate: (v) => v.length > 0 },
-    'Setup time:':      { validate: (v) => /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(v) },
-  };
-  
-  for (const [label, { validate, extract }] of Object.entries(fieldValidators)) {
-    const row = infoPanel.locator('.rounded-lg', { hasText: label });
-    await expect(row).toBeVisible();
-  
-    const value = await row.locator('span.font-medium').first().evaluate((el, extractFn) => {
-      if (extractFn) {
-        // Can't pass functions across evaluate boundary, handled below
-      }
-      return Array.from(el.childNodes)
+  // Extract only direct text nodes from value span, ignoring child elements (badges, SVGs, imgs)
+  async function extractValue(row) {
+    return row.locator('span.font-medium').first().evaluate(el =>
+      Array.from(el.childNodes)
         .filter(n => n.nodeType === Node.TEXT_NODE)
         .map(n => n.textContent.trim())
         .filter(Boolean)
-        .join(' ')
-        .trim();
-    });
+        .join('')
+        .trim()
+    );
+  }
   
-    // For fields needing custom extraction, override with evaluate + inline logic
-    let finalValue = value;
+  // For fields where the value is inside a nested badge span
+  async function extractBadgeValue(row) {
+    return row.locator('span.font-medium span').first().innerText().then(v => v.trim());
+  }
   
-    if (label === '2FA status:' || label === 'Varnish Caching:') {
-      finalValue = await row.locator('span.font-medium span').first().innerText();
-      finalValue = finalValue.trim();
-    } else if (label === 'IP address:') {
-      finalValue = await row.locator('span.font-medium').first().evaluate(el =>
-        Array.from(el.childNodes).find(n => n.nodeType === 3)?.textContent.trim() ?? ''
-      );
-    } else if (label === 'Geo Location:' || label === 'Web server:') {
-      finalValue = await row.locator('span.font-medium').first().evaluate(el =>
-        Array.from(el.childNodes)
-          .filter(n => n.nodeType === 3)
-          .map(n => n.textContent.trim())
-          .filter(Boolean)
-          .join('')
-          .trim()
-      );
+  const fields = [
+    { label: 'Username:',        validate: v => /^[a-z0-9_-]+$/i.test(v) },
+    { label: 'Email address:',   validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+    { label: 'Locale:',          validate: v => v.length > 0 },
+    { label: '2FA status:',      validate: v => ['Active', 'Inactive'].includes(v),  badge: true },
+    { label: 'User ID (UID):',   validate: v => /^\d+$/.test(v) },
+    { label: 'IP address:',      validate: v => /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v) },
+    { label: 'Geo Location:',    validate: v => /^[A-Z]{2}$/.test(v) },
+    { label: 'Server:',          validate: v => v.length > 0 },
+    { label: 'Docker Context:',  validate: v => v.length > 0 },
+    { label: 'Home dir:',        validate: v => v.startsWith('/home/') },
+    { label: 'Web server:',      validate: v => v.length > 0 },
+    { label: 'Varnish Caching:', validate: v => ['Enabled', 'Disabled'].includes(v), badge: true },
+    { label: 'Database type:',   validate: v => v.length > 0 },
+    { label: 'Setup time:',      validate: v => /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(v) },
+  ];
+  
+  for (const { label, validate, badge } of fields) {
+    const row = getRow(infoPanel, label);
+    await expect(row).toBeVisible();
+  
+    const value = badge ? await extractBadgeValue(row) : await extractValue(row);
+  
+    if (!validate(value)) {
+      throw new Error(`Field "${label}" failed validation with value: "${value}"`);
     }
-  
-    if (!validate(finalValue)) {
-      throw new Error(`Field "${label}" failed validation with value: "${finalValue}"`);
-    }
+    console.log(`  ✓ ${label.padEnd(20)} "${value}"`);
   }
   
   console.log('overview tab ok');
