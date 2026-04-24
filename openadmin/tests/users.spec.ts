@@ -82,7 +82,7 @@ test('test tabs', async ({ page }) => {
   // SERVICES
   await nav.getByText('Services').click();
   await expect(page).toHaveURL(/#services/);
-  const expectedServices = ['cpu', 'memory', 'actions', 'disabled', 'allocated'];
+  const expectedServices = ['cpu', 'ram', 'actions', 'disabled', 'allocated'];
   for (const col of expectedServices) {
     await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
   }
