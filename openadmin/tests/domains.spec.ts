@@ -1,27 +1,45 @@
 import { test, expect } from '@playwright/test';
 
-test('zone template edit and restore flow', async ({ page }) => {
-    await page.goto(`/domains/zone-templates/`);
+test('edit ipv4 zone template', async ({ page }) => {
+    await page.goto(`/domains/zone-templates`);
 
     const ipv4Textarea = page.locator('textarea#zone_template_ipv4');
-    const comment = ';comment added';
+    const comment = ';ipv4 comment added';
 
-    // 1. Edit the IPv4 Template
     const originalValue = await ipv4Textarea.inputValue();
     await ipv4Textarea.fill(originalValue + '\n' + comment);
-
-    // 2. Save the changes
     await page.getByRole('button', { name: 'Save Files' }).click();
 
     await expect(page.getByText('Template updated successfully!')).toBeVisible();
     await expect(ipv4Textarea).toHaveValue(new RegExp(comment));
 
-    // 4. Restore to Default
-    await page.getByRole('button', { name: 'Restore Default' }).first().click();
+    await page.getByRole('button', { name: 'Restore Default' }).nth(0).click();
     await expect(ipv4Textarea).not.toHaveValue(new RegExp(comment));
     await page.getByRole('button', { name: 'Save Files' }).click();
 
-    // 6. Final verification
     await expect(page.getByText('Template updated successfully!')).toBeVisible();
     await expect(ipv4Textarea).not.toHaveValue(new RegExp(comment));
+});
+
+
+
+test('edit ipv6 zone template', async ({ page }) => {
+    await page.goto(`/domains/zone-templates`);
+
+    const ipv6Textarea = page.locator('textarea#zone_template_ipv6');
+    const comment = ';ipv6 comment added';
+
+    const originalValue = await ipv6Textarea.inputValue();
+    await ipv4Textarea.fill(originalValue + '\n' + comment);
+    await page.getByRole('button', { name: 'Save Files' }).click();
+
+    await expect(page.getByText('Template updated successfully!')).toBeVisible();
+    await expect(ipv6Textarea).toHaveValue(new RegExp(comment));
+
+    await page.getByRole('button', { name: 'Restore Default' }).nth(1).click();
+    await expect(ipv6Textarea).not.toHaveValue(new RegExp(comment));
+    await page.getByRole('button', { name: 'Save Files' }).click();
+
+    await expect(page.getByText('Template updated successfully!')).toBeVisible();
+    await expect(ipv6Textarea).not.toHaveValue(new RegExp(comment));
 });
