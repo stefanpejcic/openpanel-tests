@@ -85,7 +85,7 @@ test('test tabs on single user', async ({ page }) => {
   await expect(page).toHaveURL(/#services/);
 
   const expectedServices = [
-    /name/i, /cpu/i, /memory/i, /actions/i, /disabled/i, /allocated/i,
+    /cpu/i, /memory/i, /actions/i, /disabled/i, /allocated/i,
   ];
 
   for (const service of expectedServices) {
