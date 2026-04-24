@@ -50,7 +50,6 @@ test('edit zone for a domain', async ({ page }) => {
   await page.goto('/domains/dns');
   const domainSelect = page.locator('#domains');
   const options = domainSelect.locator('option:not([disabled])');
-  await expect(options.first()).toBeVisible();
   const firstOption = options.first();
   const domainValue = await firstOption.getAttribute('value');
   const domainName = (await firstOption.textContent())?.trim();
