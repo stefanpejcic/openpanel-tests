@@ -26,7 +26,7 @@ test('create new user', async ({ page }) => {
 
   await page.click('#CreateUserButton');
 
-  const successMessage = page.getByText('created successfully');
+  const successMessage = page.getByText('user created successfully');
   await expect(successMessage).toBeVisible({ timeout: 20_000 });
 
   console.log('User created successfully');
