@@ -1,5 +1,43 @@
 import { test, expect } from '@playwright/test';
 
+test('search updates table rows', async ({ page }) => {
+  await page.goto('/server/processes');
+  await expect(page).toHaveURL(/server\/processes/);
+
+  const table = page.locator('#processes_table');
+  const rows = table.locator('tbody tr');
+  const searchInput = page.getByPlaceholder('Search processes...');
+
+  const getRowCount = async () => {
+    const count = await rows.count();
+    console.log('Row count:', count);
+    return count;
+  };
+
+  const initialCount = await getRowCount();
+
+  // testinguser
+  await searchInput.fill('testinguser');
+  await page.waitForTimeout(300); // for alpinejs
+
+  const testingUserCount = await getRowCount();
+  console.log(`After "testinguser": ${testingUserCount}`);
+
+  expect(testingUserCount).toBeGreaterThanOrEqual(0);
+  expect(testingUserCount).not.toBe(initialCount);
+
+  await searchInput.fill('dockerd');
+  await page.waitForTimeout(300);
+
+  const dockerdCount = await getRowCount();
+  console.log(`After "dockerd": ${dockerdCount}`);
+  expect(dockerdCount).toBeGreaterThanOrEqual(0);
+
+  await expect(table).toBeVisible();
+});
+
+
+
 test('process table sorting - verifies asc/desc direction only', async ({ page }) => {
   await page.goto('/server/processes');
   await expect(page).toHaveURL(/server\/processes/);
