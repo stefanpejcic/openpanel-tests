@@ -15,13 +15,10 @@ test('search', async ({ page }) => {
 
   const initialCount = await getRowCount();
 
-  // testinguser
   await searchInput.fill('testinguser');
   await page.waitForTimeout(300); // for alpinejs
   await expect(rows.first()).toContainText('testinguser');
   const testingUserCount = await getRowCount();
-  console.log(`After "testinguser": ${testingUserCount}`);
-  
   console.log(`\nsearch for "testinguser" -> total was: ${initialCount}, results: ${testingUserCount}`);
   expect(testingUserCount).toBeGreaterThanOrEqual(0);
   expect(testingUserCount).not.toBe(initialCount);
@@ -29,7 +26,6 @@ test('search', async ({ page }) => {
   await searchInput.fill('dockerd');
   await page.waitForTimeout(300);
   await expect(rows.first()).toContainText('dockerd');
-  
   const dockerdCount = await getRowCount();
   console.log(`\nsearch for "dockerd" -> total was: ${initialCount}, results: ${dockerdCount}`);
   expect(dockerdCount).toBeGreaterThanOrEqual(0);
