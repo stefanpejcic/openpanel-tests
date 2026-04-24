@@ -5,7 +5,7 @@ test('search', async ({ page }) => {
   await expect(page).toHaveURL(/server\/processes/);
 
   const table = page.locator('#processes_table');
-  const rows = table.locator('tbody tr');
+  const rows = table.locator('tbody tr:visible');
   const searchInput = page.getByPlaceholder('Search processes...');
 
   const getRowCount = async () => {
@@ -19,7 +19,7 @@ test('search', async ({ page }) => {
   // testinguser
   await searchInput.fill('testinguser');
   await page.waitForTimeout(300); // for alpinejs
-
+  await expect(rows.first()).toContainText('testinguser');
   const testingUserCount = await getRowCount();
   console.log(`After "testinguser": ${testingUserCount}`);
 
@@ -28,7 +28,8 @@ test('search', async ({ page }) => {
 
   await searchInput.fill('dockerd');
   await page.waitForTimeout(300);
-
+  await expect(rows.first()).toContainText('dockerd');
+  
   const dockerdCount = await getRowCount();
   console.log(`After "dockerd": ${dockerdCount}`);
   expect(dockerdCount).toBeGreaterThanOrEqual(0);
