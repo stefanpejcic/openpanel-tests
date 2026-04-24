@@ -63,4 +63,5 @@ test('edit zone for a domain', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(`Zone file for ${domainName} saved successfully and DNS service reloaded.`)).toBeVisible();
   await expect(textarea).toHaveValue(/;added a comment/);
+  // TODO: check backend added \n at end of file
 });
