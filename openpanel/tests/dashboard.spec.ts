@@ -126,3 +126,41 @@ test('sections drag to sort', async ({ page }) => {
 
   console.log(`sections drag to sort working: moved '${firstKey}' below '${secondKey}'`);
 });
+
+
+test('section toggle open and close', async ({ page }) => {
+  await navigateToDashboardPage(page);
+
+  const firstSectionWrapper = page.locator('#dashboard-sortable-area > [data-id]').nth(0);
+  const sectionKey = await firstSectionWrapper.getAttribute('data-id');
+
+  const toggleBtn = firstSectionWrapper.locator('button[aria-expanded]');
+  const iconsGrid = firstSectionWrapper.locator(`#section-icons-${sectionKey}`);
+
+  await expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+  await expect(iconsGrid).toBeVisible();
+
+  await toggleBtn.click();
+  await page.waitForTimeout(350); // alpinejs x-collapse
+
+  await expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+  await expect(iconsGrid).toBeHidden();
+
+  const closedValue = await page.evaluate((key) =>
+    localStorage.getItem(`section_state_${key}`)
+  , sectionKey);
+  expect(closedValue).toBe('false');
+
+  await toggleBtn.click();
+  await page.waitForTimeout(350);
+
+  await expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+  await expect(iconsGrid).toBeVisible();
+
+  const openedValue = await page.evaluate((key) =>
+    localStorage.getItem(`section_state_${key}`)
+  , sectionKey);
+  expect(openedValue).toBe('true');
+
+  console.log(`section toggle open/close working for section: '${sectionKey}'`);
+});
