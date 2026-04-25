@@ -77,3 +77,52 @@ test('icons toggle', async ({ page }) => {
 
   console.log('icons toggle working');
 });
+
+
+test('sections drag to sort', async ({ page }) => {
+  await navigateToDashboardPage(page);
+
+  const firstSection = page.locator('#dashboard-sortable-area > [data-id]').nth(0);
+  const secondSection = page.locator('#dashboard-sortable-area > [data-id]').nth(1);
+
+  const firstKey = await firstSection.getAttribute('data-id');
+  const secondKey = await secondSection.getAttribute('data-id');
+
+  const handle = page.locator(`#section-title-${firstKey}`);
+  const targetHandle = page.locator(`#section-title-${secondKey}`);
+
+  const handleBox = await handle.boundingBox();
+  const targetBox = await targetHandle.boundingBox();
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(300); // wait for SortableJS
+  const steps = 10;
+  const deltaY = (targetBox.y + targetBox.height) - (handleBox.y + handleBox.height / 2);
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(
+      handleBox.x + handleBox.width / 2,
+      handleBox.y + handleBox.height / 2 + (deltaY * i) / steps
+    );
+    await page.waitForTimeout(20);
+  }
+
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+
+  const savedOrder = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('dashboard_section_order'))
+  );
+
+  expect(savedOrder).not.toBeNull();
+  expect(savedOrder[0]).toBe(secondKey);
+  expect(savedOrder[1]).toBe(firstKey);
+
+  const newFirstKey = await page.locator('#dashboard-sortable-area > [data-id]').nth(0).getAttribute('data-id');
+  const newSecondKey = await page.locator('#dashboard-sortable-area > [data-id]').nth(1).getAttribute('data-id');
+
+  expect(newFirstKey).toBe(secondKey);
+  expect(newSecondKey).toBe(firstKey);
+
+  console.log(`sections drag to sort working: moved '${firstKey}' below '${secondKey}'`);
+});
