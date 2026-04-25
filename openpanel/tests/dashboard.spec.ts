@@ -128,7 +128,7 @@ test('sections drag to sort', async ({ page }) => {
 });
 
 
-test('section toggle open and close', async ({ page }) => {
+test('section open and close', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const firstSectionWrapper = page.locator('#dashboard-sortable-area > [data-id]').nth(0);
