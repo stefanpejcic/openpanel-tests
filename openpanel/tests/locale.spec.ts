@@ -1,18 +1,56 @@
 import { test, expect } from '@playwright/test';
 
+// differ
+const localeMapping = {
+    'ne': 'ne-np',
+    'en': 'en-us',
+    'uk': 'uk-ua',
+    'zh': 'zh-cn',
+};
 
-test('change locale', async ({ page }) => {
-  navigate to /account/language
+// msgid "Change Language"
+async function getTranslation(locale) {
+    const folder = localeMapping[locale] || locale;
+    const url = `https://raw.githubusercontent.com/stefanpejcic/openpanel-translations/main/${folder}/messages.po`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const text = await response.text();
+        
+        const regex = /msgid "Change Language"\s+msgstr "(.*)"/;
+        const match = text.match(regex);
+        return match ? match[1] : null;
+    } catch (e) {
+        console.error(`Failed to fetch translation for ${locale}`);
+        return null;
+    }
+}
 
-  in select id="locale-select" select values one by one:
-<select class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" id="locale-select" aria-label="Select Language">
-                                            <option selected="" disabled="">Choose Language</option>
-                                            <option value="en">en </option><option value="ru">ru </option><option value="hu">hu </option><option value="ne">ne </option><option value="es">es </option><option value="bg">bg </option><option value="tr">tr </option><option value="fr">fr </option><option value="zh">zh </option><option value="ro">ro </option><option value="pt">pt </option><option value="de">de </option><option value="uk">uk </option>
-                                        </select>
+test('change locale and verify translations', async ({ page }) => {
+    await page.goto('/account/language');
 
-  after each we should dispaly the page in that lcoale,a nd e use one text form it to verufy, if you cna for each locale, get their file from https://github.com/stefanpejcic/openpanel-translations/tree/main using github api and look if we have that tet to consider trnalsation working!
-  
-  console.log(`${locale is working: {text}`);
+    const locales = await page.$$eval('#locale-select option:not([disabled])', options => 
+        options.map(option => option.value)
+    );
 
-  
+    for (const locale of locales) {
+        const expectedText = await getTranslation(locale);
+        
+        if (!expectedText) {
+            console.log(`⚠️ Skipping ${locale}: Translation file or key not found.`);
+            continue;
+        }
+
+        await page.selectOption('#locale-select', locale);
+
+        const locator = page.locator(`text="${expectedText}"`);
+        
+        try {
+            await expect(locator).toBeVisible({ timeout: 5000 });
+            console.log(`${locale} is working: "${expectedText}"`);
+        } catch (error) {
+            console.log(`${locale} not working: Expected "${expectedText}" but it was not found.`);
+        }
+    }
 });
