@@ -5,7 +5,7 @@ async function navigateToDashboardPage(page: any) {
   await expect(page).toHaveURL(/dashboard/);
 }
 
-
+// OPEN
 test('access dashboard', async ({ page }) => {
   await navigateToDashboardPage(page);
   await expect(page.getByText(/cpu usage/i)).toBeVisible();
@@ -13,7 +13,7 @@ test('access dashboard', async ({ page }) => {
 });
 
 
-
+// SIDEBAR OPEN/CLOSE
 test('sidebar', async ({ page }) => {
   await navigateToDashboardPage(page);
 
@@ -35,7 +35,7 @@ test('sidebar', async ({ page }) => {
 });
 
 
-
+// THEME SWITCH
 test('dark mode', async ({ page }) => {
   await navigateToDashboardPage(page);
 
@@ -55,6 +55,7 @@ test('dark mode', async ({ page }) => {
 });
 
 
+// SEARCH
 const FILTER_JSON_URL = 'https://gist.githubusercontent.com/stefanpejcic/ea6fd1db9b36645ec3fdd0d5eb26da7d/raw/bfd0f706b711157e4d11189c455f94685e2b2c09/filter.json';
 
 let filterItems: Array<{ name: string; description: string; link: string; module: string }>;
@@ -65,42 +66,40 @@ test.beforeAll(async () => {
   console.log(`Loaded ${filterItems.length} items from filter.json`);
 });
 
-test('search - each item from filter.json appears in results', async ({ page }) => {
+test('search results', async ({ page }) => {
   await navigateToDashboardPage(page);
 
+  await page.waitForFunction(() => typeof (window as any).Alpine !== 'undefined');
+  await page.waitForTimeout(500);
+
   for (const item of filterItems) {
-    // Open search using the aria-label on the open button
     const openBtn = page.locator('button[aria-label="Open search"]');
     await expect(openBtn).toBeVisible({ timeout: 3000 });
     await openBtn.click();
 
-    // Wait for input to appear and be focused
     const searchInput = page.locator('#searchInput');
     await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await expect(searchInput).toBeFocused({ timeout: 2000 });
 
-    // Type the item name — triggers fetchResults via @input
-    await searchInput.fill(item.name);
+    await searchInput.pressSequentially(item.name, { delay: 50 });
 
-    // Wait for dropdown to appear
     const dropdown = page.locator('#filteredDropdown');
-    await expect(dropdown).toBeVisible({ timeout: 5000 });
+    await expect(dropdown).toBeVisible({ timeout: 8000 });
 
-    // The item name is inside an <a> within the dropdown li
     const match = dropdown.locator('a').filter({ hasText: item.name }).first();
     await expect(match).toBeVisible({ timeout: 3000 });
 
     console.log(`✓ found: "${item.name}"`);
 
-    // Close search via the close button (resets isOpen, searchText, dropdownItems)
     await page.locator('button[aria-label="Close search"]').click();
-
-    // Wait for input to be hidden before next iteration
     await expect(searchInput).toBeHidden({ timeout: 3000 });
   }
 
   console.log('search is functional');
 });
 
+
+// ICONS TOP/START
 test('icons toggle', async ({ page }) => {
   await navigateToDashboardPage(page);
 
@@ -123,6 +122,7 @@ test('icons toggle', async ({ page }) => {
 });
 
 
+// SORTABLE
 test('sections drag to sort', async ({ page }) => {
   await navigateToDashboardPage(page);
 
@@ -172,6 +172,7 @@ test('sections drag to sort', async ({ page }) => {
 });
 
 
+// SECTION CLOSE/OPEN
 test('section open and close', async ({ page }) => {
   await navigateToDashboardPage(page);
 
