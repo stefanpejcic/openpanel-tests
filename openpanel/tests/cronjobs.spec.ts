@@ -113,7 +113,7 @@ test('edit cronjob fields', async ({ page }) => {
 
   const edits = [
     { label: 'schedule', newValue: '0 0 * * *', originalValue: '* * * * * *' },
-    { label: 'container', newValue: 'another-service', isSelect: true },
+    { label: 'container', newValue: 'php-fpm-5.6', isSelect: true },
     { label: 'command', newValue: 'curl https://google.com' },
     { label: 'comment', newValue: 'updated description' },
   ];
@@ -147,7 +147,7 @@ test('delete', async ({ page }) => {
   await page.goto('/cronjobs?view=table');
   await expect(page).toHaveURL(/\/cronjobs\?view=table/);
 
-  const tableRow = page.locator('tr', { hasText: 'curl job' });
+  const tableRow = page.locator('tr', { hasText: /curl job|updated description/ });
   await expect(tableRow).toBeVisible();
 
   await tableRow.getByRole('button', { name: /Delete/i }).click();
