@@ -212,42 +212,38 @@ test('section open and close', async ({ page }) => {
 
 
 // MENU ITEMS CLOSE/OPEN
-test('sidebar groups collapse and expand', async ({ page }) => {
+test('sidebar collapse/expand', async ({ page }) => {
   await navigateToDashboardPage(page);
 
-  const groupButtons = page.locator('[data-sidebar="menu"] > li > button');
-  const count = await groupButtons.count();
+  const groupItems = page.locator('[data-sidebar="menu"] > li[x-data]');
+  const count = await groupItems.count();
 
   console.log(`Found ${count} sidebar groups`);
   expect(count).toBeGreaterThan(0);
 
   for (let i = 0; i < count; i++) {
-    const button = groupButtons.nth(i);
-    const label = await button.innerText();
-    const groupLi = button.locator('..');
-    const submenu = groupLi.locator('ul');
+    const li = groupItems.nth(i);
+    const button = li.locator(':scope > button');
+    const submenu = li.locator(':scope > ul');
+    const label = (await button.innerText()).trim().split('\n')[0].trim();
 
-    const chevron = button.locator('svg.remixicon');
-    const chevronClass = await chevron.getAttribute('class');
-    const isOpen = chevronClass?.includes('rotate-180');
-
-    if (!isOpen) {
+    const isHidden = await submenu.evaluate(el => el.style.display === 'none');
+    if (!isHidden) {
       await button.click();
-      await page.waitForTimeout(200);
+      await expect(submenu).toBeHidden({ timeout: 2000 });
     }
 
-    await expect(submenu).toBeVisible({ timeout: 2000 });
-    console.log(`[${label.trim()}] is open ✓`);
+    console.log(`[${label}] starting collapsed ✓`);
 
     await button.click();
-    await page.waitForTimeout(200);
-    await expect(submenu).toBeHidden({ timeout: 2000 });
-    console.log(`[${label.trim()}] collapsed ✓`);
+    await submenu.waitFor({ state: 'visible', timeout: 3000 });
+    await expect(submenu).toBeVisible();
+    console.log(`[${label}] expanded ✓`);
 
     await button.click();
-    await page.waitForTimeout(200);
-    await expect(submenu).toBeVisible({ timeout: 2000 });
-    console.log(`[${label.trim()}] expanded ✓`);
+    await submenu.waitFor({ state: 'hidden', timeout: 3000 });
+    await expect(submenu).toBeHidden();
+    console.log(`[${label}] collapsed ✓`);
   }
 
   console.log('All sidebar groups collapse/expand correctly');
