@@ -215,10 +215,9 @@ test('database wizard', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);  
-  await expect(page.locator('#databases-table')).toContainText([
-    /proba/i,
-    /novi_user/i
-  ]);
+  const row = page.locator('#databases-table tr', { hasText: 'proba' });
+  await expect(row).toContainText(/proba/i);
+  await expect(row).toContainText(/novi_user/i);
 
   console.log('mysql database wizard is working');
 });
