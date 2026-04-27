@@ -314,7 +314,7 @@ const explorerTests = [
 ];
 
 for (const { route, columnHeader, valueRegex } of explorerTests) {
-  test(`${route} is functional`, async ({ page }) => {
+  test(route, async ({ page }) => {
     // 1. Initial
     await page.goto(route);
     const table = page.locator('#folders_to_navigate');
@@ -373,7 +373,7 @@ for (const { route, columnHeader, valueRegex } of explorerTests) {
     await expect(table3).toContainText('docker-data');
     await expect(table3).not.toContainText('containerd');
     
-    console.log(`${route} functional check passed`);
+    console.log(`${route} is functional`);
   });
 }
 
