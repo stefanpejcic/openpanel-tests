@@ -184,7 +184,10 @@ test('grant ALL PRIVILEGES', async ({ page }) => {
   await page.getByRole('checkbox', { name: 'ALL PRIVILEGES' }).check();
   await page.getByRole('button', { name: 'Make Changes' }).click();
   await expect(page.locator('body')).toContainText(/Privileges granted successfully for user\s+'.+?'\s+on database\s+'.+?'/i);
-  
+
+  await page.goto(`/mysql/users`);
+  await expect(page.locator('#databases-table')).toContainText('stefan_user');
+
   console.log('assign user to database is working');
 });
 
