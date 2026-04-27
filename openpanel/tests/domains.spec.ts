@@ -39,17 +39,23 @@ test('add domain', async ({ page }) => {
 test('search domains', async ({ page }) => {
   await page.goto(`/domains`);
   await expect(page).toHaveURL(/domains/);
+
   const searchBox = page.getByRole('searchbox', { name: 'Search' });
+  const rows = page.locator('tbody tr');
 
   await searchBox.fill('wp1.jecmenica.rs');
+  await expect(rows).toHaveCountGreaterThan(0);
 
-  const rows = page.locator('tbody tr');
-  await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText(/wp1\.jecmenica\.rs/i);
+  const visibleRows = rows.filter({ has: page.locator(':visible') });
+  await expect(visibleRows).toHaveCount(1);
+  await expect(visibleRows.first()).toContainText(/wp1\.jecmenica\.rs/i);
 
-  await searchBox.fill('');
+  await expect(rows.filter({ hasNot: page.locator(':visible') })).toHaveCount(
+    (await rows.count()) - 1
+  );
+
   await searchBox.fill('non-existing-domain.com');
-  await expect(rows).toHaveCount(0);
+  await expect(rows.filter({ has: page.locator(':visible') })).toHaveCount(0);
 
   console.log('Domain search is working');
 });
