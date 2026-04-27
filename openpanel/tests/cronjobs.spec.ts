@@ -142,6 +142,18 @@ test('edit cronjob fields', async ({ page }) => {
 
 
 test('delete', async ({ page }) => {
+  await page.goto('/cronjobs?view=table');
+  await expect(page).toHaveURL(/\/cronjobs\?view=table/);
+
+  const tableRow = page.locator('tr', { hasText: 'curl job' });
+  await expect(tableRow).toBeVisible();
+
+  await tableRow.getByRole('button', { name: /Delete/i }).click();
+  
+  await expect(page.getByText('Cron job was successfully deleted.')).toBeVisible();
+
+  const remainingRows = page.locator('tbody tr');
+  await expect(remainingRows).toHaveCount(0);
 
   console.log(`delete working`);
 });
