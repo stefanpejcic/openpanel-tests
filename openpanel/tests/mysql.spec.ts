@@ -330,6 +330,7 @@ test('remote access', async ({ page }) => {
 
 
 
+// IMPORT
 test('import', async ({ page }) => {
 
   const tempFilePath = path.join(os.tmpdir(), 'test-import.sql');
@@ -366,6 +367,84 @@ INSERT INTO users VALUES (1, 'John');
   expect(sizeValue).toBeGreaterThan(0);
 
   console.log('mysql import working');
+});
+
+
+
+test('export database - all combinations', async ({ page }) => {
+    await navigateToMySQLPage(page);
+
+    const row = page.locator('#databases-table tr', { hasText: 'stefan_baza' });
+
+    async function openExportDropdown() {
+        await row.locator('button', { hasText: 'Export' }).click();
+        await page.waitForSelector('.z-50', { state: 'visible' });
+    }
+
+    async function closeDropdown() {
+        await page.keyboard.press('Escape');
+        await page.mouse.click(0, 0);
+        await page.waitForTimeout(300);
+    }
+
+    // 1. .sql to browser
+    await openExportDropdown();
+
+    await expect(row.locator('input[value="sql"]')).toBeChecked();
+    await expect(row.locator('input[value="browser"]')).toBeChecked();
+
+    await expect(row.locator('input[x-model="relativePath"]')).toBeHidden();
+
+    const [download1] = await Promise.all([
+        page.waitForEvent('download'),
+        row.locator('button[type="submit"]', { hasText: 'Export' }).click(),
+    ]);
+    expect(download1.suggestedFilename()).toMatch(/stefan_baza.*\.sql$/);
+    console.log('✓ SQL + Browser download triggered:', download1.suggestedFilename());
+
+    // 2. .sql.gz to browser
+    await openExportDropdown();
+    await row.locator('input[value="gzip"]').click();
+    await expect(row.locator('input[value="gzip"]')).toBeChecked();
+
+    const [download2] = await Promise.all([
+        page.waitForEvent('download'),
+        row.locator('button[type="submit"]', { hasText: 'Export' }).click(),
+    ]);
+    expect(download2.suggestedFilename()).toMatch(/stefan_baza.*\.sql\.gz$/);
+    console.log('✓ GZIP + Browser download triggered:', download2.suggestedFilename());
+
+    // 3. .sql to files
+    await openExportDropdown();
+    await row.locator('input[value="sql"]').click();
+    await row.locator('input[value="files"]').click();
+
+    const pathInput = row.locator('input[x-model="relativePath"]');
+    await expect(pathInput).toBeVisible();
+
+    await pathInput.fill('backups/test');
+
+    const [response3] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes('export') && resp.request().method() === 'POST'),
+        row.locator('button[type="submit"]', { hasText: 'Export' }).click(),
+    ]);
+    expect(response3.status()).toBeLessThan(500);
+    console.log('✓ SQL + Files submitted, server responded:', response3.status());
+
+    // 4. .sql.gz to files
+    await openExportDropdown();
+    await row.locator('input[value="gzip"]').click();
+    await row.locator('input[value="files"]').click();
+
+    await expect(pathInput).toBeVisible();
+    await pathInput.fill('backups/test');
+
+    const [response4] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes('export') && resp.request().method() === 'POST'),
+        row.locator('button[type="submit"]', { hasText: 'Export' }).click(),
+    ]);
+    expect(response4.status()).toBeLessThan(500);
+    console.log('✓ GZIP + Files submitted, server responded:', response4.status());
 });
 
 
