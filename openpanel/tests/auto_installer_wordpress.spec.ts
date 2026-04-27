@@ -4,6 +4,10 @@ async function navigateToAutoInstaller(page: any) {
   await page.goto(`/auto-installer`);
   await expect(page).toHaveURL(/auto-installer/);
 }
+async function navigateToWordpress(page: any) {
+  await page.goto(`/wordpress`);
+  await expect(page).toHaveURL(/wordpress/);
+}
 
 // ACCESS
 test('access auto installer', async ({ page }) => {
@@ -32,7 +36,8 @@ test('install wordpress', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Admin Username:' }).fill('rasa');
   await page.getByRole('textbox', { name: 'Admin Password:' }).fill('rasa123');
   await page.getByRole('button', { name: 'Start Installation' }).click();
-  await expect(page).toHaveURL(/wordpress/);
+  await expect(page.locator('body')).toContainText(/Successfuy installed/i, { timeout: 20000 });
+  await navigateToWordpress(page);
   await expect(page.locator('body')).toContainText(/wp2.jecmenica.rs/i);
 
   console.log('wordpress created');
