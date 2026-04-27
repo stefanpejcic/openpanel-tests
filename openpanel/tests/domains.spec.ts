@@ -34,22 +34,25 @@ test('add domain', async ({ page }) => {
   console.log(`cert file exists`);
 });
 
+
+
 test('search domains', async ({ page }) => {
   await page.goto(`/domains`);
   await expect(page).toHaveURL(/domains/);
-  await page.getByRole('searchbox', { name: 'Search' }).fill('wp1.jecmenica.rs');
-  
-  const row = page.getByRole('row').filter({ hasText: 'wp1.jecmenica.rs' });
-  await expect(row).toHaveCount(1);
-  await expect(row).toHaveText(/wp1.jecmenica.rs/i);
+  const searchBox = page.getByRole('searchbox', { name: 'Search' });
 
-  const anotherrow = page.getByRole('row').filter({ hasText: 'non-existing-domain.com' });
-  await expect(anotherrow).toHaveCount(0);
-  await expect(anotherrow).not.toHaveText(/wp1.jecmenica.rs/i);
-  
+  await searchBox.fill('wp1.jecmenica.rs');
+
+  const rows = page.locator('tbody tr');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText(/wp1\.jecmenica\.rs/i);
+
+  await searchBox.fill('');
+  await searchBox.fill('non-existing-domain.com');
+  await expect(rows).toHaveCount(0);
+
   console.log('Domain search is working');
 });
-
 
 
 
