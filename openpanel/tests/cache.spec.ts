@@ -43,8 +43,9 @@ for (const service of services) {
     const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
     await enableBtn.click();
     await expect(page.locator('text=is now enabled')).toBeVisible();
-    await page.waitForTimeout(2000);
-    await navigateToPage(page, service.name);    
+  
+    await page.waitForTimeout(5000);
+    await navigateToPage(page, service.name);
     await expect(statusText).toHaveText('Enabled');
     const greenBars = page.locator('dd .bg-emerald-500').first();
     await expect(greenBars).toBeVisible();
