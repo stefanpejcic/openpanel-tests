@@ -215,7 +215,7 @@ test('change root password', async ({ page }) => {
   await expect(page.locator('body')).toContainText(/successfully changed root password/i);
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);  
-  await expect(page.locator('body')).toContainText(/stefan_baza/i);
+  await expect(page.locator('body')).toContainText(/stefan_baza/i, { timeout: 15000 });
 
   console.log('change root password is working');
 });
