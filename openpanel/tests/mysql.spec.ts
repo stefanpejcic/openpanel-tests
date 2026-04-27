@@ -199,9 +199,7 @@ test('revoke privileges', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Remove User from Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully revoked all privileges for user/i);
-  await page.getByRole('link', { name: 'Back to Databases' }).click();
-  await expect(page.locator('body')).not.toContainText(/stefan_test/i);
-  console.log('remove user from database is working');
+  await expect(page.locator('#databases-table')).not.toContainText('stefan_user');
 });
 
 
@@ -215,7 +213,7 @@ test('database wizard', async ({ page }) => {
   await page.getByRole('button', { name: 'Create DB, User, and Grant' }).click();
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);  
-  await expect(page.locator('body')).toContainText([
+  await expect(page.locator('#databases-table')).toContainText([
     /proba/i,
     /novi_user/i
   ]);
