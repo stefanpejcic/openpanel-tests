@@ -365,12 +365,6 @@ test('export', async ({ page }) => {
         await page.waitForSelector('.export-section', { state: 'visible' });
     }
 
-    async function closeDropdown() {
-        await page.keyboard.press('Escape');
-        await page.mouse.click(0, 0);
-        await page.waitForTimeout(300);
-    }
-
     // 1. .sql to browser
     await openExportDropdown();
     await expect(row.locator('input[value="sql"]')).toBeChecked();
@@ -407,7 +401,10 @@ test('export', async ({ page }) => {
     console.log('✓ SQL + Files submitted, server responded:', response3.status());
 
     // 4. .sql.gz to files
+    await page.waitForTimeout(500);
     await openExportDropdown();
+    await row.scrollIntoViewIfNeeded();
+    await page.waitForSelector('.export-section', { state: 'visible' });
     await row.locator('input[value="gzip"]').click({ force: true });
     await row.locator('input[value="files"]').click({ force: true });
     await expect(pathInput).toBeVisible();
