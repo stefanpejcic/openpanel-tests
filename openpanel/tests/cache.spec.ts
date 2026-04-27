@@ -46,10 +46,10 @@ for (const service of services) {
   
     await page.waitForTimeout(5000);
     await navigateToPage(page, service.name);
-    await expect(statusText).toHaveText('Enabled');
+    await expect(statusText).toHaveText('Running');
     const greenBars = page.locator('dd .bg-emerald-500').first();
     await expect(greenBars).toBeVisible();
-    console.log(`${service.name} is enabled`);
+    console.log(`${service.name} is running`);
 
     // TODO: test connection
 
