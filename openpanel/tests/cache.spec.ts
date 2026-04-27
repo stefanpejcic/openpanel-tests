@@ -32,7 +32,7 @@ for (const service of services) {
     // CHECK
     const statusText = page.locator('#service-page-status');
     await expect(statusText).toHaveText('Disabled');
-    const redBars = page.locator('.bg-red-500').first();
+    const redBars = page.locator('.bg-gray-400').first();
     const nameText = await page.locator('#service-page-name').textContent();
     expect(nameText?.toLowerCase()).toContain(service.name);
     await expect(page.locator('#service-page-port')).toHaveText(service.port);
