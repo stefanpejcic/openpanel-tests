@@ -384,7 +384,7 @@ test('export', async ({ page }) => {
     console.log('✓ SQL + Browser download triggered:', download1.suggestedFilename());
 
     // 2. .sql.gz to browser
-    await openExportDropdown();
+    //await openExportDropdown();
     await row.locator('input[value="gzip"]').click({ force: true });
     await expect(row.locator('input[value="gzip"]')).toBeChecked();
     const [download2] = await Promise.all([
@@ -395,7 +395,7 @@ test('export', async ({ page }) => {
     console.log('✓ GZIP + Browser download triggered:', download2.suggestedFilename());
 
     // 3. .sql to files
-    await openExportDropdown();
+    //await openExportDropdown();
     await row.locator('input[value="sql"]').click({ force: true });
     await row.locator('input[value="files"]').click({ force: true });
     const pathInput = row.locator('input[x-model="relativePath"]');
@@ -409,7 +409,7 @@ test('export', async ({ page }) => {
     console.log('✓ SQL + Files submitted, server responded:', response3.status());
 
     // 4. .sql.gz to files
-    await openExportDropdown();
+    //await openExportDropdown();
     await row.locator('input[value="gzip"]').click({ force: true });
     await row.locator('input[value="files"]').click({ force: true });
     await expect(pathInput).toBeVisible();
