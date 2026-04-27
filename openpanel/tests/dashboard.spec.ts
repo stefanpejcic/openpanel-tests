@@ -14,7 +14,7 @@ test('access dashboard', async ({ page }) => {
 
 
 // SIDEBAR OPEN/CLOSE
-test('sidebar', async ({ page }) => {
+test('sidebar open/close', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const html = page.locator('html');
@@ -36,7 +36,7 @@ test('sidebar', async ({ page }) => {
 
 
 // THEME SWITCH
-test('dark mode', async ({ page }) => {
+test('toggle dark mode', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   await page.locator('#user-btn-info').click();
@@ -100,7 +100,7 @@ test('search results', async ({ page }) => {
 
 
 // ICONS TOP/START
-test('icons toggle', async ({ page }) => {
+test('icons mode toggle', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const iconViewBtn = page.locator('button[title="Top"]');
@@ -123,7 +123,7 @@ test('icons toggle', async ({ page }) => {
 
 
 // SORTABLE
-test('sections drag to sort', async ({ page }) => {
+test('icon sections drag&sort', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const firstSection = page.locator('#dashboard-sortable-area > [data-id]').nth(0);
@@ -173,7 +173,7 @@ test('sections drag to sort', async ({ page }) => {
 
 
 // SECTION CLOSE/OPEN
-test('section open and close', async ({ page }) => {
+test('icon sections open/close', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const firstSectionWrapper = page.locator('#dashboard-sortable-area > [data-id]').nth(0);
@@ -212,7 +212,7 @@ test('section open and close', async ({ page }) => {
 
 
 // MENU ITEMS CLOSE/OPEN
-test('sidebar groups collapse and expand', async ({ page }) => {
+test('menu items collapse/expand', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const mainSidebarGroup = page.locator('[data-sidebar="group"]').nth(1);
