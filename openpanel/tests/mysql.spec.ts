@@ -363,7 +363,7 @@ test('export', async ({ page }) => {
 
     async function openExportDropdown() {
         await row.locator('button:has-text("Export")').first().click();
-        await page.waitForSelector('.z-50', { state: 'visible' });
+        await page.waitForSelector('.export-section', { state: 'visible' });
     }
 
     async function closeDropdown() {
