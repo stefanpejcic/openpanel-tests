@@ -465,6 +465,18 @@ test('delete user', async ({ page }) => {
   await confirmButton.first().click();
 
   await expect(page.locator('body')).toContainText(/successfully deleted/i);
+
+  const deleteButtons = page.locator('button.btn-danger');
+  const count = await deleteButtons.count();
+  expect(count).toBeGreaterThan(0);
+
+  await deleteButtons.first().click();
+
+  const confirmButton = page.locator('button.btn-dark');
+  await expect(confirmButton.first()).toBeVisible();
+
+  await confirmButton.first().click();
+  
   console.log('delete user is working');
 });
 
@@ -482,5 +494,14 @@ test('delete database', async ({ page }) => {
   await confirmButton.click();
 
   await expect(page.locator('body')).toContainText(/successfully deleted/i);
+
+  const deleteButton = page.locator('button.btn-danger').first();
+  await expect(deleteButton).toBeVisible();
+  await deleteButton.click();
+
+  const confirmButton = page.locator('button.btn-dark').first();
+  await expect(confirmButton).toBeVisible();
+  await confirmButton.click();
+  
   console.log('delete database is working');
 });
