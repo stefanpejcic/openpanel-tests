@@ -293,6 +293,7 @@ test('remote access', async ({ page }) => {
   await expect(statusText).toHaveText('Enabled');
   const greenBars = page.locator('dd .bg-emerald-500').first();
   await expect(greenBars).toBeVisible();
+  console.log('remote access is enabled');
 
   // 2. TEST
   await page.waitForTimeout(10000); // allow container to restart
@@ -308,6 +309,7 @@ test('remote access', async ({ page }) => {
 
   const text = await response.text();
   expect(text).toMatch(/Connection successful/i);
+  console.log('connectin established from a remote server');
 
   // 3. OFF
   await page.goto('/mysql/remote-mysql');
@@ -316,6 +318,7 @@ test('remote access', async ({ page }) => {
   await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
   await expect(statusText).toHaveText('Disabled');
   await expect(redBars).toBeVisible();
+  console.log('remote access is disabled');
 });
 
 
