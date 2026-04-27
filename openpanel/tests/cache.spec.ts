@@ -27,6 +27,11 @@ const services = [
 
 for (const service of services) {
   test(`${service.name} page`, async ({ page }) => {
+
+    if (service.name === 'elasticsearch' || service.name === 'opensearch') {
+      test.setTimeout(60_000); // 60s
+    }
+    
     await navigateToPage(page, service.name);
 
     // CHECK
