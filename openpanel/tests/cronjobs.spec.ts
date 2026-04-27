@@ -12,7 +12,7 @@ test('list', async ({ page }) => {
 
 
 
-test('create', async ({ page }) => {
+test('create job', async ({ page }) => {
   await page.goto('/cronjobs/new');
   await expect(page).toHaveURL(/\/cronjobs\/new/);
 
@@ -37,7 +37,7 @@ test('create', async ({ page }) => {
 
 
 
-test('logs', async ({ page }) => {
+test('view logs', async ({ page }) => {
   await page.goto('/cronjobs');
 
   const tableRow = page.locator('tr', { hasText: 'curl job' });
@@ -61,7 +61,7 @@ test('logs', async ({ page }) => {
 
 
 
-test('file editor', async ({ page }) => {
+test('edit as file', async ({ page }) => {
   await page.goto('/cronjobs?view=code');
   await expect(page).toHaveURL(/\/cronjobs\?view=code/);
 
@@ -104,7 +104,7 @@ command = curl https://google.com > /var/www/html/cron-test.txt`;
 
 
 
-test('edit cronjob fields', async ({ page }) => {
+test('edit job', async ({ page }) => {
   await page.goto('/cronjobs?view=table');
 
   let tableRow = page.locator('tr', { hasText: 'curl job' });
@@ -140,7 +140,7 @@ test('edit cronjob fields', async ({ page }) => {
 
 
 
-test('delete', async ({ page }) => {
+test('delete job', async ({ page }) => {
   await page.goto('/cronjobs?view=table');
   await expect(page).toHaveURL(/\/cronjobs\?view=table/);
 
