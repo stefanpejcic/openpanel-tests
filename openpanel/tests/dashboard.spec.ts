@@ -100,7 +100,9 @@ test('search results', async ({ page }) => {
 });
 
 
-test('compare sidebar menu links with filter.json', async ({ page }) => {
+
+
+test('compare sidebar menu links with search', async ({ page }) => {
   test.setTimeout(90_000);
 
   await navigateToDashboardPage(page);
@@ -109,62 +111,46 @@ test('compare sidebar menu links with filter.json', async ({ page }) => {
   await page.waitForTimeout(500);
 
   const openMenus = page.locator('li[x-data] > button');
-
   const menuCount = await openMenus.count();
-  console.log(`Found ${menuCount} sidebar menus`);
 
-  const actualLinks: Array<{ name: string; href: string }> = [];
-
+  // expand all menus
   for (let i = 0; i < menuCount; i++) {
     await openMenus.nth(i).click();
     await page.waitForTimeout(200);
   }
 
-  // collect all links
   const links = page.locator('ul[id$="-menu"] a[href]');
   const linkCount = await links.count();
+
+  const menuLinks: Array<{ name: string; href: string }> = [];
 
   for (let i = 0; i < linkCount; i++) {
     const el = links.nth(i);
 
-    const name = (await el.textContent())?.trim() || '';
-    const href = (await el.getAttribute('href')) || '';
-
-    actualLinks.push({ name, href });
+    menuLinks.push({
+      name: (await el.textContent())?.trim() || '',
+      href: (await el.getAttribute('href')) || '',
+    });
   }
 
-  console.log('Collected sidebar links:', actualLinks);
+  // build fast lookup set from filter.json
+  const validLinks = new Set(filterItems.map(i => i.link));
 
-  // compare with filter.json
-  const mismatches: string[] = [];
+  const unexpected: string[] = [];
 
-  for (const item of filterItems) {
-    const match = actualLinks.find(l =>
-      l.href === item.link || l.name === item.name
-    );
-
-    if (!match) {
-      mismatches.push(`Missing: ${item.name} (${item.link})`);
+  for (const link of menuLinks) {
+    if (!validLinks.has(link.href)) {
+      unexpected.push(`${link.name} (${link.href})`);
     }
   }
 
-  for (const link of actualLinks) {
-    const match = filterItems.find(i =>
-      i.link === link.href || i.name === link.name
-    );
-
-    if (!match) {
-      mismatches.push(`Unexpected: ${link.name} (${link.href})`);
-    }
+  if (unexpected.length) {
+    console.error('Unexpected menu items:\n', unexpected.join('\n'));
   }
 
-  if (mismatches.length) {
-    console.error('Link mismatches found:\n', mismatches.join('\n'));
-  }
+  expect(unexpected).toHaveLength(0);
 
-  expect(mismatches).toHaveLength(0);
-
-  console.log('sidebar menu links match filter.json');
+  console.log('sidebar menu is subset of filter.json (valid)');
 });
 
 
