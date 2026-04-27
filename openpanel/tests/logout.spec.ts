@@ -11,5 +11,5 @@ test('logout', async ({ page }) => {
   await page.goto('/dashboard');
   await expect(page).toHaveURL(/.*login/);
 
-  console.log('logout working');
+  console.log('logout terminated session');
 });
