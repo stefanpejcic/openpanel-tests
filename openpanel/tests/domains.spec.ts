@@ -37,8 +37,6 @@ test('add domain', async ({ page }) => {
 test('search domains', async ({ page }) => {
   await page.goto(`/domains`);
   await expect(page).toHaveURL(/domains/);
-
-  await navigateToUserPackages(page);
   await page.getByRole('searchbox', { name: 'Search' }).fill('wp1.jecmenica.rs');
   
   const row = page.getByRole('row').filter({ hasText: 'wp1.jecmenica.rs' });
@@ -54,9 +52,6 @@ test('search domains', async ({ page }) => {
 test('check columns for domains table', async ({ page }) => {
   await page.goto(`/domains`);
   await expect(page).toHaveURL(/domains/);
-
-  await navigateToUserPackages(page);
-
   await page.getByRole('button', { name: 'Show Columns' }).click();
 
   const rows = page.locator('ul[aria-labelledby="dropdownToggleButton"] li');
