@@ -415,6 +415,18 @@ test('export', async ({ page }) => {
     expect(response4.status()).toBeLessThan(500);
     await expect( page.getByText(/Database '.*' exported to .*/) ).toBeVisible();
     console.log('✓ GZIP + Files submitted, server responded:', response4.status());
+
+    // 5. check if files created
+    const filesResponse = await page.goto('/files?output=json');
+    const filesData = await filesResponse.json();
+    const fileNames = filesData.files_info.map(f => f.name);
+
+    const sqlFile = fileNames.find(n => n.match(/stefan_baza.*\.sql$/) && !n.endsWith('.gz'));
+    const gzFile = fileNames.find(n => n.match(/stefan_baza.*\.sql\.gz$/));
+
+    expect(sqlFile).toBeTruthy();
+    expect(gzFile).toBeTruthy();
+    console.log('✓ export files found in /files:', sqlFile, gzFile);
 });
 
 
