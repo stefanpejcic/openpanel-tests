@@ -43,10 +43,12 @@ for (const service of services) {
     const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
     await enableBtn.click();
     await expect(page.locator('text=is now enabled')).toBeVisible();
+    await page.waitForTimeout(2000);
+    await navigateToPage(page, service.name);    
     await expect(statusText).toHaveText('Enabled');
     const greenBars = page.locator('dd .bg-emerald-500').first();
     await expect(greenBars).toBeVisible();
-    console.log('remote access is enabled');
+    console.log(`${service.name} is enabled`);
 
     // TODO: test connection
 
@@ -56,6 +58,7 @@ for (const service of services) {
     const logContent = page.locator('#log-content');
     await expect(logContent).not.toHaveText('No logs.');
     await expect(logContent).not.toBeEmpty();
+    console.log(`${service.name} logs are working`);
 
     // DISABLE
     const disableBtn = page.locator('button', { hasText: 'Click to Disable' });
@@ -63,10 +66,7 @@ for (const service of services) {
     await expect(page.locator('text=is now disabled')).toBeVisible();
     await expect(statusText).toHaveText('Disabled');
     await expect(redBars).toBeVisible();
+    console.log(`${service.name} is disbaled`);
 
-
-
-    
-    console.log(`${service.name} remote access is disabled`);
   });
 }
