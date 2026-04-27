@@ -362,7 +362,7 @@ test('export', async ({ page }) => {
     const row = page.locator('#databases-table tr', { hasText: 'stefan_baza' });
 
     async function openExportDropdown() {
-        await row.locator('button', { hasText: 'Export' }).click();
+        await row.locator('button', { hasText: ' Export' }).click();
         await page.waitForSelector('.z-50', { state: 'visible' });
     }
 
