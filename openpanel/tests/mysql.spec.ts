@@ -182,12 +182,9 @@ test('database wizard', async ({ page }) => {
 
 test('processlist', async ({ page }) => {
   await page.goto(`/mysql/processlist`);
-  await expect(page).toHaveURL(/.*mysql\/processlist/);  
-  await expect(page.locator('body')).toContainText([
-    /host/i,
-    /state/i
-  ]);
-
+  await expect(page).toHaveURL(/.*mysql\/processlist/);
+  await expect(page.locator('body')).toContainText(/host/i);
+  await expect(page.locator('body')).toContainText(/state/i);
   console.log('processlist is working');
 });
 
@@ -195,20 +192,16 @@ test('processlist', async ({ page }) => {
 
 test('configuration editor', async ({ page }) => {
   await page.goto(`/mysql/configuration`);
-  await expect(page).toHaveURL(/.*mysql\/configuration/);  
-  await expect(page.locator('body')).toContainText([
-    /max_allowed_packet/i,
-    /log_error_verbosity/i
-  ]);
+  await expect(page).toHaveURL(/.*mysql\/configuration/);
+  await expect(page.locator('body')).toContainText(/max_allowed_packet/i);
+  await expect(page.locator('body')).toContainText(/log_error_verbosity/i);
   await page.locator('#interactive_timeout').fill('90');
   await page.locator('#wait_timeout').fill('300');
   await page.getByRole('button', { name: 'Save Changes' }).click();
   await expect(page.locator('body')).toContainText(/configuration updated and service restarted/i);
   await page.waitForLoadState('networkidle');
-
   await expect(page.locator('#interactive_timeout')).toHaveValue('90');
   await expect(page.locator('#wait_timeout')).toHaveValue('300');
-
   console.log('mysql configuration is saved');
 });
 
