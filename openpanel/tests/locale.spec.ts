@@ -9,7 +9,7 @@ const localeMapping = {
 };
 
 async function getTranslation(locale) {
-    const folder = localeMapping[locale] || locale;
+    const folder = localeMapping[locale] || `${locale}-${locale}`;
     const url = `https://raw.githubusercontent.com/stefanpejcic/openpanel-translations/main/${folder}/messages.po`;
     
     try {
@@ -26,7 +26,7 @@ async function getTranslation(locale) {
     }
 }
 
-const localesToTest = [ 'bg', 'de', 'en', 'es', 'fr', 'hu', 'ne', 'pt', 'ro', 'ru', 'tr', 'uk', 'zh'];
+const localesToTest = [ 'bg', 'de', 'es', 'fr', 'hu', 'ne', 'pt', 'ro', 'ru', 'tr', 'uk', 'zh', 'en'];
 
 test.describe('Change and use locale', () => {
     
