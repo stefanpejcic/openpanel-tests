@@ -43,9 +43,9 @@ test('search domains', async ({ page }) => {
   await expect(row).toHaveCount(1);
   await expect(row).toHaveText(/wp1.jecmenica.rs/i);
 
-  const row = page.getByRole('row').filter({ hasText: 'non-existing-domain.com' });
-  await expect(row).toHaveCount(0);
-  await expect(row).not.toHaveText(/wp1.jecmenica.rs/i);
+  const anotherrow = page.getByRole('row').filter({ hasText: 'non-existing-domain.com' });
+  await expect(anotherrow).toHaveCount(0);
+  await expect(anotherrow).not.toHaveText(/wp1.jecmenica.rs/i);
   
   console.log('Domain search is working');
 });
