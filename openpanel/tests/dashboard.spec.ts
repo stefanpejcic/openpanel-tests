@@ -78,13 +78,13 @@ test('search results', async ({ page }) => {
     await openBtn.click();
 
     const searchInput = page.locator('#searchInput');
-    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await expect(searchInput).toBeVisible({ timeout: 2000 });
     await expect(searchInput).toBeFocused({ timeout: 2000 });
 
     await searchInput.pressSequentially(item.name, { delay: 50 });
 
     const dropdown = page.locator('#filteredDropdown');
-    await expect(dropdown).toBeVisible({ timeout: 8000 });
+    await expect(dropdown).toBeVisible({ timeout: 5000 });
 
     const match = dropdown.locator('a').filter({ hasText: item.name }).first();
     await expect(match).toBeVisible({ timeout: 3000 });
