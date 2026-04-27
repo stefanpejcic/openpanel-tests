@@ -56,7 +56,7 @@ test('toggle dark mode', async ({ page }) => {
 
 
 // SEARCH
-const FILTER_JSON_URL = 'https://gist.githubusercontent.com/stefanpejcic/ea6fd1db9b36645ec3fdd0d5eb26da7d/raw/7ec9efc6d1027c3644c5e812b35bf7b4a07ba058/filter.json';
+const FILTER_JSON_URL = 'https://gist.githubusercontent.com/stefanpejcic/ea6fd1db9b36645ec3fdd0d5eb26da7d/raw/73783ecafd9c3488b2c6de4cf0002bff17f3a1f7/filter.json';
 
 let filterItems: Array<{ name: string; description: string; link: string; module: string }>;
 
