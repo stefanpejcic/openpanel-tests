@@ -1,7 +1,71 @@
 import { test, expect } from '@playwright/test';
 
+async function navigateToPage(page: any, service: string) {
+  await page.goto(`/cache/${service}`);
+  await expect(page).toHaveURL(new RegExp(`cache/${service}`));
+}
 
-async function navigateToRedisLPage(page: any) {
-  await page.goto(`/cache/redis`);
-  await expect(page).toHaveURL(/cache\/redis/);
+// cache services
+const services = [
+  {
+    name: 'redis',
+    port: '6379',
+  },
+  {
+    name: 'memcached',
+    port: '11211',
+  },
+  {
+    name: 'elasticsearch',
+    port: '9200',
+  },
+  {
+    name: 'opensearch',
+    port: '9200',
+  },
+];
+
+for (const service of services) {
+  test(`${service.name} service page`, async ({ page }) => {
+    await navigateToPage(page, service.name);
+
+    // CHECK
+    const statusText = page.locator('#service-status');
+    await expect(statusText).toHaveText('Disabled');
+    const nameText = await page.locator('#service-name').textContent();
+    expect(nameText?.toLowerCase()).toContain(service.name);
+    await expect(page.locator('#service-port')).toHaveText(service.port);
+
+    console.log(`${service.name} has correct data`);
+  
+    // ENABLE
+    const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
+    await enableBtn.click();
+    await expect(page.locator('text=is now enabled')).toBeVisible();
+    await expect(statusText).toHaveText('Enabled');
+    const greenBars = page.locator('dd .bg-emerald-500').first();
+    await expect(greenBars).toBeVisible();
+    console.log('remote access is enabled');
+
+    // TODO: test connection
+
+    // LOGS
+    await page.click('button:has-text("fetchLogs")');
+    await page.waitForResponse(response => response.url().includes('/api/containers/log/service.name') && response.status() === 200);
+    const logContent = page.locator('#log-content');
+    await expect(logContent).not.toHaveText('No logs.');
+    await expect(logContent).not.toBeEmpty();
+
+    // DISABLE
+    const disableBtn = page.locator('button', { hasText: 'Click to Disable' });
+    await disableBtn.click();
+    await expect(page.locator('text=is now disabled')).toBeVisible();
+    await expect(statusText).toHaveText('Disabled');
+    await expect(redBars).toBeVisible();
+
+
+
+    
+    console.log(`${service.name} remote access is disabled`);
+  });
 }
