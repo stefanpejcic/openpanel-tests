@@ -11,8 +11,7 @@ async function navigateToMySQLPage(page: any) {
 // ACCESS
 test('list databases', async ({ page }) => {
   await navigateToMySQLPage(page);
-  await expect(page.locator('body'))
-    .toContainText(/create your first database/i, { timeout: 20000 });
+  await expect(page.locator('body')).toContainText(/create your first database/i, { timeout: 20000 });
   console.log('mysql initialized');
 });
 
@@ -472,6 +471,23 @@ test('delete user', async ({ page }) => {
 });
 
 
+
+test('phpmyadmin auto-login', async ({ page }) => {
+  await page.goto(`/phpmyadmin?route=/database/structure&server=1&db=stefan_baza`);
+  // wait up to 30sec and expect: http://185.193.66.252:32797/index.php?server=1&route=%2Fdatabase%2Fstructure&db=stefan_baza
+  await expect(page.locator('body')).toContainText(/stefan_baza/i, { timeout: 30000 });
+
+  console.log('phpmyadmin auto-login is working');
+});
+
+
+
+test('phpmyadmin settings', async ({ page }) => {
+  await page.goto(`/mysql/phpmyadmin`);  
+  await expect(page.locator('body')).toContainText(/stefan_baza/i, { timeout: 30000 });
+  // TODO: cover user/pass combo, and edit service: off/on, edit limits..
+  console.log('phpmyadmin settings are working');
+});
 
 test('delete database', async ({ page }) => {
   await navigateToMySQLPage(page);
