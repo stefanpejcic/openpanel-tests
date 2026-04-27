@@ -139,8 +139,3 @@ test('delete', async ({ page }) => {
 
   console.log(`delete working`);
 });
-
-test('delete', async ({ page }) => {
-
-  console.log(`delete working`);
-});
