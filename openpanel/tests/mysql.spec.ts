@@ -48,9 +48,11 @@ test('show system databases', async ({ page }) => {
 test('show database sizes', async ({ page }) => {
   await navigateToMySQLPage(page);
 
-  await page.getByRole('switch', { name: 'Show database sizes' }).check();
+  const showSizesCheckbox = page.locator('#showSizesCheckbox');
+  await showSizesCheckbox.check();
+  await expect(page.locator('#size-column-header')).toBeVisible();
   await page.locator('#display-size').selectOption('mb');
-  await expect(page.locator('body')).toContainText(/Size (MB)/i);
+  await expect(page.locator('#size_unit')).toHaveText('(MB)');
 
   console.log('show database sizes working');
 });
