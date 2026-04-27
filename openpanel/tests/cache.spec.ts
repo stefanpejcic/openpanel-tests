@@ -30,12 +30,12 @@ for (const service of services) {
     await navigateToPage(page, service.name);
 
     // CHECK
-    const statusText = page.locator('#service-status');
+    const statusText = page.locator('#service-page-status');
     await expect(statusText).toHaveText('Disabled');
     const redBars = page.locator('dd .bg-red-500').first();
-    const nameText = await page.locator('#service-name').textContent();
+    const nameText = await page.locator('#service-page-name').textContent();
     expect(nameText?.toLowerCase()).toContain(service.name);
-    await expect(page.locator('#service-port')).toHaveText(service.port);
+    await expect(page.locator('#service-page-port')).toHaveText(service.port);
 
     console.log(`${service.name} has correct data`);
   
