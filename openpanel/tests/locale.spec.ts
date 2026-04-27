@@ -1,14 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-// differ
 const localeMapping = {
     'ne': 'ne-np',
     'en': 'en-us',
+    'pt': 'pt-br',
     'uk': 'uk-ua',
     'zh': 'zh-cn',
 };
 
-// msgid "Change Language"
 async function getTranslation(locale) {
     const folder = localeMapping[locale] || locale;
     const url = `https://raw.githubusercontent.com/stefanpejcic/openpanel-translations/main/${folder}/messages.po`;
@@ -18,39 +17,29 @@ async function getTranslation(locale) {
         if (!response.ok) return null;
         const text = await response.text();
         
+        // Matches the msgstr for the "Change Language" msgid
         const regex = /msgid "Change Language"\s+msgstr "(.*)"/;
         const match = text.match(regex);
         return match ? match[1] : null;
     } catch (e) {
-        console.error(`Failed to fetch translation for ${locale}`);
         return null;
     }
 }
 
-test('change locale and verify translations', async ({ page }) => {
-    await page.goto('/account/language');
+const localesToTest = [ 'bg', 'de', 'en', 'es', 'fr', 'hu', 'ne', 'pt', 'ro', 'ru', 'tr', 'uk', 'zh'];
 
-    const locales = await page.$$eval('#locale-select option:not([disabled])', options => 
-        options.map(option => option.value)
-    );
-
-    for (const locale of locales) {
-        const expectedText = await getTranslation(locale);
+test.describe('test locale', () => {
+    
+    for (const locale of localesToTest) {
         
-        if (!expectedText) {
-            console.log(`⚠️ Skipping ${locale}: Translation file or key not found.`);
-            continue;
-        }
+        test(`verify translation for locale: ${locale}`, async ({ page }) => {
+            const expectedText = await getTranslation(locale);
+            test.skip(!expectedText, `Translation key for "${locale}" not found on GitHub.`);
 
-        await page.selectOption('#locale-select', locale);
-
-        const locator = page.locator(`text="${expectedText}"`);
-        
-        try {
+            await page.goto('/account/language');
+            await page.selectOption('#locale-select', locale);
+            const locator = page.getByText(expectedText, { exact: true });
             await expect(locator).toBeVisible({ timeout: 5000 });
-            console.log(`${locale} is working: "${expectedText}"`);
-        } catch (error) {
-            console.log(`${locale} not working: Expected "${expectedText}" but it was not found.`);
-        }
+        });
     }
 });
