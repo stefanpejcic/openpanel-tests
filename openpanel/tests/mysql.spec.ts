@@ -388,7 +388,7 @@ test('export', async ({ page }) => {
     console.log('✓ SQL + Browser download triggered:', download1.suggestedFilename());
 
     // 2. .sql.gz to browser
-    //await openExportDropdown();
+    await openExportDropdown();
     await row.locator('input[value="gzip"]').click();
     await expect(row.locator('input[value="gzip"]')).toBeChecked();
 
@@ -400,7 +400,7 @@ test('export', async ({ page }) => {
     console.log('✓ GZIP + Browser download triggered:', download2.suggestedFilename());
 
     // 3. .sql to files
-    //await openExportDropdown();
+    await openExportDropdown();
     await row.locator('input[value="sql"]').click();
     await row.locator('input[value="files"]').click();
 
@@ -417,7 +417,7 @@ test('export', async ({ page }) => {
     console.log('✓ SQL + Files submitted, server responded:', response3.status());
 
     // 4. .sql.gz to files
-    //await openExportDropdown();
+    await openExportDropdown();
     await row.locator('input[value="gzip"]').click();
     await row.locator('input[value="files"]').click();
 
