@@ -90,8 +90,14 @@ command = curl https://google.com > /var/www/html/cron-test.txt`;
     return document.querySelector('.CodeMirror').CodeMirror.getValue();
   });
   expect(postSaveContent).toContain('schedule = * * * * * *');
-  
-  console.log(`cronjob file editor verified and working`);
+
+  await page.goto('/cronjobs?view=table');
+  await expect(page).toHaveURL(/\/cronjobs\?view=table/);
+  const tableRow = page.locator('tr', { hasText: 'curl job' });
+  await expect(tableRow).toBeVisible();
+  await expect(tableRow).toContainText(`* * * * * *`);
+
+  console.log(`cronjob file editor working`);
 });
 
 
