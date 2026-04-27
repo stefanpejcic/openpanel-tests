@@ -292,16 +292,18 @@ test('remote access', async ({ page }) => {
   await expect(greenBars).toBeVisible();
 
   // 2. TEST
-  await page.goto('https://api.openpanel.com/remote-mysql/');
-  await page.fill('input[name="host"]', remoteServerText?.trim());
-  await page.fill('input[name="port"]', remotePortText?.trim());
-  await page.fill('input[name="username"]', 'novi_user');
-  await page.fill('input[name="password"]', 'stefan456g7dsd');
-  await page.fill('input[name="database"]', 'proba');
+  const response = await page.request.post('https://api.openpanel.com/remote-mysql/', {
+    form: {
+      host: remoteServerText?.trim(),
+      port: remotePortText?.trim(),
+      username: 'novi_user',
+      password: 'stefan456g7dsd',
+      database: 'proba',
+    }
+  });
   
-  await page.click('button[type="submit"]');
-
-  await expect(page.locator('body')).toContainText(/Connection successful/i, { timeout: 5000 });
+  const text = await response.text();
+  expect(text).toMatch(/Connection successful/i);
 
   // 3. OFF
   await page.goto('/mysql/remote-mysql');
