@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 async function navigateToMySQLPage(page: any) {
   await page.goto(`/mysql`);
@@ -323,6 +326,46 @@ test('remote access', async ({ page }) => {
   await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
   await expect(statusText).toHaveText('Disabled');
   await expect(redBars).toBeVisible();
+});
+
+
+
+test('import', async ({ page }) => {
+
+  const tempFilePath = path.join(os.tmpdir(), 'test-import.sql');
+
+  const sqlContent = `
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (id INT, name VARCHAR(50));
+INSERT INTO users VALUES (1, 'John');
+`;
+
+  fs.writeFileSync(tempFilePath, sqlContent);
+
+  await page.goto(`/mysql/import/stefan_baza`);
+  await expect(page).toHaveURL(/.*mysql\/import\/stefan_baza/);  
+
+  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
+  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
+  await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
+
+  await page.getByRole('button', { name: 'Upload & Import' }).click();
+  await expect(page.locator('body')).toContainText(/Successfully imported from test-import.sql file to database: stefan_baza/i);
+
+  await navigateToMySQLPage(page);
+
+  const showSizesCheckbox = page.locator('#showSizesCheckbox');
+  await showSizesCheckbox.check();
+  await expect(page.locator('#size-column-header')).toBeVisible();
+  await page.locator('#display-size').selectOption('mb');
+  
+  const row = page.locator('#databases-table tr', { hasText: 'stefan_baza' });
+  const sizeCell = row.locator('td.db_size_cell');
+  const sizeText = await sizeCell.textContent();
+  const sizeValue = Number(sizeText?.trim());
+  expect(sizeValue).toBeGreaterThan(0);
+
+  console.log('mysql import working');
 });
 
 
