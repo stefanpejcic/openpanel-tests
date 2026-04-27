@@ -9,7 +9,7 @@ async function navigateToMySQLPage(page: any) {
 }
 
 // ACCESS
-test('access databases', async ({ page }) => {
+test('list databases', async ({ page }) => {
   await navigateToMySQLPage(page);
   await expect(page.locator('body'))
     .toContainText(/create your first database/i, { timeout: 20000 });
@@ -62,7 +62,7 @@ test('show database sizes', async ({ page }) => {
 
 
 
-test('access users', async ({ page }) => {
+test('list users', async ({ page }) => {
   await page.goto(`/mysql/users`);
   await expect(page).toHaveURL(/.*mysql\/users/);
   await expect(page.locator('body')).toContainText(/no users yet/i);
@@ -356,7 +356,7 @@ INSERT INTO users VALUES (1, 'John');
 
 
 
-test('export database - all combinations', async ({ page }) => {
+test('export', async ({ page }) => {
     await navigateToMySQLPage(page);
 
     const row = page.locator('#databases-table tr', { hasText: 'stefan_baza' });
