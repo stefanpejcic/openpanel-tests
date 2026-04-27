@@ -53,6 +53,8 @@ for (const service of services) {
 
     // TODO: test connection
 
+    // TODO: check usage data
+
     // LOGS
     await page.click('button:has-text("fetchLogs")');
     await page.waitForResponse(response => response.url().includes(`/api/containers/log/${service.name}`) && response.status() === 200);
