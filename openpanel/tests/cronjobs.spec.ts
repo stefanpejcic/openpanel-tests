@@ -123,7 +123,8 @@ test('edit cronjob fields', async ({ page }) => {
     if (edit.isSelect) {
       await tableRow.locator('select[name="container"]').selectOption({ label: edit.newValue });
     } else {
-      await tableRow.locator(`input[name="${edit.label}"]`).fill(edit.newValue);
+      const input = tableRow.locator(`input[name="${edit.label}"]:visible`);
+      await input.fill(edit.newValue);
     }
 
     await tableRow.getByRole('button', { name: /Save/i }).click();
