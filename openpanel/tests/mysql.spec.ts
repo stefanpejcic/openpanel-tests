@@ -114,7 +114,7 @@ test('change password', async ({ page }) => {
 
 
 
-test('grant privileges', async ({ page }) => {
+test('grant CREATE ROUTE privilege', async ({ page }) => {
   await page.goto(`/mysql/users`);
   await page.getByRole('link', { name: 'Assign User to Database' }).click();
   await expect(page).toHaveURL(/.*mysql\/assign/);
@@ -132,6 +132,23 @@ test('grant privileges', async ({ page }) => {
   await page.getByRole('button', { name: 'Make Changes' }).click();
   await expect(page.locator('body')).toContainText(/Privileges granted successfully for user\s+'.+?'\s+on database\s+'.+?'/i);
 
+  console.log('granting a single permission to user is working');
+});
+
+
+
+test('grant NO privileges', async ({ page }) => {
+  await page.goto(`/mysql/users`);
+  await page.getByRole('link', { name: 'Assign User to Database' }).click();
+  await expect(page).toHaveURL(/.*mysql\/assign/);
+
+  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
+
+  await page.locator('select[name="db_user"]').selectOption('stefan_user');
+  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
+
+  await page.waitForResponse(resp => resp.url().includes('/mysql/privileges/') && resp.status() === 200);
+
   // REMOVE 'CREATE ROUTE' - expect error!
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);
@@ -141,6 +158,23 @@ test('grant privileges', async ({ page }) => {
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).uncheck();
   await page.getByRole('button', { name: 'Make Changes' }).click();
   await expect(page.locator('body')).toContainText(/at least one privilege must be selected/i);
+
+  console.log('granting no privileges does show error');
+});
+
+
+
+test('grant ALL PRIVILEGES', async ({ page }) => {
+  await page.goto(`/mysql/users`);
+  await page.getByRole('link', { name: 'Assign User to Database' }).click();
+  await expect(page).toHaveURL(/.*mysql\/assign/);
+
+  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
+
+  await page.locator('select[name="db_user"]').selectOption('stefan_user');
+  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
+
+  await page.waitForResponse(resp => resp.url().includes('/mysql/privileges/') && resp.status() === 200);
 
   // GRANT 'ALL PRIVILEGES'
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).check();
