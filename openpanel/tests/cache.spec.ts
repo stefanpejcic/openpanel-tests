@@ -79,8 +79,7 @@ for (const service of services) {
       const value = await item.locator('span').last().innerText();
       stats[label.trim()] = value.trim();
     }
-    
-    console.log('Collected stats:', stats); //TODO: remove
+    //console.log('Collected stats:', stats);
     
     const requiredKeys = ['ID', 'Name', 'CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'Block I/O', 'PIDs'];
     for (const key of requiredKeys) {
