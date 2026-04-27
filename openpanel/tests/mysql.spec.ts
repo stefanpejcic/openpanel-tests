@@ -211,6 +211,8 @@ test('database wizard', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Database User' }).fill('novi_user');
   await page.getByRole('textbox', { name: 'Password' }).fill('stefan456g7dsd');
   await page.getByRole('button', { name: 'Create DB, User, and Grant' }).click();
+  await expect(page.getByText('Process completed!')).toBeVisible();
+
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);  
   await expect(page.locator('#databases-table')).toContainText([
