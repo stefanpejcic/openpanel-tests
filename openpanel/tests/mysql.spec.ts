@@ -261,27 +261,23 @@ test('remote access', async ({ page }) => {
   const redBars = page.locator('dd .bg-red-500').first();
   await expect(redBars).toBeVisible();
 
-  const localSection = page.locator('section').filter({ has: page.locator('h2#local') });
-  const localServer = localSection.locator('span.text-3xl').first();
-  const localServerText = await localServer.textContent();
+  const localServerText = await page.locator('#local_server').textContent();
   expect(localServerText?.toLowerCase()).toMatch(/mysql|mariadb/);
-  const localPort = localSection.locator('span.text-3xl').nth(1);
-  await expect(localPort).toHaveText('3306');
 
-  const remoteSection = page.locator('section').filter({ has: page.locator('h2#remote') });
-  const remoteServer = remoteSection.locator('span.text-3xl').first();
-  const remoteServerText = await remoteServer.textContent();
+  await expect(page.locator('#local_port')).toHaveText('3306');
 
+  const remoteServerText = await page.locator('#remote_server').textContent();
   const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
   expect(remoteServerText?.trim()).toMatch(ipv4Regex);
-  const parts = remoteServerText!.trim().split('.').map(Number);
-  expect(parts[0]).not.toBe(127);                                             // not loopback
-  expect(parts[0]).not.toBe(10);                                              // not 10.x.x.x
-  expect(!(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)).toBe(true); // not 172.16–31.x.x
-  expect(!(parts[0] === 192 && parts[1] === 168)).toBe(true);                 // not 192.168.x.x
 
-  const remotePort = remoteSection.locator('span.text-3xl').nth(1);
-  const remotePortNum = parseInt((await remotePort.textContent()) ?? '0', 10);
+  const parts = remoteServerText!.trim().split('.').map(Number);
+  expect(parts[0]).not.toBe(127);
+  expect(parts[0]).not.toBe(10);
+  expect(!(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)).toBe(true);
+  expect(!(parts[0] === 192 && parts[1] === 168)).toBe(true);
+
+  const remotePortText = await page.locator('#remote_port').textContent();
+  const remotePortNum = parseInt(remotePortText ?? '0', 10);
   expect(remotePortNum).toBeGreaterThanOrEqual(32768);
   expect(remotePortNum).toBeLessThanOrEqual(65535);
 
@@ -290,25 +286,24 @@ test('remote access', async ({ page }) => {
   await enableBtn.click();
   await expect(page.locator('text=Remote MySQL access is now enabled')).toBeVisible();
   await expect(statusText).toHaveText('Enabled');
+
   const greenBars = page.locator('dd .bg-emerald-500').first();
   await expect(greenBars).toBeVisible();
 
   // 2. TEST
   await page.goto('https://www.rainbowspuppiessunshine.com/tools/dbtest/index.php');
-  await page.fill('input[name="in_ServerName"]', `${remoteServerText}:${remotePort}`);
+  await page.fill('input[name="in_ServerName"]', `${remoteServerText?.trim()}:${remotePortText?.trim()}`);
   await page.fill('input[name="in_UserName"]', 'novi_user');
   await page.fill('input[name="in_Password"]', 'stefan456g7dsd');
   await page.fill('input[name="in_Database"]', 'proba');
   await page.click('input[type="submit"]');
-  const result = page.locator('body');
-  await expect(result).toContainText(/success|error|connected/i);  
+  await expect(page.locator('body')).toContainText(/success|error|connected/i);
 
   // 3. OFF
+  await page.goto('/mysql/remote-mysql');
   const disableBtn = page.locator('dd button', { hasText: 'Click to Disable' });
   await disableBtn.click();
-
   await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
-
   await expect(statusText).toHaveText('Disabled');
   await expect(redBars).toBeVisible();
 });
