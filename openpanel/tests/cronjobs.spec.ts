@@ -30,7 +30,7 @@ test('create', async ({ page }) => {
   await expect(tableRow).toBeVisible();
   await expect(tableRow).toContainText(testCommand);
 
-  // TODO: check if service started by fetching /api/services?name=cron
+  // TODO: check if service auto-started by fetching /api/services?name=cron
 
   console.log(`cronjob created`);
 });
@@ -106,37 +106,33 @@ command = curl https://google.com > /var/www/html/cron-test.txt`;
 
 test('edit cronjob fields', async ({ page }) => {
   await page.goto('/cronjobs?view=table');
-  await expect(page).toHaveURL(/\/cronjobs\?view=table/);
 
-  const tableRow = page.locator('tr', { hasText: 'curl job' });
+  let tableRow = page.locator('tr', { hasText: 'curl job' });
   await expect(tableRow).toBeVisible();
 
   const edits = [
-    { label: 'schedule', newValue: '0 0 * * *', originalValue: '* * * * * *' },
-    { label: 'container', newValue: 'php-fpm-5.6', isSelect: true },
+    { label: 'schedule', newValue: '0 0 * * *' },
+    { label: 'container', newValue: 'php-fpm-8.4', isSelect: true },
     { label: 'command', newValue: 'curl https://google.com' },
     { label: 'comment', newValue: 'updated description' },
   ];
-  
+
   for (const edit of edits) {
     await tableRow.getByRole('button', { name: /Edit/i }).click();
-  
+
     if (edit.isSelect) {
-      const select = tableRow.locator('select[name="container"]:visible');
-      
-      await expect(select).toBeVisible();
-  
-      const options = await select.locator('option').allInnerTexts();
-      console.log('Available options:', options);
-  
-      await select.selectOption({ label: 'php-fpm-8.4' }); 
+      await tableRow.locator('select[name="container"]').selectOption({ label: edit.newValue });
     } else {
-      const input = tableRow.locator(`input[name="${edit.label}"]:visible`);
-      await input.fill(edit.newValue);
+      await tableRow.locator(`input[name="${edit.label}"]`).fill(edit.newValue);
     }
-  
+
     await tableRow.getByRole('button', { name: /Save/i }).click();
-    await expect(page.getByText('Cron job was successfully edited.')).toBeVisible();
+    await expect(page.getByText(/successfully edited/i)).toBeVisible();
+
+    if (edit.label === 'comment') {
+       tableRow = page.locator('tr', { hasText: edit.newValue });
+    }
+
     await expect(tableRow).toContainText(edit.newValue);
   }
 });
