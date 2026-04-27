@@ -26,7 +26,7 @@ const services = [
 ];
 
 for (const service of services) {
-  test(`${service.name} service page`, async ({ page }) => {
+  test(`${service.name} page`, async ({ page }) => {
     await navigateToPage(page, service.name);
 
     // CHECK
