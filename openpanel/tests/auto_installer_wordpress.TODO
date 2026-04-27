@@ -15,14 +15,18 @@ test('access auto installer', async ({ page }) => {
 
 
 test('install wordpress', async ({ page }) => {
+	
   await navigateToAutoInstaller(page);
-  await page.getByRole('link', { name: 'Install WordPress' }).click();
+  const installLink = page.getByRole('link', { name: /Install WordPress/i });
+  await expect(installLink).toBeVisible();
+  await installLink.click();
+  await expect(page).toHaveURL(/wordpress\/install/);
   await page.getByRole('textbox', { name: 'Website name:' }).fill('rasa');
-  await page.getByLabel('Domain:*').selectOption('12');
+  await page.getByLabel('Domain:').selectOption('12');
   await page.getByRole('textbox', { name: 'Admin Username:' }).fill('rasa');
   await page.getByRole('textbox', { name: 'Admin Password:' }).fill('rasa123');
   await page.getByRole('button', { name: 'Start Installation' }).click();
-  await page.goto('https://server.jecmenica.rs:2083/wordpress');
+  await expect(page).toHaveURL(/wordpress/);
   await expect(page.locator('body')).toContainText(/wp2.jecmenica.rs/i);
 
   console.log('wordpress created');
