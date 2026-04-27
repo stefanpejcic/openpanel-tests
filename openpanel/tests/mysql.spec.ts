@@ -223,27 +223,6 @@ test('change root password', async ({ page }) => {
 
 
 
-test('delete user', async ({ page }) => {
-  await navigateToMySQLPage(page);
-  await page.getByRole('button', { name: ' Delete' }).nth(1).click();
-  await page.getByRole('button', { name: /confirm/i }).nth(1).click();
-  await expect(page.locator('body')).toContainText(/successfully deleted a database stefan_baza/i);
-
-  console.log('delete database is working');
-});
-
-
-
-test('delete database', async ({ page }) => {
-  await page.goto(`/mysql/users`);
-  await page.getByRole('button', { name: ' Delete' }).nth(1).click();
-  await page.getByRole('button', { name: /confirm/i }).nth(1).click();
-  await expect(page.locator('body')).toContainText(/successfully deleted a database stefan_baza/i);
-
-  console.log('delete user is working');
-});
-
-
 test('remote access', async ({ page }) => {
   await page.goto('/mysql/remote-mysql');
 
@@ -301,4 +280,41 @@ test('remote access', async ({ page }) => {
   await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
   await expect(statusText).toHaveText('Disabled');
   await expect(redBars).toBeVisible();
+});
+
+
+
+test('delete user', async ({ page }) => {
+  await page.goto(`/mysql/users`);
+
+  const deleteButtons = page.locator('button.btn-danger');
+  const count = await deleteButtons.count();
+  expect(count).toBeGreaterThan(0);
+
+  await deleteButtons.first().click();
+
+  const confirmButton = page.locator('button.btn-dark');
+  await expect(confirmButton.first()).toBeVisible();
+
+  await confirmButton.first().click();
+
+  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  console.log('delete user is working');
+});
+
+
+
+test('delete database', async ({ page }) => {
+  await navigateToMySQLPage(page);
+
+  const deleteButton = page.locator('button.btn-danger').first();
+  await expect(deleteButton).toBeVisible();
+  await deleteButton.click();
+
+  const confirmButton = page.locator('button.btn-dark').first();
+  await expect(confirmButton).toBeVisible();
+  await confirmButton.click();
+
+  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  console.log('delete database is working');
 });
