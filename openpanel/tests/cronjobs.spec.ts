@@ -30,6 +30,8 @@ test('create', async ({ page }) => {
   await expect(tableRow).toBeVisible();
   await expect(tableRow).toContainText(testCommand);
 
+  // TODO: check if service started by fetching /api/services?name=cron
+
   console.log(`cronjob created`);
 });
 
