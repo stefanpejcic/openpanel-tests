@@ -214,12 +214,23 @@ test('change root password', async ({ page }) => {
 
 
 
-test('delete database', async ({ page }) => {
+test('delete user', async ({ page }) => {
   await navigateToMySQLPage(page);
   await page.getByRole('button', { name: ' Delete' }).nth(1).click();
-  await page.getByRole('button', { name: ' Delete' }).nth(1).click();
+  await page.getByRole('button', { name: ' Confirm' }).nth(1).click();
   await expect(page.locator('body')).toContainText(/successfully deleted a database stefan_baza/i);
 
   console.log('delete database is working');
+});
+
+
+
+test('delete database', async ({ page }) => {
+  await page.goto(`/mysql/users`);
+  await page.getByRole('button', { name: ' Delete' }).nth(1).click();
+  await page.getByRole('button', { name: ' Confirm' }).nth(1).click();
+  await expect(page.locator('body')).toContainText(/successfully deleted user stefan_usera/i);
+
+  console.log('delete user is working');
 });
 
