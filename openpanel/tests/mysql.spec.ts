@@ -254,21 +254,6 @@ test('configuration editor', async ({ page }) => {
 
 
 
-test('change root password', async ({ page }) => {
-  await page.goto(`/mysql/root-password`);
-  await expect(page).toHaveURL(/.*mysql\/root-password/);  
-  await page.getByRole('textbox', { name: 'New Password*' }).fill('stefan94');
-  await page.getByRole('button', { name: 'Change Password' }).click();
-  await expect(page.locator('body')).toContainText(/successfully changed root password/i);
-  await page.getByRole('link', { name: 'Back to Databases' }).click();
-  await expect(page).toHaveURL(/.*mysql/);  
-  await expect(page.locator('body')).toContainText(/stefan_baza/i, { timeout: 15000 });
-
-  console.log('change root password is working');
-});
-
-
-
 test('remote access', async ({ page }) => {
   await page.goto('/mysql/remote-mysql');
 
@@ -445,6 +430,21 @@ test('export database - all combinations', async ({ page }) => {
     ]);
     expect(response4.status()).toBeLessThan(500);
     console.log('✓ GZIP + Files submitted, server responded:', response4.status());
+});
+
+
+
+test('change root password', async ({ page }) => {
+  await page.goto(`/mysql/root-password`);
+  await expect(page).toHaveURL(/.*mysql\/root-password/);  
+  await page.getByRole('textbox', { name: 'New Password*' }).fill('stefan94');
+  await page.getByRole('button', { name: 'Change Password' }).click();
+  await expect(page.locator('body')).toContainText(/successfully changed root password/i);
+  await page.getByRole('link', { name: 'Back to Databases' }).click();
+  await expect(page).toHaveURL(/.*mysql/);  
+  await expect(page.locator('body')).toContainText(/stefan_baza/i, { timeout: 15000 });
+
+  console.log('change root password is working');
 });
 
 
