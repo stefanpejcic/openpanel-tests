@@ -35,11 +35,10 @@ test.describe('Change and use locale', () => {
         test(`locale: ${locale}`, async ({ page }) => {
             const expectedText = await getTranslation(locale);
             test.skip(!expectedText, `Translation key for "${locale}" not found on GitHub.`);
-
             await page.goto('/account/language');
             await page.selectOption('#locale-select', locale);
-            const locator = page.getByText(expectedText, { exact: true });
-            await expect(locator).toBeVisible({ timeout: 5000 });
+            const locator = page.getByText(expectedText, { exact: true }).first();
+            await expect(locator).toBeVisible();
         });
     }
 });
