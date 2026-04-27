@@ -278,18 +278,21 @@ test('remote access', async ({ page }) => {
   await enableBtn.click();
   await expect(page.locator('text=Remote MySQL access is now enabled')).toBeVisible();
   await expect(statusText).toHaveText('Enabled');
-
   const greenBars = page.locator('dd .bg-emerald-500').first();
   await expect(greenBars).toBeVisible();
 
   // 2. TEST
-  await page.goto('https://www.rainbowspuppiessunshine.com/tools/dbtest/index.php');
-  await page.fill('input[name="in_ServerName"]', `${remoteServerText?.trim()}:${remotePortText?.trim()}`);
-  await page.fill('input[name="in_UserName"]', 'novi_user');
-  await page.fill('input[name="in_Password"]', 'stefan456g7dsd');
-  await page.fill('input[name="in_Database"]', 'proba');
-  await page.click('input[type="submit"]');
-  await expect(page.locator('body')).toContainText(/success|error|connected/i);
+  await page.goto('https://piehost.com/tools/mysql-tester');
+  await page.fill('input[name="host"]', remoteServerText?.trim());
+  await page.fill('input[name="port"]', remotePortText?.trim());
+  await page.fill('input[name="username"]', 'novi_user');
+  await page.fill('input[name="password"]', 'stefan456g7dsd');
+  await page.fill('input[name="database"]', 'proba');
+  
+  await page.click('button[type="submit"]');
+  
+  await expect(page.locator('body')).toContainText(/Connection successful!/i);
+
 
   // 3. OFF
   await page.goto('/mysql/remote-mysql');
