@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Domain add', async ({ page }) => {
+test('add domain', async ({ page }) => {
   await page.goto(`/domains`);
   await expect(page).toHaveURL(/domains/);
   await page.getByRole('link', { name: 'New Domain', exact: true }).click();
@@ -19,12 +19,10 @@ test('Domain add', async ({ page }) => {
   await expect(page.getByText(/wp1.jecmenica.rs/i)).toBeVisible();
   console.log(`document root visible`);
 
-  
   await page.goto(`/domains\/edit-dns-zone\/wp1.jecmenica.rs`);
   await expect(page).toHaveURL(/domains\/edit-dns-zone\/wp1.jecmenica.rs/);
   await expect(page.getByText(/spf1/i)).toBeVisible();
   console.log(`zone file exists`);
-  
 
   await page.goto(`/domains\/vhosts?domain=wp1.jecmenica.rs`);
   await expect(page.locator('#editor')).toContainText('index.php');  
@@ -34,6 +32,6 @@ test('Domain add', async ({ page }) => {
   const certData = page.locator('#certData');
   await expect(certData).toBeVisible();
   console.log(`cert file exists`);
-
-  
 });
+
+
