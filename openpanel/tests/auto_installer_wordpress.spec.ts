@@ -22,7 +22,7 @@ test('install wordpress', async ({ page }) => {
   await installLink.click();
   await expect(page).toHaveURL(/wordpress\/install/);
   await page.getByRole('textbox', { name: 'Website name:' }).fill('rasa');
-  await page.getByLabel('Domain:').selectOption('12');
+  await page.getByLabel('Domain:').selectOption('12'); // TODO: dynamic ID
   await page.getByRole('textbox', { name: 'Admin Username:' }).fill('rasa');
   await page.getByRole('textbox', { name: 'Admin Password:' }).fill('rasa123');
   await page.getByRole('button', { name: 'Start Installation' }).click();
