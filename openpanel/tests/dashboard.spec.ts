@@ -56,6 +56,42 @@ test('dark mode', async ({ page }) => {
 
 
 
+const FILTER_JSON_URL =
+  'https://gist.githubusercontent.com/stefanpejcic/ea6fd1db9b36645ec3fdd0d5eb26da7d/raw/bfd0f706b711157e4d11189c455f94685e2b2c09/filter.json';
+
+let filterItems: Array<{ name: string; description: string; link: string; module: string }>;
+
+test.beforeAll(async () => {
+  const res = await fetch(FILTER_JSON_URL);
+  filterItems = await res.json();
+  console.log(`Loaded ${filterItems.length} items from filter.json`);
+});
+
+
+test('search ', async ({ page }) => {
+  await navigateToDashboardPage(page);
+
+  for (const item of filterItems) {
+    await page.locator('[x-on\\:click="openSearch"]').first().click();
+
+    const searchInput = page.locator('#searchInput');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+
+    await searchInput.fill(item.name);
+
+    const dropdown = page.locator('#filteredDropdown');
+    await expect(dropdown).toBeVisible({ timeout: 3000 });
+
+    const match = dropdown.locator(`text=${item.name}`).first();
+    await expect(match).toBeVisible({ timeout: 3000 });
+
+    console.log(`✓ found: "${item.name}"`);
+
+    await page.keyboard.press('Escape');
+  }
+
+  console.log('search is functional');
+});
 
 test('icons toggle', async ({ page }) => {
   await navigateToDashboardPage(page);
