@@ -212,7 +212,7 @@ test('icon sections open/close', async ({ page }) => {
 
 
 // MENU ITEMS CLOSE/OPEN
-test('menu items collapse/expand', async ({ page }) => {
+test('menu items collapse/expand individually', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const mainSidebarGroup = page.locator('[data-sidebar="group"]').nth(1);
@@ -251,7 +251,7 @@ test('menu items collapse/expand', async ({ page }) => {
 });
 
 // MENU ITEMS COLLAPSE/EXPAND ALL
-test('menu items collapse/expand ', async ({ page }) => {
+test('menu items collapse/expand all', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   const toggleButton = page.locator('button[\\@click*="sidebar-toggle-all"]');
