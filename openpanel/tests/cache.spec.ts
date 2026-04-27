@@ -32,6 +32,7 @@ for (const service of services) {
     // CHECK
     const statusText = page.locator('#service-status');
     await expect(statusText).toHaveText('Disabled');
+    const redBars = page.locator('dd .bg-red-500').first();
     const nameText = await page.locator('#service-name').textContent();
     expect(nameText?.toLowerCase()).toContain(service.name);
     await expect(page.locator('#service-port')).toHaveText(service.port);
@@ -51,7 +52,7 @@ for (const service of services) {
 
     // LOGS
     await page.click('button:has-text("fetchLogs")');
-    await page.waitForResponse(response => response.url().includes('/api/containers/log/service.name') && response.status() === 200);
+    await page.waitForResponse(response => response.url().includes(`/api/containers/log/${service.name}`) && response.status() === 200);
     const logContent = page.locator('#log-content');
     await expect(logContent).not.toHaveText('No logs.');
     await expect(logContent).not.toBeEmpty();
