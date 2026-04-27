@@ -55,9 +55,7 @@ test('dark mode', async ({ page }) => {
 });
 
 
-
-const FILTER_JSON_URL =
-  'https://gist.githubusercontent.com/stefanpejcic/ea6fd1db9b36645ec3fdd0d5eb26da7d/raw/bfd0f706b711157e4d11189c455f94685e2b2c09/filter.json';
+const FILTER_JSON_URL = 'https://gist.githubusercontent.com/stefanpejcic/ea6fd1db9b36645ec3fdd0d5eb26da7d/raw/bfd0f706b711157e4d11189c455f94685e2b2c09/filter.json';
 
 let filterItems: Array<{ name: string; description: string; link: string; module: string }>;
 
@@ -67,27 +65,37 @@ test.beforeAll(async () => {
   console.log(`Loaded ${filterItems.length} items from filter.json`);
 });
 
-
-test('search ', async ({ page }) => {
+test('search - each item from filter.json appears in results', async ({ page }) => {
   await navigateToDashboardPage(page);
 
   for (const item of filterItems) {
-    await page.locator('[x-on\\:click="openSearch"]').first().click();
+    // Open search using the aria-label on the open button
+    const openBtn = page.locator('button[aria-label="Open search"]');
+    await expect(openBtn).toBeVisible({ timeout: 3000 });
+    await openBtn.click();
 
+    // Wait for input to appear and be focused
     const searchInput = page.locator('#searchInput');
     await expect(searchInput).toBeVisible({ timeout: 3000 });
 
+    // Type the item name — triggers fetchResults via @input
     await searchInput.fill(item.name);
 
+    // Wait for dropdown to appear
     const dropdown = page.locator('#filteredDropdown');
-    await expect(dropdown).toBeVisible({ timeout: 3000 });
+    await expect(dropdown).toBeVisible({ timeout: 5000 });
 
-    const match = dropdown.locator(`text=${item.name}`).first();
+    // The item name is inside an <a> within the dropdown li
+    const match = dropdown.locator('a').filter({ hasText: item.name }).first();
     await expect(match).toBeVisible({ timeout: 3000 });
 
     console.log(`✓ found: "${item.name}"`);
 
-    await page.keyboard.press('Escape');
+    // Close search via the close button (resets isOpen, searchText, dropdownItems)
+    await page.locator('button[aria-label="Close search"]').click();
+
+    // Wait for input to be hidden before next iteration
+    await expect(searchInput).toBeHidden({ timeout: 3000 });
   }
 
   console.log('search is functional');
