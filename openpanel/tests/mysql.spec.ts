@@ -20,14 +20,15 @@ test('create database', async ({ page }) => {
   await page.getByRole('link', { name: 'Create your first database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_baza');
   await page.getByRole('button', { name: 'Create Database' }).click();
+
   await expect(page.locator('body')).toContainText(/successfully created a database/i);
-  await expect(page.locator('body')).toContainText([
-    /stefan_baza/i,
-    /import/i,
-    /export/i,
-    /phpmyadmin/i,
-    /delete/i
-  ]);
+  const row = page.locator('tr', { hasText: 'stefan_baza' });
+  await expect(row).toBeVisible();
+  await expect(row.getByRole('link', { name: /import/i })).toBeVisible();
+  await expect(row.getByRole('button', { name: /export/i })).toBeVisible();
+  await expect(row.getByRole('link', { name: /phpmyadmin/i })).toBeVisible();
+  await expect(row.getByRole('button', { name: /delete/i })).toBeVisible();
+
   console.log('database created');
 });
 
