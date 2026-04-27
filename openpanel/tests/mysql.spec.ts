@@ -108,24 +108,32 @@ test('change password', async ({ page }) => {
 test('grant privileges', async ({ page }) => {
   await page.goto(`/mysql/users`);
   await page.getByRole('link', { name: 'Assign User to Database' }).click();
-  await expect(page).toHaveURL(/.*mysql\/assign/);  
+  await expect(page).toHaveURL(/.*mysql\/assign/);
+
+  await page.waitForFunction(() => {
+    const select = document.querySelector('select[name="db_user"]');
+    return select && select.options.length > 1;
+  });
+
   await page.locator('select[name="db_user"]').selectOption('stefan_users');
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
+
+  await page.waitForFunction(() => {
+    return document.querySelectorAll("input[name='privileges']:checked").length >= 0;
+  });
+
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).check();
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).check();
   await page.getByRole('button', { name: 'Make Changes' }).click();
   await expect(page.locator('body')).toContainText(/privileges successfully for user/i);
   await page.getByRole('link', { name: 'Back to Databases' }).click();
-  await expect(page).toHaveURL(/.*mysql/);  
+  await expect(page).toHaveURL(/.*mysql/);
   await expect(page.locator('body')).toContainText(/stefan_user/i);
-
   await page.getByRole('link', { name: 'stefan_users' }).click();
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).uncheck();
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).uncheck();
   await page.getByRole('button', { name: 'Make Changes' }).click();
-
   await expect(page.locator('body')).toContainText(/at least one privilege must be selected/i);
-
   console.log('assign user to database is working');
 });
 
@@ -135,12 +143,19 @@ test('revoke privileges', async ({ page }) => {
   await page.goto(`/mysql/users`);
   await page.getByRole('link', { name: 'Remove User from DB' }).click();
   await expect(page).toHaveURL(/.*mysql\/remove/);
+
+  await page.waitForFunction(() => {
+    const select = document.querySelector('select[name="db_user"]');
+    return select && select.options.length > 1;
+  });
+
+  await page.locator('select[name="db_user"]').selectOption('stefan_users');
+  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
+
   await page.getByRole('button', { name: 'Remove User from Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully revoked all privileges for user/i);
-
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page.locator('body')).not.toContainText(/stefan_test/i);
-
   console.log('remove user from database is working');
 });
 
