@@ -129,7 +129,7 @@ test('grant privileges', async ({ page }) => {
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).check();
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).check();
   await page.getByRole('button', { name: 'Make Changes' }).click();
-  await expect(page.locator('body')).toContainText(/privileges successfully for user/i);
+  await expect(page.locator('body')).toContainText(/Privileges granted successfully for user\s+'.+?'\s+on database\s+'.+?'/i);
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);
   await expect(page.locator('body')).toContainText(/stefan_user/i);
