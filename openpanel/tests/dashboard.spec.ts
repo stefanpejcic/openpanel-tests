@@ -209,3 +209,46 @@ test('section open and close', async ({ page }) => {
 
   console.log(`section toggle open/close working for section: '${sectionKey}'`);
 });
+
+
+// MENU ITEMS CLOSE/OPEN
+test('sidebar groups collapse and expand', async ({ page }) => {
+  await navigateToDashboardPage(page);
+
+  const groupButtons = page.locator('[data-sidebar="menu"] > li > button');
+  const count = await groupButtons.count();
+
+  console.log(`Found ${count} sidebar groups`);
+  expect(count).toBeGreaterThan(0);
+
+  for (let i = 0; i < count; i++) {
+    const button = groupButtons.nth(i);
+    const label = await button.innerText();
+    const groupLi = button.locator('..');
+    const submenu = groupLi.locator('ul');
+
+    const chevron = button.locator('svg.remixicon');
+    const chevronClass = await chevron.getAttribute('class');
+    const isOpen = chevronClass?.includes('rotate-180');
+
+    if (!isOpen) {
+      await button.click();
+      await page.waitForTimeout(200);
+    }
+
+    await expect(submenu).toBeVisible({ timeout: 2000 });
+    console.log(`[${label.trim()}] is open ✓`);
+
+    await button.click();
+    await page.waitForTimeout(200);
+    await expect(submenu).toBeHidden({ timeout: 2000 });
+    console.log(`[${label.trim()}] collapsed ✓`);
+
+    await button.click();
+    await page.waitForTimeout(200);
+    await expect(submenu).toBeVisible({ timeout: 2000 });
+    console.log(`[${label.trim()}] expanded ✓`);
+  }
+
+  console.log('All sidebar groups collapse/expand correctly');
+});
