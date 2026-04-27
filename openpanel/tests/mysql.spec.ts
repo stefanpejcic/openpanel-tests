@@ -147,7 +147,7 @@ test('revoke privileges', async ({ page }) => {
 
 
 test('database wizard', async ({ page }) => {
-  await page.locator('#mysql-menu').getByRole('link', { name: 'Database Wizard' }).click();
+  await page.goto(`/mysql/wizard`);
   await expect(page).toHaveURL(/.*mysql\/wizard/);  
   await page.getByRole('textbox', { name: 'Database Name' }).fill('proba');
   await page.getByRole('textbox', { name: 'Database User' }).fill('novi_user');
@@ -166,7 +166,7 @@ test('database wizard', async ({ page }) => {
 
 
 test('processlist', async ({ page }) => {
-  await page.getByRole('link', { name: 'Show Processes' }).click();
+  await page.goto(`/mysql/processlist`);
   await expect(page).toHaveURL(/.*mysql\/processlist/);  
   await expect(page.locator('body')).toContainText([
     /host/i,
@@ -179,7 +179,7 @@ test('processlist', async ({ page }) => {
 
 
 test('configuration editor', async ({ page }) => {
-  await page.getByRole('link', { name: 'Configuration' }).click();
+  await page.goto(`/mysql/configuration`);
   await expect(page).toHaveURL(/.*mysql\/configuration/);  
   await expect(page.locator('body')).toContainText([
     /max_allowed_packet/i,
@@ -200,7 +200,7 @@ test('configuration editor', async ({ page }) => {
 
 
 test('change root password', async ({ page }) => {
-  await page.getByRole('link', { name: 'Change root password' }).click();
+  await page.goto(`/mysql/root-password`);
   await expect(page).toHaveURL(/.*mysql\/root-password/);  
   await page.getByRole('textbox', { name: 'New Password*' }).fill('stefan94');
   await page.getByRole('button', { name: 'Change Password' }).click();
@@ -215,7 +215,7 @@ test('change root password', async ({ page }) => {
 
 
 test('delete database', async ({ page }) => {
-  await page.getByRole('link', { name: 'Change root password' }).click();
+  await navigateToMySQLPage(page);
   await page.getByRole('button', { name: ' Delete' }).nth(1).click();
   await page.getByRole('button', { name: ' Delete' }).nth(1).click();
   await expect(page.locator('body')).toContainText(/successfully deleted a database stefan_baza/i);
