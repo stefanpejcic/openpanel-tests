@@ -292,7 +292,7 @@ test('remote access', async ({ page }) => {
   await expect(greenBars).toBeVisible();
 
   // 2. TEST
-  await page.goto('https://piehost.com/tools/mysql-tester');
+  await page.goto('https://api.openpanel.com/remote-mysql/');
   await page.fill('input[name="host"]', remoteServerText?.trim());
   await page.fill('input[name="port"]', remotePortText?.trim());
   await page.fill('input[name="username"]', 'novi_user');
@@ -301,7 +301,6 @@ test('remote access', async ({ page }) => {
   
   await page.click('button[type="submit"]');
 
-  await page.waitForSelector('.bg-green-50, .bg-red-50', { timeout: 30000 });
   await expect(page.locator('body')).toContainText(/Connection successful/i, { timeout: 5000 });
 
   // 3. OFF
