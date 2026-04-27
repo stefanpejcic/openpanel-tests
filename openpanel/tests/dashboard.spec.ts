@@ -249,3 +249,40 @@ test('menu items collapse/expand', async ({ page }) => {
 
   console.log('All sidebar groups collapse/expand correctly');
 });
+
+// MENU ITEMS COLLAPSE/EXPAND ALL
+test('menu items collapse/expand ', async ({ page }) => {
+  await navigateToDashboardPage(page);
+
+  const toggleButton = page.locator('button[\\@click*="sidebar-toggle-all"]');
+  const mainSidebarGroup = page.locator('[data-sidebar="group"]').nth(1);
+  const groupItems = mainSidebarGroup.locator('[data-sidebar="menu"] > li[x-data]');
+  const count = await groupItems.count();
+
+  expect(count).toBeGreaterThan(0);
+
+  await expect(toggleButton).toContainText('Expand all');
+  await toggleButton.click();
+  await expect(toggleButton).toContainText('Collapse all');
+
+  for (let i = 0; i < count; i++) {
+    const submenu = groupItems.nth(i).locator(':scope > ul');
+    const label = (await groupItems.nth(i).locator(':scope > button').innerText()).trim().split('\n')[0].trim();
+    await submenu.waitFor({ state: 'visible', timeout: 3000 });
+    await expect(submenu).toBeVisible();
+    console.log(`[${label}] expanded ✓`);
+  }
+
+  await toggleButton.click();
+  await expect(toggleButton).toContainText('Expand all');
+
+  for (let i = 0; i < count; i++) {
+    const submenu = groupItems.nth(i).locator(':scope > ul');
+    const label = (await groupItems.nth(i).locator(':scope > button').innerText()).trim().split('\n')[0].trim();
+    await submenu.waitFor({ state: 'hidden', timeout: 3000 });
+    await expect(submenu).toBeHidden();
+    console.log(`[${label}] collapsed ✓`);
+  }
+
+  console.log('Collapse all / Expand all working correctly');
+});
