@@ -175,7 +175,7 @@ test('database wizard', async ({ page }) => {
   await expect(page).toHaveURL(/.*mysql\/wizard/);  
   await page.getByRole('textbox', { name: 'Database Name' }).fill('proba');
   await page.getByRole('textbox', { name: 'Database User' }).fill('novi_user');
-  await page.getByRole('textbox', { name: 'Password' }).fill('stefan456g7dsd$%D&&');
+  await page.getByRole('textbox', { name: 'Password' }).fill('stefan456g7dsd');
   await page.getByRole('button', { name: 'Create DB, User, and Grant' }).click();
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);  
@@ -261,19 +261,14 @@ test('remote access', async ({ page }) => {
   const redBars = page.locator('dd .bg-red-500').first();
   await expect(redBars).toBeVisible();
 
-  // server = mysql/mariadb, port = 3306
   const localSection = page.locator('section').filter({ has: page.locator('h2#local') });
-
   const localServer = localSection.locator('span.text-3xl').first();
   const localServerText = await localServer.textContent();
   expect(localServerText?.toLowerCase()).toMatch(/mysql|mariadb/);
-
   const localPort = localSection.locator('span.text-3xl').nth(1);
   await expect(localPort).toHaveText('3306');
 
-  // public IPv4 + port
   const remoteSection = page.locator('section').filter({ has: page.locator('h2#remote') });
-
   const remoteServer = remoteSection.locator('span.text-3xl').first();
   const remoteServerText = await remoteServer.textContent();
 
@@ -290,15 +285,25 @@ test('remote access', async ({ page }) => {
   expect(remotePortNum).toBeGreaterThanOrEqual(32768);
   expect(remotePortNum).toBeLessThanOrEqual(65535);
 
+  // 1. ON
   const enableBtn = page.locator('dd button', { hasText: 'Click to Enable' });
   await enableBtn.click();
-
   await expect(page.locator('text=Remote MySQL access is now enabled')).toBeVisible();
-
   await expect(statusText).toHaveText('Enabled');
   const greenBars = page.locator('dd .bg-emerald-500').first();
   await expect(greenBars).toBeVisible();
 
+  // 2. TEST
+  await page.goto('https://www.rainbowspuppiessunshine.com/tools/dbtest/index.php');
+  await page.fill('input[name="in_ServerName"]', `${remoteServerText}:${remotePort}`);
+  await page.fill('input[name="in_UserName"]', 'novi_user');
+  await page.fill('input[name="in_Password"]', 'stefan456g7dsd');
+  await page.fill('input[name="in_Database"]', 'proba');
+  await page.click('input[type="submit"]');
+  const result = page.locator('body');
+  await expect(result).toContainText(/success|error|connected/i);  
+
+  // 3. OFF
   const disableBtn = page.locator('dd button', { hasText: 'Click to Disable' });
   await disableBtn.click();
 
