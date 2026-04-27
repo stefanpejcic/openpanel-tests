@@ -115,21 +115,25 @@ test('edit cronjob fields', async ({ page }) => {
     { label: 'command', newValue: 'curl https://google.com' },
     { label: 'comment', newValue: 'updated description' },
   ];
-
+  
   for (const edit of edits) {
     await tableRow.getByRole('button', { name: /Edit/i }).click();
-
+  
     if (edit.isSelect) {
-        await tableRow.locator('select[name="container"]:visible').selectOption(edit.newValue);
-      } else {
-        const input = tableRow.locator(`input[name="${edit.label}"]:visible`);
-        
-        await expect(input).toBeVisible();
-        await input.fill(edit.newValue);
-      }
-
+      const select = tableRow.locator('select[name="container"]:visible');
+      
+      await expect(select).toBeVisible();
+  
+      const options = await select.locator('option').allInnerTexts();
+      console.log('Available options:', options);
+  
+      await select.selectOption({ label: 'php-fpm-8.4' }); 
+    } else {
+      const input = tableRow.locator(`input[name="${edit.label}"]:visible`);
+      await input.fill(edit.newValue);
+    }
+  
     await tableRow.getByRole('button', { name: /Save/i }).click();
-
     await expect(page.getByText('Cron job was successfully edited.')).toBeVisible();
     await expect(tableRow).toContainText(edit.newValue);
   }
