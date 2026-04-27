@@ -119,17 +119,12 @@ test('grant privileges', async ({ page }) => {
   await page.getByRole('link', { name: 'Assign User to Database' }).click();
   await expect(page).toHaveURL(/.*mysql\/assign/);
 
-  await page.waitForFunction(() => {
-    const select = document.querySelector('select[name="db_user"]');
-    return select && select.options.length > 1;
-  });
+  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
 
-  await page.locator('select[name="db_user"]').selectOption('stefan_users');
+  await page.locator('select[name="db_user"]').selectOption('stefan_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
-  await page.waitForFunction(() => {
-    return document.querySelectorAll("input[name='privileges']:checked").length >= 0;
-  });
+  await page.waitForResponse(resp => resp.url().includes('/mysql/privileges/') && resp.status() === 200);
 
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).check();
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).check();
@@ -138,7 +133,7 @@ test('grant privileges', async ({ page }) => {
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);
   await expect(page.locator('body')).toContainText(/stefan_user/i);
-  await page.getByRole('link', { name: 'stefan_users' }).click();
+  await page.getByRole('link', { name: 'stefan_user' }).click();
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).uncheck();
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).uncheck();
   await page.getByRole('button', { name: 'Make Changes' }).click();
@@ -153,12 +148,9 @@ test('revoke privileges', async ({ page }) => {
   await page.getByRole('link', { name: 'Remove User from DB' }).click();
   await expect(page).toHaveURL(/.*mysql\/remove/);
 
-  await page.waitForFunction(() => {
-    const select = document.querySelector('select[name="db_user"]');
-    return select && select.options.length > 1;
-  });
+  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
 
-  await page.locator('select[name="db_user"]').selectOption('stefan_users');
+  await page.locator('select[name="db_user"]').selectOption('stefan_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
   await page.getByRole('button', { name: 'Remove User from Database' }).click();
