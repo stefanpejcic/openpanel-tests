@@ -22,7 +22,13 @@ test('install wordpress', async ({ page }) => {
   await installLink.click();
   await expect(page).toHaveURL(/wordpress\/install/);
   await page.getByRole('textbox', { name: 'Website name:' }).fill('rasa');
-  await page.getByLabel('Domain:').selectOption('12'); // TODO: dynamic ID
+
+  // await page.getByLabel('Domain:').selectOption('12'); // TODO: dynamic ID
+	await page.getByLabel('Domain:').evaluate((select: HTMLSelectElement) => {
+	  const option = Array.from(select.options).find(o => !o.disabled);
+	  if (option) select.value = option.value;
+	});
+	
   await page.getByRole('textbox', { name: 'Admin Username:' }).fill('rasa');
   await page.getByRole('textbox', { name: 'Admin Password:' }).fill('rasa123');
   await page.getByRole('button', { name: 'Start Installation' }).click();
