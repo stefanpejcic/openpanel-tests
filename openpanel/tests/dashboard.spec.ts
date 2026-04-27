@@ -212,10 +212,11 @@ test('section open and close', async ({ page }) => {
 
 
 // MENU ITEMS CLOSE/OPEN
-test('sidebar collapse/expand', async ({ page }) => {
+test('sidebar groups collapse and expand', async ({ page }) => {
   await navigateToDashboardPage(page);
 
-  const groupItems = page.locator('[data-sidebar="menu"] > li[x-data]');
+  const mainSidebarGroup = page.locator('[data-sidebar="group"]').nth(1);
+  const groupItems = mainSidebarGroup.locator('[data-sidebar="menu"] > li[x-data]');
   const count = await groupItems.count();
 
   console.log(`Found ${count} sidebar groups`);
