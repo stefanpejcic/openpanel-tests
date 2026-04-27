@@ -398,7 +398,6 @@ test('export', async ({ page }) => {
     await row.locator('input[value="files"]').click({ force: true });
     const pathInput = row.locator('input[x-model="relativePath"]');
     await expect(pathInput).toBeVisible();
-    await pathInput.fill('backups/test');
     const [response3] = await Promise.all([
         page.waitForResponse(resp => resp.url().includes('export') && resp.request().method() === 'POST'),
         row.locator('button[type="submit"]', { hasText: 'Export' }).click(),
@@ -412,7 +411,6 @@ test('export', async ({ page }) => {
     await row.locator('input[value="gzip"]').click({ force: true });
     await row.locator('input[value="files"]').click({ force: true });
     await expect(pathInput).toBeVisible();
-    await pathInput.fill('backups/test');
     const [response4] = await Promise.all([
         page.waitForResponse(resp => resp.url().includes('export') && resp.request().method() === 'POST'),
         row.locator('button[type="submit"]', { hasText: 'Export' }).click(),
