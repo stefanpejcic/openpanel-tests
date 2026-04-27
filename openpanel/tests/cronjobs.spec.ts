@@ -59,6 +59,43 @@ test('logs', async ({ page }) => {
 
 
 
+test('file editor', async ({ page }) => {
+  await page.goto('/cronjobs?view=code');
+  await expect(page).toHaveURL(/\/cronjobs\?view=code/);
+
+  const expectedCron = `[job-exec "curl job"]
+schedule = @every 15s
+container = php-fpm-8.5
+command = curl https://google.com > /var/www/html/cron-test.txt`;
+
+  const actualContent = await page.evaluate(() => {
+    return document.querySelector('.CodeMirror').CodeMirror.getValue();
+  });
+
+  expect(actualContent.trim()).toBe(expectedCron);
+
+  const updatedContent = expectedCron.replace('@every 15s', '* * * * * *');
+  
+  await page.evaluate((val) => {
+    const cm = document.querySelector('.CodeMirror').CodeMirror;
+    cm.setValue(val);
+    cm.save();
+  }, updatedContent);
+
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+  
+  await expect(page.getByText('Crontab file saved successfully!')).toBeVisible();
+
+  const postSaveContent = await page.evaluate(() => {
+    return document.querySelector('.CodeMirror').CodeMirror.getValue();
+  });
+  expect(postSaveContent).toContain('schedule = * * * * * *');
+  
+  console.log(`cronjob file editor verified and working`);
+});
+
+
+
 test('todo', async ({ page }) => {
 
   // LOGS AFTER CREATE
