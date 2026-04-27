@@ -48,8 +48,13 @@ for (const service of services) {
     const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
     await enableBtn.click();
     await expect(page.locator('text=is now enabled')).toBeVisible();
-  
-    await page.waitForTimeout(5000);
+
+    if (service.name === 'elasticsearch' || service.name === 'opensearch') {
+      await page.waitForTimeout(10000);
+    } else {
+      await page.waitForTimeout(5000);
+    }
+    
     await navigateToPage(page, service.name);
     await expect(statusText).toHaveText('Running');
     const greenBars = page.locator('.bg-emerald-500').first();
