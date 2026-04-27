@@ -44,7 +44,8 @@ test('search domains', async ({ page }) => {
   const rows = page.locator('tbody tr');
 
   await searchBox.fill('wp1.jecmenica.rs');
-  await expect(rows).toHaveCountGreaterThan(0);
+  const count = await rows.count();
+  expect(count).toBeGreaterThan(0);
 
   const visibleRows = rows.filter({ has: page.locator(':visible') });
   await expect(visibleRows).toHaveCount(1);
