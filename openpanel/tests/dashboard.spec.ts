@@ -100,6 +100,74 @@ test('search results', async ({ page }) => {
 });
 
 
+test('compare sidebar menu links with filter.json', async ({ page }) => {
+  test.setTimeout(90_000);
+
+  await navigateToDashboardPage(page);
+
+  await page.waitForFunction(() => typeof (window as any).Alpine !== 'undefined');
+  await page.waitForTimeout(500);
+
+  const openMenus = page.locator('li[x-data] > button');
+
+  const menuCount = await openMenus.count();
+  console.log(`Found ${menuCount} sidebar menus`);
+
+  const actualLinks: Array<{ name: string; href: string }> = [];
+
+  for (let i = 0; i < menuCount; i++) {
+    await openMenus.nth(i).click();
+    await page.waitForTimeout(200);
+  }
+
+  // collect all links
+  const links = page.locator('ul[id$="-menu"] a[href]');
+  const linkCount = await links.count();
+
+  for (let i = 0; i < linkCount; i++) {
+    const el = links.nth(i);
+
+    const name = (await el.textContent())?.trim() || '';
+    const href = (await el.getAttribute('href')) || '';
+
+    actualLinks.push({ name, href });
+  }
+
+  console.log('Collected sidebar links:', actualLinks);
+
+  // compare with filter.json
+  const mismatches: string[] = [];
+
+  for (const item of filterItems) {
+    const match = actualLinks.find(l =>
+      l.href === item.link || l.name === item.name
+    );
+
+    if (!match) {
+      mismatches.push(`Missing: ${item.name} (${item.link})`);
+    }
+  }
+
+  for (const link of actualLinks) {
+    const match = filterItems.find(i =>
+      i.link === link.href || i.name === link.name
+    );
+
+    if (!match) {
+      mismatches.push(`Unexpected: ${link.name} (${link.href})`);
+    }
+  }
+
+  if (mismatches.length) {
+    console.error('Link mismatches found:\n', mismatches.join('\n'));
+  }
+
+  expect(mismatches).toHaveLength(0);
+
+  console.log('sidebar menu links match filter.json');
+});
+
+
 // ICONS TOP/START
 test('icons mode toggle', async ({ page }) => {
   await navigateToDashboardPage(page);
