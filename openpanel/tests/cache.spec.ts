@@ -64,6 +64,7 @@ for (const service of services) {
     // TODO: test connection
 
     // CONTAINER STATS
+    await page.waitForResponse(response => response.url().includes(`/api/services?name=${service.name}`) && response.status() === 200);
     const statsContainer = page.locator('#service-page-stats');
     const getStat = (label) => statsContainer.locator('div', { hasText: label }).locator('span.font-medium').last();
     
