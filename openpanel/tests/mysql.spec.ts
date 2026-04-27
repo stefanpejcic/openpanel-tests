@@ -68,6 +68,15 @@ test('access users', async ({ page }) => {
 });
 
 
+test('show system users', async ({ page }) => {
+  await page.goto(`/mysql/users`);
+
+  await page.getByText('Show system users').click();
+  await expect(page.locator('body')).toContainText(/healthcheck/i);
+
+  console.log('show system users working');
+});
+
 
 test('create user', async ({ page }) => {
   await page.goto(`/mysql/users`);
