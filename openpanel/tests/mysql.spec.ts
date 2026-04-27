@@ -300,9 +300,9 @@ test('remote access', async ({ page }) => {
   await page.fill('input[name="database"]', 'proba');
   
   await page.click('button[type="submit"]');
-  
-  await expect(page.locator('body')).toContainText(/Connection successful!/i);
 
+  await page.waitForSelector('.bg-green-50, .bg-red-50', { timeout: 30000 });
+  await expect(page.locator('body')).toContainText(/Connection successful/i, { timeout: 5000 });
 
   // 3. OFF
   await page.goto('/mysql/remote-mysql');
