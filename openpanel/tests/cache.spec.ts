@@ -63,7 +63,44 @@ for (const service of services) {
 
     // TODO: test connection
 
-    // TODO: check usage data
+    // CONTAINER STATS
+    const statsContainer = page.locator('#service-page-stats');
+    const getStat = (label) => statsContainer.locator('div', { hasText: label }).locator('span.font-medium').last();
+    
+    const statItems = statsContainer.locator('div.flex.items-center.justify-between');
+    const count = await statItems.count();
+    
+    const stats = {};
+    for (let i = 0; i < count; i++) {
+      const item = statItems.nth(i);
+      const label = await item.locator('span').first().innerText();
+      const value = await item.locator('span').last().innerText();
+      stats[label.trim()] = value.trim();
+    }
+    
+    console.log('Collected stats:', stats); //TODO: remove
+    
+    const requiredKeys = ['ID', 'Name', 'CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'Block I/O', 'PIDs'];
+    for (const key of requiredKeys) {
+      expect(stats).toHaveProperty(key, expect.any(String));
+    }
+    
+    await expect(getStat('Name')).toHaveText(service.name);
+    
+    const validations = {
+      'ID':           { re: /^[a-f0-9]{12}$/,                    desc: '12 hex chars' },
+      'CPU Usage':    { re: /^\d+\.\d+%$/,                       desc: 'percentage like 0.05%' },
+      'Memory Usage': { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 2.098MiB / 102.4MiB' },
+      'Memory %':     { re: /^\d+\.\d+%$/,                       desc: 'percentage like 2.05%' },
+      'Network I/O':  { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 1.04kB / 126B' },
+      'Block I/O':    { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 147kB / 0B' },
+      'PIDs':         { re: /^\d+$/,                             desc: 'integer like 10' },
+    };
+    
+    for (const [label, { re, desc }] of Object.entries(validations)) {
+      const value = stats[label];
+      expect(re.test(value),`"${label}" value "${value}" should match ${desc}`).toBe(true);
+    }  
 
     // LOGS
     await page.click('button:has-text("View container log")');
