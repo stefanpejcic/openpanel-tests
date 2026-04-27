@@ -107,3 +107,14 @@ test('check columns for domains table', async ({ page }) => {
   }
   console.log('column toggle is working'); 
 });
+
+
+
+test('vhost editor', async ({ page }) => {
+  await page.goto(`/domains/vhosts?domain=wp1.jecmenica.rs`);
+
+  // TODO: add header for ols, apache, nginx
+  //       then curl the domain and check for header
+
+  console.log('vhost editor is working');
+});
