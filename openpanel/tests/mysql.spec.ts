@@ -242,3 +242,59 @@ test('delete database', async ({ page }) => {
   console.log('delete user is working');
 });
 
+
+test('remote access', async ({ page }) => {
+  await page.goto('/mysql/remote-mysql');
+
+  const statusText = page.locator('dd p.text-lg.font-semibold');
+  await expect(statusText).toHaveText('Disabled');
+
+  const redBars = page.locator('dd .bg-red-500').first();
+  await expect(redBars).toBeVisible();
+
+  // server = mysql/mariadb, port = 3306
+  const localSection = page.locator('section').filter({ has: page.locator('h2#local') });
+
+  const localServer = localSection.locator('span.text-3xl').first();
+  const localServerText = await localServer.textContent();
+  expect(localServerText?.toLowerCase()).toMatch(/mysql|mariadb/);
+
+  const localPort = localSection.locator('span.text-3xl').nth(1);
+  await expect(localPort).toHaveText('3306');
+
+  // public IPv4 + port
+  const remoteSection = page.locator('section').filter({ has: page.locator('h2#remote') });
+
+  const remoteServer = remoteSection.locator('span.text-3xl').first();
+  const remoteServerText = await remoteServer.textContent();
+
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  expect(remoteServerText?.trim()).toMatch(ipv4Regex);
+  const parts = remoteServerText!.trim().split('.').map(Number);
+  expect(parts[0]).not.toBe(127);                                             // not loopback
+  expect(parts[0]).not.toBe(10);                                              // not 10.x.x.x
+  expect(!(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)).toBe(true); // not 172.16–31.x.x
+  expect(!(parts[0] === 192 && parts[1] === 168)).toBe(true);                 // not 192.168.x.x
+
+  const remotePort = remoteSection.locator('span.text-3xl').nth(1);
+  const remotePortNum = parseInt((await remotePort.textContent()) ?? '0', 10);
+  expect(remotePortNum).toBeGreaterThanOrEqual(32768);
+  expect(remotePortNum).toBeLessThanOrEqual(65535);
+
+  const enableBtn = page.locator('dd button', { hasText: 'Click to Enable' });
+  await enableBtn.click();
+
+  await expect(page.locator('text=Remote MySQL access is now enabled')).toBeVisible();
+
+  await expect(statusText).toHaveText('Enabled');
+  const greenBars = page.locator('dd .bg-emerald-500').first();
+  await expect(greenBars).toBeVisible();
+
+  const disableBtn = page.locator('dd button', { hasText: 'Click to Disable' });
+  await disableBtn.click();
+
+  await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
+
+  await expect(statusText).toHaveText('Disabled');
+  await expect(redBars).toBeVisible();
+});
