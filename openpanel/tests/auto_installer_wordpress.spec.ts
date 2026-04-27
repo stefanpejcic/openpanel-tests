@@ -36,10 +36,10 @@ test('install wordpress', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Admin Username:' }).fill('rasa');
   await page.getByRole('textbox', { name: 'Admin Password:' }).fill('rasa123');
   await page.getByRole('button', { name: 'Start Installation' }).click();
-	await expect(page.locator('body'))
-    .toContainText(/Successfully installed/i, { timeout: 20000 });
-  await navigateToWordpress(page);
-  await expect(page.locator('body')).toContainText(/wp2.jecmenica.rs/i);
+await expect(page.getByText(/Successfully installed/i)).toBeVisible({ timeout: 20000 });
+
+await navigateToWordpress(page);
+await expect(page.getByText('wp2.jecmenica.rs', { exact: true })).toBeVisible();
 
   console.log('wordpress created');
 });
