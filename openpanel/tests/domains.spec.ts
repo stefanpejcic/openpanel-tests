@@ -48,3 +48,53 @@ test('search domains', async ({ page }) => {
   console.log('Domain search is working');
 });
 
+
+
+
+test('check columns for domains table', async ({ page }) => {
+  await page.goto(`/domains`);
+  await expect(page).toHaveURL(/domains/);
+
+  await navigateToUserPackages(page);
+
+  await page.getByRole('button', { name: 'Show Columns' }).click();
+
+  const rows = page.locator('ul[aria-labelledby="dropdownToggleButton"] li');
+
+  const count = await rows.count();
+
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+
+    const checkbox = row.locator('input[type="checkbox"]');
+
+    const xModel = await checkbox.getAttribute('x-model');
+    if (!xModel) continue;
+
+    const columnKey = xModel.replace('columns.', '');
+    const th = page.locator(`th[x-show="columns.${columnKey}"]`);
+
+    const initialState = await checkbox.isChecked();
+
+    await row.locator('label').click();
+    await page.waitForTimeout(100); // needed for alpine.js x-show
+
+    const expectedStateAfterToggle = !initialState;
+
+    if (expectedStateAfterToggle) {
+      await expect(th).toBeVisible();
+    } else {
+      await expect(th).toBeHidden();
+    }
+
+    await row.locator('label').click();
+    await page.waitForTimeout(100);
+
+    if (initialState) {
+      await expect(th).toBeVisible();
+    } else {
+      await expect(th).toBeHidden();
+    }
+  }
+  console.log('column toggle is working'); 
+});
