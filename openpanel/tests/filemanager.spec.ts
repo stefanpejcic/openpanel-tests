@@ -57,23 +57,37 @@ async function cleanupAll(page: any) {
   await expect(page.locator('body')).toContainText(/No items found/i);
 }
 
+// TODO: test toggle column names makes them visible in the table
 
-test('create new file and folder', async ({ page }) => {
+// TODO: test just from cleanupAll() to check if delete working
+// TODO: test for folder search and file search
+// TODO: copy path button test
+// TODO: looooong breadcrumbs test
+// TODO: test upload drag and drop
+// TODO: test upload multiple files
+
+
+test('create file', async ({ page }) => {
   await navigateToFiles(page);
 
   await createFile(page, FILE_NAME);
   await expect(page.locator('body')).toContainText(/File created successfully/i);
   await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
+  console.log('File created successfully');
+});
+
+test('create folder', async ({ page }) => {
+  await navigateToFiles(page);
+
   await createFolder(page, FOLDER_NAME);
   await expect(page.locator('body')).toContainText(/Folder created successfully/i);
   await expect(page.locator('body')).toContainText(new RegExp(FOLDER_NAME, 'i'));
 
-  console.log('File and folder created successfully');
+  console.log('Folder created successfully');
 });
 
-
-test('copy file into folder', async ({ page }) => {
+test('copy file to folder', async ({ page }) => {
   await navigateToFiles(page);
 
   await selectItem(page, FILE_NAME);
@@ -88,7 +102,7 @@ test('copy file into folder', async ({ page }) => {
 });
 
 
-test('move file out of folder', async ({ page }) => {
+test('move file', async ({ page }) => {
   await page.goto(`/files`);
 
   await page.getByRole('link', { name: FOLDER_NAME }).click();
@@ -111,7 +125,7 @@ test('move file out of folder', async ({ page }) => {
 });
 
 
-test('delete file to trash and restore', async ({ page }) => {
+test('delete file to trash', async ({ page }) => {
   await navigateToFiles(page);
 
   await selectItem(page, FILE_NAME);
@@ -119,19 +133,25 @@ test('delete file to trash and restore', async ({ page }) => {
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
 
+  console.log('File moved to trash successfully');
+});
+
+test('restore file from trash', async ({ page }) => {
+  await navigateToFiles(page);
+
   await page.getByRole('link', { name: 'Trash' }).click();
   await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
   await selectItem(page, FILE_NAME);
   await page.click('#restoreButton');
   await page.getByRole('button', { name: 'Restore', exact: true }).click();
+  // TODO: open again trash and check does NOT have it anymore
 
   await page.getByRole('link', { name: 'File Manager' }).click();
   await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
-  console.log('File deleted to trash and restored successfully');
+  console.log('File restored from trash successfully');
 });
-
 
 test('delete multiple items permanently', async ({ page }) => {
   await navigateToFiles(page);
@@ -148,6 +168,8 @@ test('delete multiple items permanently', async ({ page }) => {
 
 
 test('create file with editor, view and edit content', async ({ page }) => {
+  // TODO: separate to 3 functions: create, edit, view
+  // TODO: on edit test all 4 code editor modes!
   await navigateToFiles(page);
 
   await createFile(page, TXT_FILE, true);
@@ -191,7 +213,7 @@ test('rename file', async ({ page }) => {
   await page.locator('#renameInput').click();
   await page.locator('#renameInput').fill(TXT_FILE_BAK);
   await page.getByRole('button', { name: 'Rename', exact: true }).click();
-
+  // TODO: add check to NOT contain old filename
   await expect(page.locator('body')).toContainText(new RegExp(TXT_FILE_BAK, 'i'));
   await expect(page.locator('body')).toContainText(/File renamed successfully/i);
 
@@ -243,6 +265,8 @@ test('upload file from URL', async ({ page }) => {
 
 test('compress and extract files', async ({ page }) => {
   await navigateToFiles(page);
+  // TODO: separate to 2 functions: compress, extract 
+  // TODO: cover all 3 supported archive extensions
 
   await createFile(page, ZIP_FILE);
   await createFolder(page, ZIP_FOLDER);
