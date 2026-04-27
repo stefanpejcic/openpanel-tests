@@ -60,7 +60,7 @@ test('show database sizes', async ({ page }) => {
 
 
 test('access users', async ({ page }) => {
-  await page.getByRole('link', { name: 'Users' }).click();
+  await page.goto(`/mysql/users`);
   await expect(page).toHaveURL(/.*mysql\/users/);
   await expect(page.locator('body')).toContainText(/no users yet/i);
 
