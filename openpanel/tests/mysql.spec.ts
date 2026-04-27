@@ -292,6 +292,7 @@ test('remote access', async ({ page }) => {
   await expect(greenBars).toBeVisible();
 
   // 2. TEST
+  await page.waitForTimeout(5000); // allow container to restart
   const response = await page.request.post('https://api.openpanel.com/remote-mysql/', {
     form: {
       host: remoteServerText?.trim(),
