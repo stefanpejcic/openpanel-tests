@@ -28,11 +28,11 @@ async function getTranslation(locale) {
 
 const localesToTest = [ 'bg', 'de', 'en', 'es', 'fr', 'hu', 'ne', 'pt', 'ro', 'ru', 'tr', 'uk', 'zh'];
 
-test.describe('test locale', () => {
+test.describe('Change and use locale', () => {
     
     for (const locale of localesToTest) {
         
-        test(`verify translation for locale: ${locale}`, async ({ page }) => {
+        test(`locale: ${locale}`, async ({ page }) => {
             const expectedText = await getTranslation(locale);
             test.skip(!expectedText, `Translation key for "${locale}" not found on GitHub.`);
 
