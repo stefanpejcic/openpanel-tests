@@ -1,5 +1,9 @@
 import { test, expect, Page } from '@playwright/test';
 
+const domain = 'wp.tests.openpanel.org';
+
+const versions = [ '8.5', '8.4', '8.3', '8.2', '8.1', '8.0', '7.4', '7.3', '7.2', '7.1', '7.0', '5.6' ];
+
 test.setTimeout(10 * 60 * 1000); // 10min so we can also download docker images
 
 async function openPhpPage(page: Page) {
@@ -121,57 +125,70 @@ test.describe('search filter', () => {
 
 
 
-test('change every PHP version and verify info.php', async ({ page }) => {
-  test.setTimeout(120_000); // 2min per version!
-  const domain = 'wp.tests.openpanel.org';
+test.describe('version change', () => {
+  test.describe.configure({ mode: 'serial' }); // strict order
 
-  // 1. Edit info.php
-  await page.goto(`/file-manager/edit-file/${domain}/info.php?editor=text&new=true`);
-  await page.locator('#editor-text').fill('<?php phpinfo();');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
 
-  await openPhpPage(page);
-  const rows = domainRows(page);
-  const rowCount = await rows.count();
+    // Ensure info.php exists
+    await page.goto(`/file-manager/edit-file/${domain}/info.php?editor=text&new=true`);
+    await page.locator('#editor-text').fill('<?php phpinfo();');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
-  let targetRow = null;
-  for (let i = 0; i < rowCount; i++) {
-    const row = rows.nth(i);
-    const domainCell = await row.locator('td').first().textContent();
-    if (domainCell?.trim() && domain.includes(domainCell.trim())) {
-      targetRow = row;
-      break;
-    }
-  }
-  if (!targetRow) {
-    test.skip(true, `Could not find domain "${domain}" in the PHP settings table`);
-    return;
-  }
+    await page.close();
+  });
 
-  const select = targetRow.locator('select[name="new_php_version"]');
-  const options = await select.locator('option:not([disabled])').all();
-  if (options.length === 0) {
-    test.skip(true, 'No PHP versions available to switch to');
-    return;
-  }
+  for (const version of versions) {
+    test(version, async ({ page }) => {
+      test.setTimeout(120_000);
 
-  // 2. Cycle through every available version
-  for (const option of options) {
-    const newVersion = await option.getAttribute('value');
-    if (!newVersion) continue;
+      await openPhpPage(page);
 
-    const currentVersion = (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
+      const rows = domainRows(page);
+      const rowCount = await rows.count();
 
-    await select.selectOption(newVersion);
-    await Promise.all([page.waitForResponse((res) => res.request().method() === 'POST' && res.status() === 200,{ timeout: 90_000 }),targetRow.getByRole('button', { name: /change/i }).click(),]);
-    await expect(page.getByText(new RegExp(`PHP version for domain .* updated from ${currentVersion} to ${newVersion}`, 'i'))).toBeVisible({ timeout: 10_000 });
-    await expect(targetRow).toContainText(newVersion, { timeout: 5_000 });
+      let targetRow = null;
+      for (let i = 0; i < rowCount; i++) {
+        const row = rows.nth(i);
+        const domainCell = await row.locator('td').first().textContent();
+        if (domainCell?.trim() && domain.includes(domainCell.trim())) {
+          targetRow = row;
+          break;
+        }
+      }
 
-    const versionShort = newVersion.match(/\d+\.\d+/)?.[0] ?? newVersion;
-    await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100_000)}`);
-    await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
-    await openPhpPage(page);
-    console.log(`php ${versionShort} is working`);
+      if (!targetRow) {
+        test.skip(true, 'Domain not found');
+        return;
+      }
+
+      const select = targetRow.locator('select[name="new_php_version"]');
+
+      const currentVersion =
+        (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
+
+      await select.selectOption(version);
+
+      await Promise.all([
+        page.waitForResponse(
+          res => res.request().method() === 'POST' && res.status() === 200,
+          { timeout: 90_000 }
+        ),
+        targetRow.getByRole('button', { name: /change/i }).click(),
+      ]);
+
+      await expect(
+        page.getByText(new RegExp(`updated from ${currentVersion} to ${version}`, 'i'))
+      ).toBeVisible();
+
+      const versionShort = version.match(/\d+\.\d+/)?.[0] ?? version;
+
+      await page.goto(`https://${domain}/info.php?nocache=${Date.now()}`);
+      await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
+
+      console.log(`php ${versionShort} is working`);
+    });
   }
 });
