@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const DOMAIN = 'wp.tests.openpanel.org';
+
 const CERT_PEM = `-----BEGIN CERTIFICATE-----
 MIIEnjCCA4agAwIBAgIUOfPOctSsB62Ls9PNnuvn7QCwu9AwDQYJKoZIhvcNAQEL
 BQAwgYsxCzAJBgNVBAYTAlVTMRkwFwYDVQQKExBDbG91ZEZsYXJlLCBJbmMuMTQw
@@ -59,7 +61,6 @@ Q1KxOtc7x30jSEzV4+veNew=
 -----END PRIVATE KEY-----
 `;
 
-const DOMAIN = 'wp.tests.openpanel.org';
 
 
 
