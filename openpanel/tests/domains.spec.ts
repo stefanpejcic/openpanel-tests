@@ -249,8 +249,10 @@ test('edit dns record', async ({ page }) => {
   if (await field4.isVisible({ timeout: 2_000 }).catch(() => false)) {
     await field4.fill(`${recordValue}-edited`);
   }
-  await newRow.locator('button:has-text("Save"), button:has-text("Save"), button:has-text("Save")').click();
-
+  const editedRow = page.locator('tr.domain_row', { hasText: `${recordValue}-edited` });
+  await expect(editedRow).toBeVisible();  
+  await editedRow.locator('button:has-text("Save"), button:has-text("Save"), button:has-text("Save")').click();
+  
   // 2. verify row is changed
   await expect(page.locator('tr.domain_row', { hasText: recordValue })).toHaveCount(0);
   await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(1);
