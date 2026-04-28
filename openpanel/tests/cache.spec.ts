@@ -30,10 +30,14 @@ const services = [
 ];
 
 const domain = 'wp.tests.openpanel.org';
- 
+
 // PHP connection test scripts per service
 const connectionPhpScripts: Record<string, string> = {
   redis: `<?php
+if (!class_exists('Redis')) {
+    die('REDIS_EXTENSION_MISSING');
+}
+
 $redis = new Redis();
 try {
   $redis->connect('redis', 6379, 3);
@@ -48,6 +52,10 @@ try {
 }`,
 
   valkey: `<?php
+if (!class_exists('Redis')) {
+    die('REDIS_EXTENSION_MISSING');
+}
+
 $redis = new Redis();
 try {
   $redis->connect('valkey', 6379, 3);
@@ -62,6 +70,10 @@ try {
 }`,
   
   memcached: `<?php
+if (!class_exists('Memcached')) {
+    die("MEMCACHED_EXTENSION_MISSING");
+}
+  
 $mc = new Memcached();
 $mc->addServer('memcached', 11211);
 $key = 'openpanel_test_' . time();
