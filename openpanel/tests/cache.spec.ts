@@ -148,17 +148,13 @@ for (const service of services) {
 
     // TEST CONNECTION
     await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?editor=text&new=true`); 
-
-    // will this work for <textarea id="editor-text"
     await page.locator('#editor-text').fill(connectionPhpScripts[service.name]);
     await page.getByRole('button', { name: 'Save' }).click();
-
     const testUrl = `https://${domain}/cache_connection_test.php?nocache=${Math.floor(Math.random() * 100_000)}`;
     await page.goto(testUrl);
     const body = await page.locator('body').textContent();
-    const normalized = body?.trim().replace(/\r/g, '');
     const expectedOk = `${service.name.toUpperCase()}_OK`;
-    expect(normalized?.includes(expectedOk),`Expected "${expectedOk}" in response but got: ${JSON.stringify(body)}`).toBe(true);
+    expect(body?.trim().includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
     console.log(`${service.name} connection test passed`);
 
     // CONTAINER STATS
