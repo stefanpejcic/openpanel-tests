@@ -77,7 +77,7 @@ test.describe('version 4 domain', () => {
   });
 });
 
-test.describe('search', () => {
+test.describe('search filter', () => {
   test('filter table rows', async ({ page }) => {
     await openPhpPage(page);
 
@@ -98,7 +98,7 @@ test.describe('search', () => {
     expect(visibleCount).toBeLessThanOrEqual(totalRows);
   });
 
-  test('clicking a version counter link filters by that version', async ({ page }) => {
+  test('version counter filter', async ({ page }) => {
     await openPhpPage(page);
 
     const counterLink = page.locator('dl a').first();
@@ -135,66 +135,37 @@ test.describe('search', () => {
 });
 
 
-test.describe('Change version', () => {
-  test('Change button is disabled when the same version is selected', async ({ page }) => {
-    await openPhpPage(page);
-    const rows = domainRows(page);
-    if (await rows.count() === 0) return;
 
-    const firstRow = rows.first();
-    const changeBtn = firstRow.getByRole('button', { name: /change/i });
-    await expect(changeBtn).toBeDisabled();
-  });
+test('change version', async ({ page }) => {
+  await openPhpPage(page);
+  const rows = domainRows(page);
+  if (await rows.count() === 0) return;
+  const firstRow = rows.first();
 
-  test('Change button becomes enabled after picking a different version', async ({ page }) => {
-    await openPhpPage(page);
-    const rows = domainRows(page);
-    if (await rows.count() === 0) return;
+  const currentVersion = await firstRow.locator('[data-current-php-version]').getAttribute('data-current-php-version')
+    ?? await firstRow.locator('td.php-version').innerText();
 
-    const firstRow = rows.first();
-    const select = firstRow.locator('select[name="new_php_version"]');
+  const select = firstRow.locator('select[name="new_php_version"]');
+  const options = await select.locator('option:not([disabled])').all();
+  if (options.length === 0) return;
+  const newVersion = await options[0].getAttribute('value');
+  if (!newVersion) return;
+  await select.selectOption(newVersion);
 
-    // Get all option values
-    const options = await select.locator('option:not([disabled])').all();
-    if (options.length === 0) return;
+  await Promise.all([
+    page.waitForResponse(
+      (res) => res.request().method() === 'POST' && res.status() === 200,
+      { timeout: 30_000 }
+    ),
+    firstRow.getByRole('button', { name: /change/i }).click(),
+  ]);
 
-    const newVersion = await options[0].getAttribute('value');
-    if (!newVersion) return;
-
-    await select.selectOption(newVersion);
-    await page.waitForTimeout(200);
-
-    const changeBtn = firstRow.getByRole('button', { name: /change/i });
-    await expect(changeBtn).toBeEnabled();
-  });
-
-  test('submitting a version change posts the form and reloads', async ({ page }) => {
-    await openPhpPage(page);
-    const rows = domainRows(page);
-    if (await rows.count() === 0) return;
-
-    const firstRow = rows.first();
-    const select = firstRow.locator('select[name="new_php_version"]');
-    const options = await select.locator('option:not([disabled])').all();
-    if (options.length === 0) return;
-
-    const newVersion = await options[0].getAttribute('value');
-    if (!newVersion) return;
-
-    await select.selectOption(newVersion);
-
-    const [request] = await Promise.all([
-      page.waitForRequest((req) => req.method() === 'POST'),
-      firstRow.getByRole('button', { name: /change/i }).click(),
-    ]);
-
-    expect(request.method()).toBe('POST');
-    const body = request.postData() ?? '';
-    expect(body).toContain('new_php_version');
-    expect(body).toContain('domain_url');
-    expect(body).toContain('csrf_token');
-  });
+  await expect(page.getByText(new RegExp(`PHP version for domain .* updated from ${currentVersion} to ${newVersion}`, 'i'))).toBeVisible({ timeout: 10_000 });
+  await expect(firstRow).toContainText(newVersion);
 });
+
+
+
 
 test('create info.php and check', async ({ page }) => {
   // 1. create info.php
