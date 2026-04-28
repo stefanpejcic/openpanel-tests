@@ -126,7 +126,7 @@ test('change every PHP version and verify info.php', async ({ page }) => {
   const domain = 'wp.tests.openpanel.org';
 
   // 1. Edit info.php
-  await page.goto('/file-manager/edit-file/${domain}/info.php?editor=text&new=true');
+  await page.goto(`/file-manager/edit-file/${domain}/info.php?editor=text&new=true`);
   await page.locator('#editor-text').fill('<?php phpinfo();');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(/saved|success/i).first()).toBeVisible();
