@@ -1,5 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 
+test.setTimeout(10 * 60 * 1000); // 10min so we can also download docker images
+
 async function openPhpPage(page: Page) {
   await page.goto('/php/domains');
   await expect(page.locator('table')).toBeVisible();
