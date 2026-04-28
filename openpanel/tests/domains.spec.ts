@@ -323,6 +323,34 @@ test('export dns zone', async ({ page, context }) => {
 });
 
 
+test('edit zone file', async ({ page }) => {
+  await page.goto(`/domains/edit-dns-zone/${domain}?view=code`);
+
+  // 1. append TXT record
+  const newRecord = `\n${domain}.    14400     IN      TXT       "added via zone editor"`;
+  const zoneTextArea = page.locator('textarea[name="zone_content"]');
+  const existingContent = await zoneTextArea.inputValue();
+  await zoneTextArea.fill(existingContent + newRecord);
+  await page.click('#save_zone_button');
+  await expect(page.getByText('Zone file saved successfully')).toBeVisible();
+
+  // 2. validate in table view
+  await page.goto(`/domains/edit-dns-zone/${domain}`);
+  const newRow = page.locator('tr.domain_row', { hasText: `added via zone editor` });
+  await expect(newRow).toBeVisible();
+  await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
+  await expect(newRow.locator('td').nth(3)).toContainText(`added via zone editor`);
+
+  // 3. validate using dig tools
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
+  await expect(resultsArea).toBeVisible({ timeout: 10_000 });
+  await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
+  await expect(page.locator('body')).toContainText(`added via zone editor`, { timeout: 30_000 });
+  console.log('dns file editor mode is working');
+});
+
+
 
 test('reset dns zone', async ({ page }) => {
   await page.goto(`/domains/edit-dns-zone/${domain}`);
@@ -355,8 +383,12 @@ test('reset dns zone', async ({ page }) => {
   const successMsg = page.getByText('DNS zone restarted successfully.');
   await expect(successMsg).toBeVisible();
   await expect(newRow).not.toBeVisible();
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
+  await expect(resultsArea).toBeVisible({ timeout: 10_000 });
+  await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
+  await expect(page.locator('body')).not.toContainText(`added via zone editor`, { timeout: 30_000 });
 
-  // TODO: validate extenral dig  
   console.log('dns zone restart is working');
 });
 
