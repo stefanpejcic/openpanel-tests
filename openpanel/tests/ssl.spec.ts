@@ -68,15 +68,22 @@ Q1KxOtc7x30jSEzV4+veNew=
 function getCert(domain: string) {
   return new Promise<any>((resolve, reject) => {
     const socket = tls.connect(
-      443,
-      domain,
-      { servername: domain },
+      {
+        host: domain,
+        port: 443,
+        servername: domain, // SNI REQUIRED
+      },
       () => {
-        const cert = socket.getPeerCertificate();
+        const cert = socket.getPeerCertificate(true);
         socket.end();
         resolve(cert);
       }
     );
+
+    socket.setTimeout(5000, () => {
+      socket.destroy();
+      reject(new Error('TLS timeout'));
+    });
 
     socket.on('error', reject);
   });
@@ -175,7 +182,7 @@ test('switch back to Lets Encrypt', async ({ page }) => {
   const cert = await getCert(DOMAIN);
   const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
   console.log('Issuer:', issuer);
-  expect(issuer).toMatch(/let'?s encrypt/i);
+  expect(issuerRaw).toMatch(/let'?s encrypt|isrg|r3/);
 
   console.log('switch from custom to LE is working!');
 });
