@@ -108,94 +108,93 @@ for (const service of services) {
 
     console.log(`${service.name} has correct data`);
 
-    try {
 
-      // ENABLE
-      const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
-      await enableBtn.click();
-      await expect(page.locator('text=is now enabled')).toBeVisible();
-      
-      if (service.name === 'elasticsearch' || service.name === 'opensearch') {
-        await page.waitForTimeout(10000);
-      } else {
-        await page.waitForTimeout(5000);
-      }
-      
-      await navigateToPage(page, service.name);
-      await expect(statusText).toHaveText('Running');
-      const greenBars = page.locator('.bg-emerald-500').first();
-      await expect(greenBars).toBeVisible();
-      console.log(`${service.name} is running`);
-
-      // TEST CONNECTION
-      await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?new=true`);        
-      await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(connectionPhpScripts[service.name]);
-      await page.getByRole('button', { name: 'Save' }).click();
- 
-      const testUrl = `https://${domain}/cache_connection_test.php?nocache=${Math.floor(Math.random() * 100_000)}`;
-      await page.goto(testUrl);
-      const body = await page.locator('body').textContent();
-      const expectedOk = `${service.name.toUpperCase()}_OK`;
-      expect(body?.includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
-      console.log(`${service.name} connection test passed`);
- 
-      // CONTAINER STATS
-      await page.waitForResponse(response => response.url().includes(`/api/services?name=${service.name}`) && response.status() === 200);
-      const statsContainer = page.locator('#service-page-stats');
-      await expect(statsContainer.locator('span.font-medium').filter({ hasText: '--' })).toHaveCount(0, { timeout: 5000 });
-      const getStat = (label) => statsContainer.locator('div', { hasText: label }).locator('span.font-medium').last();
-
-      const statItems = statsContainer.locator('div.flex.items-center.justify-between');
-      const count = await statItems.count();
-      
-      const stats = {};
-      for (let i = 0; i < count; i++) {
-        const item = statItems.nth(i);
-        const label = await item.locator('span').first().innerText();
-        const value = await item.locator('span').last().innerText();
-        stats[label.trim()] = value.trim();
-      }
-      
-      const requiredKeys = ['ID', 'Name', 'CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'Block I/O', 'PIDs'];
-      for (const key of requiredKeys) {
-        expect(stats).toHaveProperty(key, expect.any(String));
-      }
-      
-      await expect(getStat('Name')).toHaveText(service.name);
-      
-      const validations = {
-        'ID':           { re: /^[a-f0-9]{12}$/,                    desc: '12 hex chars' },
-        'CPU Usage':    { re: /^\d+\.\d+%$/,                       desc: 'percentage like 0.05%' },
-        'Memory Usage': { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 2.098MiB / 102.4MiB' },
-        'Memory %':     { re: /^\d+\.\d+%$/,                       desc: 'percentage like 2.05%' },
-        'Network I/O':  { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 1.04kB / 126B' },
-        'Block I/O':    { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 147kB / 0B' },
-        'PIDs':         { re: /^\d+$/,                             desc: 'integer like 10' },
-      };
-      
-      for (const [label, { re, desc }] of Object.entries(validations)) {
-        const value = stats[label];
-        expect(re.test(value), `"${label}" value "${value}" should match ${desc}`).toBe(true);
-      }  
-
-      // LOGS
-      await page.click('button:has-text("View container log")');
-      await page.waitForResponse(response => response.url().includes(`/api/containers/log/${service.name}`) && response.status() === 200);
-      const logContent = page.locator('#log-content');
-      await expect(logContent).not.toHaveText('No logs.');
-      await expect(logContent).not.toBeEmpty();
-      console.log(`${service.name} logs are working`);
-
-    } finally {
-      // DISABLE
-      await navigateToPage(page, service.name);
-      const disableBtn = page.locator('button', { hasText: 'Click to Disable' });
-      await disableBtn.click();
-      await expect(page.locator('text=is now disabled')).toBeVisible();
-      await expect(statusText).toHaveText('Disabled');
-      await expect(redBars).toBeVisible();
-      console.log(`${service.name} is disabled`);
+    // ENABLE
+    const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
+    await enableBtn.click();
+    await expect(page.locator('text=is now enabled')).toBeVisible();
+    
+    if (service.name === 'elasticsearch' || service.name === 'opensearch') {
+      await page.waitForTimeout(10000);
+    } else {
+      await page.waitForTimeout(5000);
     }
+
+
+  
+    await navigateToPage(page, service.name);
+    await expect(statusText).toHaveText('Running');
+    const greenBars = page.locator('.bg-emerald-500').first();
+    await expect(greenBars).toBeVisible();
+    console.log(`${service.name} is running`);
+
+    // TEST CONNECTION
+    await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?new=true`);        
+    await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(connectionPhpScripts[service.name]);
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const testUrl = `https://${domain}/cache_connection_test.php?nocache=${Math.floor(Math.random() * 100_000)}`;
+    await page.goto(testUrl);
+    const body = await page.locator('body').textContent();
+    const expectedOk = `${service.name.toUpperCase()}_OK`;
+    expect(body?.includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
+    console.log(`${service.name} connection test passed`);
+
+    // CONTAINER STATS
+    await page.waitForResponse(response => response.url().includes(`/api/services?name=${service.name}`) && response.status() === 200);
+    const statsContainer = page.locator('#service-page-stats');
+    await expect(statsContainer.locator('span.font-medium').filter({ hasText: '--' })).toHaveCount(0, { timeout: 5000 });
+    const getStat = (label) => statsContainer.locator('div', { hasText: label }).locator('span.font-medium').last();
+
+    const statItems = statsContainer.locator('div.flex.items-center.justify-between');
+    const count = await statItems.count();
+    
+    const stats = {};
+    for (let i = 0; i < count; i++) {
+      const item = statItems.nth(i);
+      const label = await item.locator('span').first().innerText();
+      const value = await item.locator('span').last().innerText();
+      stats[label.trim()] = value.trim();
+    }
+    
+    const requiredKeys = ['ID', 'Name', 'CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'Block I/O', 'PIDs'];
+    for (const key of requiredKeys) {
+      expect(stats).toHaveProperty(key, expect.any(String));
+    }
+    
+    await expect(getStat('Name')).toHaveText(service.name);
+    
+    const validations = {
+      'ID':           { re: /^[a-f0-9]{12}$/,                    desc: '12 hex chars' },
+      'CPU Usage':    { re: /^\d+\.\d+%$/,                       desc: 'percentage like 0.05%' },
+      'Memory Usage': { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 2.098MiB / 102.4MiB' },
+      'Memory %':     { re: /^\d+\.\d+%$/,                       desc: 'percentage like 2.05%' },
+      'Network I/O':  { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 1.04kB / 126B' },
+      'Block I/O':    { re: /^\d+(\.\d+)?\w+\s*\/\s*\d+(\.\d+)?\w+$/, desc: 'bytes like 147kB / 0B' },
+      'PIDs':         { re: /^\d+$/,                             desc: 'integer like 10' },
+    };
+    
+    for (const [label, { re, desc }] of Object.entries(validations)) {
+      const value = stats[label];
+      expect(re.test(value), `"${label}" value "${value}" should match ${desc}`).toBe(true);
+    }  
+
+    // LOGS
+    await page.click('button:has-text("View container log")');
+    await page.waitForResponse(response => response.url().includes(`/api/containers/log/${service.name}`) && response.status() === 200);
+    const logContent = page.locator('#log-content');
+    await expect(logContent).not.toHaveText('No logs.');
+    await expect(logContent).not.toBeEmpty();
+    console.log(`${service.name} logs are working`);
+
+    // DISABLE
+    await navigateToPage(page, service.name);
+    const disableBtn = page.locator('button', { hasText: 'Click to Disable' });
+    await disableBtn.click();
+    await expect(page.locator('text=is now disabled')).toBeVisible();
+    await expect(statusText).toHaveText('Disabled');
+    await expect(redBars).toBeVisible();
+    console.log(`${service.name} is disabled`);
 
   });
 }
