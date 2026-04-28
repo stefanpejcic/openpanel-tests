@@ -151,7 +151,7 @@ for (const service of services) {
     await page.goto(testUrl);
     const body = await page.locator('body').textContent();
     const expectedOk = `${service.name.toUpperCase()}_OK`;
-    expect(body?.trim().includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
+    await expect(body?.trim().includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
     console.log(`${service.name} connection test from php passed`);
 
     // CONTAINER STATS
