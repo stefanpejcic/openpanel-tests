@@ -187,7 +187,7 @@ test('change docroot', async ({ page }) => {
 
   // 4. Open the domain in browser and verify PHP execution
   await page.goto(`https://${DOMAIN}/testing.php`);
-  await expect(page.getByText('is php working?')).toBeVisible();
+  await expect(page.getByText(`File is shown from folder: ${NEW_FOLDER}`)).toBeVisible();
   
   console.log('docroot change is fully working');
 });
