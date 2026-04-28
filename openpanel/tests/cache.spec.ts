@@ -70,19 +70,56 @@ try {
 }`,
   
   memcached: `<?php
-if (!class_exists('Memcached')) {
-    die("MEMCACHED_EXTENSION_MISSING");
-}
-  
-$mc = new Memcached();
-$mc->addServer('memcached', 11211);
-$key = 'openpanel_test_' . time();
-$mc->set($key, 'ok', 10);
-$val = $mc->get($key);
-if ($val === 'ok') {
-  echo 'MEMCACHED_OK';
+if (class_exists('Memcached')) {
+  $mc = new Memcached();
+  $mc->addServer('memcached', 11211);
+  $key = 'openpanel_test_' . time();
+  $mc->set($key, 'ok', 10);
+  $val = $mc->get($key);
+  if ($val === 'ok') {
+    echo 'MEMCACHED_OK';
+  } else {
+    echo 'MEMCACHED_FAIL:get_returned_' . var_export($val, true);
+  }
 } else {
-  echo 'MEMCACHED_FAIL:get_returned_' . var_export($val, true);
+  $host = 'memcached';
+  $port = 11211;
+  
+  $fp = fsockopen($host, $port, $errno, $errstr, 2);
+  
+  if (!$fp) {
+      die("MEMCACHED_FAIL:connection_failed");
+  }
+  
+  $key = 'openpanel_test_' . time();
+  $value = 'ok';
+  
+  $cmd = "set $key 0 10 " . strlen($value) . "\r\n$value\r\n";
+  fwrite($fp, $cmd);
+  $setResponse = trim(fgets($fp));
+  
+  if ($setResponse !== "STORED") {
+      fclose($fp);
+      die("MEMCACHED_FAIL:set_" . $setResponse);
+  }
+  fwrite($fp, "get $key\r\n");
+  
+  $getResponse = '';
+  while (!feof($fp)) {
+      $line = fgets($fp);
+      if (strpos($line, "END") !== false) {
+          break;
+      }
+      $getResponse .= $line;
+  }
+  
+  fclose($fp);
+  
+  if (strpos($getResponse, $value) !== false) {
+      echo "MEMCACHED_OK";
+  } else {
+      echo "MEMCACHED_FAIL:get_returned_" . var_export($getResponse, true);
+  }
 }`,
  
   elasticsearch: `<?php
