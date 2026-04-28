@@ -308,7 +308,7 @@ test('export dns zone', async ({ page, context }) => {
   const pagePromise = context.waitForEvent('page');
 
   await page.locator('#dropdownHoverButton').click();
-  await page.locator('a:has-text("Export Zone")[href*="export"]').click();
+  await page.locator('#dropdownHover').locator('a:has-text("Export Zone")[href*="export"]').click();
 
   const download = await downloadPromise;
   const path = await download.path();
@@ -374,8 +374,9 @@ test('reset dns zone', async ({ page }) => {
 
   // 3. restart
   await page.locator('#dropdownHoverButton').click();
-  await page.locator('a[data-drawer-target="drawer-right-restart-zone"]').click();
-  const resetBtn = page.getByRole('button', { name: 'Reset', exact: true });
+  await page.locator('#dropdownHover').locator('a:has-text(Reset")').click();  
+  //await page.locator('a[data-drawer-target="drawer-right-restart-zone"]').click();
+  //const resetBtn = page.getByRole('button', { name: 'Reset', exact: true });
   await expect(resetBtn).toBeVisible();
   await resetBtn.click();
   
