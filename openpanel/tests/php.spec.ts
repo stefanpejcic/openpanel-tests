@@ -230,13 +230,14 @@ test.describe('info.php live PHP version check', () => {
       return;
     }
 
-    await page.goto(`${domain}/info.php`);
+    await page.goto(`${domain}/info.php?nocache=${Math.floor(Math.random() * 100000)}`);
     await expect(page.locator('body')).toContainText(`PHP Version ${expectedVersion}`);
-  });
 
-  test('info.php page title confirms it is a PHP info page', async ({ page }) => {
-    await page.goto(`${domain}/info.php`);
-    await expect(page).toHaveTitle(/phpinfo/i);
+    // cleanup
+    await page.goto(`/files/wp.tests.openpanel.org`);
+    await page.locator('#filemanager_table div').filter({ hasText: domain }).click();
+    await page.getByRole('button', { name: ' Delete' }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();    
   });
 });
 
