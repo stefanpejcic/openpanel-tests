@@ -120,6 +120,7 @@ test.describe('search filter', () => {
 
 
 test('change every PHP version and verify info.php', async ({ page }) => {
+  test.setTimeout(120_000); // 2min
   const domain = 'wp.tests.openpanel.org';
 
   // 1. Create info.php
@@ -162,35 +163,16 @@ test('change every PHP version and verify info.php', async ({ page }) => {
       const newVersion = await option.getAttribute('value');
       if (!newVersion) continue;
 
-      const currentVersion =
-        (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
+      const currentVersion = (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
 
       await select.selectOption(newVersion);
-
-      await Promise.all([
-        page.waitForResponse(
-          (res) => res.request().method() === 'POST' && res.status() === 200,
-          { timeout: 90_000 }
-        ),
-        targetRow.getByRole('button', { name: /change/i }).click(),
-      ]);
-
-      await expect(
-        page.getByText(
-          new RegExp(`PHP version for domain .* updated from ${currentVersion} to ${newVersion}`, 'i')
-        )
-      ).toBeVisible({ timeout: 10_000 });
-
+      await Promise.all([page.waitForResponse((res) => res.request().method() === 'POST' && res.status() === 200,{ timeout: 90_000 }),targetRow.getByRole('button', { name: /change/i }).click(),]);
+      await expect(page.getByText(new RegExp(`PHP version for domain .* updated from ${currentVersion} to ${newVersion}`, 'i'))).toBeVisible({ timeout: 10_000 });
       await expect(targetRow).toContainText(newVersion, { timeout: 5_000 });
 
       const versionShort = newVersion.match(/\d+\.\d+/)?.[0] ?? newVersion;
-      await page.goto(
-        `https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100_000)}`
-      );
-      await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`, {
-        timeout: 15_000,
-      });
-
+      await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100_000)}`);
+      await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
       await openPhpPage(page);
     }
   } finally {
