@@ -168,8 +168,8 @@ test('dns zone editor', async ({ page }) => {
   const randomSuffix = randomBytes(3).toString('hex');
   const recordValue = `verify-${randomBytes(6).toString('hex')}`;
 
+  // 1. create random TXT record
   await page.locator('#AddDNSRecord').click();
-
   const addRow = page.locator('#addRecordRow');
   await expect(addRow).toBeVisible();
 
@@ -179,16 +179,16 @@ test('dns zone editor', async ({ page }) => {
   // await addRow.locator('input[name="TTL"]').fill('14400');
   await page.locator('#save-row').click();
 
-  // TODO: DNS record added successfully.
+  await expect(page.getByText(new RegExp(`DNS record added successfully`, 'i'))).toBeVisible();
 
+  // 2. validate on page
   const newRow = page.locator('tr.domain_row', { hasText: recordValue });
   await expect(newRow).toBeVisible();
-
   await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
   await expect(newRow.locator('td').nth(3)).toContainText(recordValue);
 
+  // 3. validate using dig tools
   await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
-
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'),{ timeout: 30_000 });
