@@ -156,7 +156,12 @@ test('vhost editor', async ({ page }) => {
   console.log('vhost editor is working');
 });
 
+test('change docroot', async ({ page }) => {
+  await page.goto(`/domains/docroot?domain_name=wp.tests.openpanel.org`);
 
+
+  console.log('change docroot is working');
+});
 
 
 
