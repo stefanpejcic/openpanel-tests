@@ -263,7 +263,6 @@ test('edit dns record', async ({ page }) => {
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
-  await expect(page.locator('body')).not.toContainText(recordValue);  
   await expect(page.locator('body')).toContainText(`${recordValue}-edited`);  
   console.log('dns record deletion is working');
 });
