@@ -235,7 +235,7 @@ test.describe('info.php live PHP version check', () => {
 
     // cleanup
     await page.goto(`/files/wp.tests.openpanel.org`);
-    await page.locator('#filemanager_table div').filter({ hasText: domain }).click();
+    await page.locator('#filemanager_table div').filter({ hasText: 'info.php' }).click();
     await page.getByRole('button', { name: ' Delete' }).click();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();    
   });
