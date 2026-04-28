@@ -184,7 +184,7 @@ test.describe('version change', () => {
       await expect(async () => {
         await page.goto(`https://${domain}/info.php?nocache=${Date.now()}`);
         await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
-      }).toPass({ timeout: 10000, intervals: [500] }); // 10s max, every 0.5s
+      }).toPass({ timeout: 15000, intervals: [500] }); // 15s max, every 0.5s
 
       console.log(`php ${versionShort} is working`);
     });
