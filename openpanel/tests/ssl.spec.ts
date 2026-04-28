@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test.use({ ignoreHTTPSErrors: true });
+
 const DOMAIN = 'wp.tests.openpanel.org';
 
-const context = await browser.newContext({
-  ignoreHTTPSErrors: true,
-});
 
 const CERT_PEM = `-----BEGIN CERTIFICATE-----
 MIIEnjCCA4agAwIBAgIUOfPOctSsB62Ls9PNnuvn7QCwu9AwDQYJKoZIhvcNAQEL
