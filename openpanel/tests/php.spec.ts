@@ -196,49 +196,47 @@ test.describe('Change version', () => {
   });
 });
 
-test.describe('info.php live PHP version check', () => {
-  test('info.php is reachable and reports the expected PHP version', async ({ page }) => {
-    // 1. create info.php
-    await page.goto(`/files/wp.tests.openpanel.org`);
-    await page.getByRole('button', { name: ' New File' }).click();
-    await page.getByRole('textbox', { name: 'File Name*' }).fill(`info.php`);
-    await page.getByRole('button', { name: 'Create' }).click();
+test('create info.php and check', async ({ page }) => {
+  // 1. create info.php
+  await page.goto(`/files/wp.tests.openpanel.org`);
+  await page.getByRole('button', { name: ' New File' }).click();
+  await page.getByRole('textbox', { name: 'File Name*' }).fill(`info.php`);
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  await page.goto(`/file-manager/edit-file/wp.tests.openpanel.org/info.php`);
+  await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('<?php phpinfo();');
+  await page.getByRole('button', { name: 'Save' }).click();
   
-    await page.goto(`/file-manager/edit-file/wp.tests.openpanel.org/info.php`);
-    await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('<?php phpinfo();');
-    await page.getByRole('button', { name: 'Save' }).click();
-    
-    const domain = 'wp.tests.openpanel.org';
-    
-    await openPhpPage(page);
-    const rows = domainRows(page);
-    const rowCount = await rows.count();
+  const domain = 'wp.tests.openpanel.org';
+  
+  await openPhpPage(page);
+  const rows = domainRows(page);
+  const rowCount = await rows.count();
 
-    let expectedVersion: string | null = null;
-    for (let i = 0; i < rowCount; i++) {
-      const row = rows.nth(i);
-      const domainCell = await row.locator('td').first().textContent();
-      if (domainCell && domain.includes(domainCell.trim())) {
-        const versionCell = await row.locator('td').nth(1).textContent();
-        expectedVersion = versionCell?.match(/\d+\.\d+/)?.[0] ?? null;
-        break;
-      }
+  let expectedVersion: string | null = null;
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
+    const domainCell = await row.locator('td').first().textContent();
+    if (domainCell && domain.includes(domainCell.trim())) {
+      const versionCell = await row.locator('td').nth(1).textContent();
+      expectedVersion = versionCell?.match(/\d+\.\d+/)?.[0] ?? null;
+      break;
     }
+  }
 
-    if (!expectedVersion) {
-      test.skip(true, `Could not find domain "${domain}" in the PHP settings table`);
-      return;
-    }
+  if (!expectedVersion) {
+    test.skip(true, `Could not find domain "${domain}" in the PHP settings table`);
+    return;
+  }
 
-    await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100000)}`);
-    await expect(page.locator('body')).toContainText(`PHP Version ${expectedVersion}`);
+  await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100000)}`);
+  await expect(page.locator('body')).toContainText(`PHP Version ${expectedVersion}`);
 
-    // cleanup
-    await page.goto(`/files/wp.tests.openpanel.org`);
-    await page.locator('#filemanager_table div').filter({ hasText: 'info.php' }).click();
-    await page.getByRole('button', { name: ' Delete' }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();    
-  });
+  // cleanup
+  await page.goto(`/files/wp.tests.openpanel.org`);
+  await page.locator('#filemanager_table div').filter({ hasText: 'info.php' }).click();
+  await page.getByRole('button', { name: ' Delete' }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();    
 });
 
 test.describe('AJAX requests and dynamic data', () => {
