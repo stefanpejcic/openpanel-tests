@@ -278,7 +278,7 @@ test('delete dns record', async ({ page }) => {
   //await newRow.locator('button[data-action="delete"], button.delete-record, .btn-delete').click();
   await newRow.locator('button.delete-button').click();
 
-  const confirmBtn = page.locator('button:has-text("Confirm"), button:has-text("Confirm"), button:has-text("Delete")').first();
+  const confirmBtn = page.locator('button:has-text("Confirm"), button:has-text("Confirm")').first();
   if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
     await confirmBtn.click();
   }
