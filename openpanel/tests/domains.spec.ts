@@ -28,26 +28,46 @@ test('add domains', async ({ page }) => {
 });
 
 test('verify files created for a new domain', async ({ page }) => {
+  // domains page shows new domain
   await page.goto(`/domains`);
   await expect(page.locator('td[x-show="columns.domain"]', { hasText: 'wp.tests.openpanel.org' })).toBeVisible();
   console.log(`domain visible`);
 
+  // docroot created
   await page.goto(`/files`);
   await expect(page).toHaveURL(/files/);
   await expect(page.getByText(/wp.tests.openpanel.org/i)).toBeVisible();
   console.log(`document root visible`);
 
+  // DNS zone created
   await page.goto(`/domains\/edit-dns-zone\/wp.tests.openpanel.org`);
   await expect(page).toHaveURL(/domains\/edit-dns-zone\/wp.tests.openpanel.org/);
   await expect(page.getByText(/spf1/i)).toBeVisible();
   console.log(`zone file exists`);
 
+  // vhosts file created
   await page.goto(`/domains\/vhosts?domain=wp.tests.openpanel.org`);
   await expect(page.locator('#editor')).toContainText('index.php');  
   console.log(`vhost file exists`);
-  
-  await page.goto(`/domains\/ssl?domain_name=wp.tests.openpanel.org`);
+
+  // SSL generation
+  await page.goto('http://wp.tests.openpanel.org', {
+    waitUntil: 'domcontentloaded',
+  });
   const certData = page.locator('#certData');
+  const start = Date.now();
+  
+  while (Date.now() - start < 15000) {
+    await page.goto('/domains/ssl?domain_name=wp.tests.openpanel.org');
+  
+    try {
+      await expect(certData).toBeVisible({ timeout: 2000 });
+      break;
+    } catch (e) {
+      // retry
+    }
+  }
+  
   await expect(certData).toBeVisible();
   console.log(`cert file exists`);
 });
