@@ -75,20 +75,20 @@ test('view ssl info', async ({ page }) => {
 test('add custom ssl', async ({ page }) => {
 
   // Write files
-  await page.goto('/file-manager/edit-file/cert.crt?editor=text&new=true');
+  await page.goto('/file-manager/edit-file/cert.txt?editor=text&new=true');
   await page.locator('#editor-text').fill(CERT_PEM);
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
-  await page.goto('/file-manager/edit-file/private.key?editor=text&new=true');
+  await page.goto('/file-manager/edit-file/private.txt?editor=text&new=true');
   await page.locator('#editor-text').fill(KEY_PEM);
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
   // 2. set ssl in UI
   await page.goto(`/domains/ssl?domain_name=${DOMAIN}`);
-  await page.locator('input[name="public_path"]').fill('/var/www/html/cert.crt');
-  await page.locator('input[name="private_path"]').fill('/var/www/html/private.key');
+  await page.locator('input[name="public_path"]').fill('/var/www/html/cert.txt');
+  await page.locator('input[name="private_path"]').fill('/var/www/html/private.txt');
   await page.getByRole('button', { name: 'Configure Custom Certificate' }).click();
 
   await expect(page.getByText(/certificate configured|ssl updated|success/i).first()).toBeVisible(); //TODO: check mode
