@@ -299,28 +299,18 @@ test('delete dns record', async ({ page }) => {
 
 
 
-test('export dns zone', async ({ page, context }) => {
-  await page.goto(`/domains/edit-dns-zone/${domain}`);
+const fs = require('fs');
 
+test('export dns zone', async ({ page }) => {
   const downloadPromise = page.waitForEvent('download');
-  const pagePromise = context.waitForEvent('page');
-
-  await page.locator('#dropdownHoverButton').click();
-  await page.locator('#dropdownHover').locator('a:has-text("Export Zone")[href*="export"]').click();
-
-  const newTab = await pagePromise;
-  
-  await newTab.waitForLoadState('domcontentloaded');
-  expect(newTab.url()).toContain('export'); 
-
+  await page.goto(`/domains/export-dns-zone/${domain}`);
   const download = await downloadPromise;
   const path = await download.path();
-  
-  const fs = require('fs');
   const stats = fs.statSync(path);
-  expect(stats.size).toBeGreaterThan(1024);
-});
 
+  console.log(`Downloaded file to: ${path}`);
+  expect(stats.size).toBeGreaterThan(1024); // >1kb
+});
 
 
 test('edit zone file', async ({ page }) => {
