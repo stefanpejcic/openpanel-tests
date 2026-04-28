@@ -250,7 +250,7 @@ test('edit dns record', async ({ page }) => {
     await field4.fill(`${recordValue}-edited`);
   }
 
-  const editedRow = page.locator('tr.domain_row').filter({ has: page.getByDisplayValue(`${recordValue}-edited`) });  
+  const editedRow = page.locator('tr.domain_row').filter({ has: page.locator('input#Record').filter({ hasValue: `${recordValue}-edited` }) });
   await expect(editedRow).toBeVisible();  
   await editedRow.locator('button:has-text("Save"), button:has-text("Save"), button:has-text("Save")').click();
   
