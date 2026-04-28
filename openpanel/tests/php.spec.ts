@@ -174,6 +174,7 @@ test('change every PHP version and verify info.php', async ({ page }) => {
       await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100_000)}`);
       await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
       await openPhpPage(page);
+      console.log(`php ${versionShort} is working`);
     }
   } finally {
     await page.goto(`/files/${domain}`);
