@@ -275,9 +275,10 @@ test('delete dns record', async ({ page }) => {
   // 1. find and delete the record created in the previous test
   const newRow = page.locator('tr.domain_row', { hasText: `${recordValue}-edited` });
   await expect(newRow).toBeVisible();
-  await newRow.locator('button[data-action="delete"], button.delete-record, .btn-delete').click();
+  //await newRow.locator('button[data-action="delete"], button.delete-record, .btn-delete').click();
+  await newRow.locator('button.delete-button').click();
 
-  const confirmBtn = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').first();
+  const confirmBtn = page.locator('button:has-text("Confirm"), button:has-text("Confirm"), button:has-text("Delete")').first();
   if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
     await confirmBtn.click();
   }
