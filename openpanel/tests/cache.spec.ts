@@ -165,7 +165,6 @@ for (const service of services) {
     // CHECK
     const statusText = page.locator('#service-page-status');
     await expect(statusText).toHaveText('Disabled');
-    const redBars = page.locator('.bg-gray-400').first();
     const nameText = await page.locator('#service-page-name').textContent();
     expect(nameText?.toLowerCase()).toContain(service.name);
     await expect(page.locator('#service-page-port')).toHaveText(service.port);
@@ -176,21 +175,33 @@ for (const service of services) {
     const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
     await enableBtn.click();
     await expect(page.locator('text=is now enabled')).toBeVisible();
-    
-    if (service.name === 'elasticsearch' || service.name === 'opensearch') {
-      await page.waitForTimeout(10000);
-    } else {
-      await page.waitForTimeout(5000);
-    }
 
     const timeoutMs = 30_000;
     const startTime = Date.now();
-  
+    let isRunning = false;
+    
     while (Date.now() - startTime < timeoutMs) {
       await navigateToPage(page, service.name);
-      const status = await statusText.textContent();
-      if (status?.trim() === 'Running') {break;}
+      
+      const statusText = page.locator('#service-page-status');
+      
+      try {
+        await statusText.waitFor({ state: 'visible', timeout: 3000 });
+        const status = await statusText.textContent();
+        
+        if (status?.trim() === 'Running') {
+          isRunning = true;
+          break;
+        }
+      } catch {
+        // continue
+      }
+    
       await page.waitForTimeout(1000);
+    }
+    
+    if (!isRunning) {
+      throw new Error(`${service.name} did not reach Running state within ${timeoutMs}ms`);
     }
 
     const greenBars = page.locator('.bg-emerald-500').first();
@@ -261,8 +272,8 @@ for (const service of services) {
     const disableBtn = page.locator('button', { hasText: 'Click to Disable' });
     await disableBtn.click();
     await expect(page.locator('text=is now disabled')).toBeVisible();
-    await expect(statusText).toHaveText('Disabled');
-    await expect(redBars).toBeVisible();
+    await expect(page.locator('#service-page-status')).toHaveText('Disabled');
+    await expect(page.locator('.bg-gray-400').first()).toBeVisible();
     console.log(`${service.name} is disabled successfully`);
   });
 }
