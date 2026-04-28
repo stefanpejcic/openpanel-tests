@@ -179,9 +179,9 @@ test.describe('version change', () => {
       ]);
 
       await expect(page.getByText(new RegExp(`updated from ${currentVersion} to ${version}`, 'i'))).toBeVisible();
-
       const versionShort = version.match(/\d+\.\d+/)?.[0] ?? version;
 
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Service Unavailable
       await page.goto(`https://${domain}/info.php?nocache=${Date.now()}`);
       await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
 
