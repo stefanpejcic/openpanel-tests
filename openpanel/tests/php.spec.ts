@@ -205,8 +205,8 @@ test.describe('info.php live PHP version check', () => {
     await page.getByRole('button', { name: 'Create' }).click();
   
     await page.goto(`/file-manager/edit-file/wp.tests.openpanel.org/info.php`);
-    await page3.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('<?php phpinfo();');
-    await page3.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('<?php phpinfo();');
+    await page.getByRole('button', { name: 'Save' }).click();
     
     const domain = 'wp.tests.openpanel.org';
     
