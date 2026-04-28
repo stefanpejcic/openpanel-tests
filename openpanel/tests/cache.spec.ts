@@ -129,8 +129,12 @@ for (const service of services) {
     console.log(`${service.name} is running`);
 
     // TEST CONNECTION
-    await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?new=true`);        
-    await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(connectionPhpScripts[service.name]);
+    await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?new=true`);      
+    const editor = page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' });
+    await editor.click();
+    await editor.press('Control+A');
+    await editor.press('Backspace');
+    await editor.fill(connectionPhpScripts[service.name]);
     await page.getByRole('button', { name: 'Save' }).click();
 
     const testUrl = `https://${domain}/cache_connection_test.php?nocache=${Math.floor(Math.random() * 100_000)}`;
