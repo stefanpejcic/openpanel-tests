@@ -300,17 +300,23 @@ test('delete dns record', async ({ page }) => {
 
 
 const fs = require('fs');
-
 test('export dns zone', async ({ page }) => {
   const downloadPromise = page.waitForEvent('download');
-  await page.goto(`/domains/export-dns-zone/${domain}`);
+
+  await Promise.all([
+    downloadPromise,
+    page.goto(`/domains/export-dns-zone/${domain}`).catch(e => {if (!e.message.includes('Download is starting')) throw e;})
+  ]);
+
   const download = await downloadPromise;
+  
   const path = await download.path();
   const stats = fs.statSync(path);
 
   console.log(`Downloaded file to: ${path}`);
-  expect(stats.size).toBeGreaterThan(1024); // >1kb
+  expect(stats.size).toBeGreaterThan(1024); 
 });
+
 
 
 test('edit zone file', async ({ page }) => {
