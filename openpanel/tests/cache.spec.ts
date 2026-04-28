@@ -107,13 +107,14 @@ for (const service of services) {
     await expect(page.locator('#service-page-port')).toHaveText(service.port);
 
     console.log(`${service.name} has correct data`);
-  
-    // ENABLE
-    const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
-    await enableBtn.click();
-    await expect(page.locator('text=is now enabled')).toBeVisible();
 
     try {
+
+      // ENABLE
+      const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
+      await enableBtn.click();
+      await expect(page.locator('text=is now enabled')).toBeVisible();
+      
       if (service.name === 'elasticsearch' || service.name === 'opensearch') {
         await page.waitForTimeout(10000);
       } else {
