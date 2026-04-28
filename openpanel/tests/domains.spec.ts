@@ -157,10 +157,35 @@ test('vhost editor', async ({ page }) => {
 });
 
 test('change docroot', async ({ page }) => {
-  await page.goto(`/domains/docroot?domain_name=wp.tests.openpanel.org`);
+  const NEW_FOLDER = `folder_${Math.random().toString(36).substring(7)}`;
+  const DOMAIN = 'wp.tests.openpanel.org';
 
+  // 1. Create a dummy PHP file in the new folder
+  await page.goto(`/file-manager/edit-file/${NEW_FOLDER}/testing.php?editor=text&new=true`);
+  await page.locator('#editor-text').fill(`<?php echo "File is shown from folder: ${NEW_FOLDER}"; ?>`);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
-  console.log('change docroot is working');
+  // 2. Change docroot
+  await page.goto(`/domains/docroot?domain_name=${DOMAIN}`);
+  await page.locator('input[name="new_docroot"]').fill(`/var/www/html/${NEW_FOLDER}`);
+  await page.getByRole('button', { name: 'Change docroot' }).click();
+  const successPattern = new RegExp(`Docroot updated to: /var/www/html/${NEW_FOLDER} for domain: ${DOMAIN}`);
+  await expect(page.getByText(successPattern)).toBeVisible();
+  await expect(page.locator('input[name="new_docroot"]')).toHaveValue(`/var/www/html/${NEW_FOLDER}`);
+  console.log(`docroot change saved`);
+
+  // 3. Open domains page and verify
+  await page.goto('/domains');
+  const domainRow = page.locator('tr', { hasText: DOMAIN });
+  await expect(domainRow.locator('td', { hasText: NEW_FOLDER })).toBeVisible();
+  console.log(`docroot change visible in table`);
+
+  // 4. Open the domain in browser and verify PHP execution
+  await page.goto(`https://${DOMAIN}/testing.php`);
+  await expect(page.getByText('is php working?')).toBeVisible();
+  
+  console.log('docroot change is fully working');
 });
 
 
