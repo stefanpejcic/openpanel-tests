@@ -140,7 +140,7 @@ test.describe('version change', () => {
   });
 
   for (const version of versions) {
-    test(version, async ({ page }) => {
+    test(`php ${version}`, async ({ page }) => {
       test.setTimeout(120_000);
 
       await openPhpPage(page);
