@@ -156,8 +156,9 @@ for (const service of services) {
     const testUrl = `https://${domain}/cache_connection_test.php?nocache=${Math.floor(Math.random() * 100_000)}`;
     await page.goto(testUrl);
     const body = await page.locator('body').textContent();
+    const normalized = body?.trim().replace(/\r/g, '');
     const expectedOk = `${service.name.toUpperCase()}_OK`;
-    expect(body?.includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
+    expect(normalized?.includes(expectedOk),`Expected "${expectedOk}" in response but got: ${JSON.stringify(body)}`).toBe(true);
     console.log(`${service.name} connection test passed`);
 
     // CONTAINER STATS
