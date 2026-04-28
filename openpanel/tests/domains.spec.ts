@@ -195,8 +195,8 @@ test('change docroot', async ({ page }) => {
   await page.goto(`/domains/docroot?domain_name=${DOMAIN}`);
   await page.locator('input[name="new_docroot"]').fill(`/var/www/html/${DOMAIN}`);
   await page.getByRole('button', { name: 'Change docroot' }).click();
-  const successPattern = new RegExp(`Docroot updated to: /var/www/html/${DOMAIN} for domain: ${DOMAIN}`);
-  await expect(page.getByText(successPattern)).toBeVisible();
+  const revertPattern = new RegExp(`Docroot updated to: /var/www/html/${DOMAIN} for domain: ${DOMAIN}`);
+  await expect(page.getByText(revertPattern)).toBeVisible();
   await expect(page.locator('input[name="new_docroot"]')).toHaveValue(`/var/www/html/${NEW_FOLDER}`); 
 });
 
