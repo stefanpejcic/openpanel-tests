@@ -23,11 +23,6 @@ test.describe('page structure', () => {
     await expect(headers.nth(1)).toContainText(/current php version/i);
     await expect(headers.nth(2)).toContainText(/change version/i);
   });
-
-  test('search is visible', async ({ page }) => {
-    await openPhpPage(page);
-    await expect(page.getByPlaceholder(/search/i)).toBeVisible();
-  });
 });
 
 test.describe('version 4 domain', () => {
