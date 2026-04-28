@@ -12,6 +12,10 @@ const services = [
     port: '6379',
   },
   {
+    name: 'valkey',
+    port: '6379',
+  },
+  {
     name: 'memcached',
     port: '11211',
   },
@@ -42,7 +46,21 @@ try {
 } catch (Exception $e) {
   echo 'REDIS_FAIL:' . $e->getMessage();
 }`,
- 
+
+  valkey: `<?php
+$redis = new Redis();
+try {
+  $redis->connect('valkey', 6379, 3);
+  $pong = $redis->ping();
+  if ($pong === true || $pong === '+PONG' || $pong === 'PONG') {
+    echo 'VALKEY_OK';
+  } else {
+    echo 'VALKEY_FAIL:unexpected_ping_response';
+  }
+} catch (Exception $e) {
+  echo 'VALKEY_FAIL:' . $e->getMessage();
+}`,
+  
   memcached: `<?php
 $mc = new Memcached();
 $mc->addServer('memcached', 11211);
