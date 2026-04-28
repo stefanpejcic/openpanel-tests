@@ -126,7 +126,6 @@ test.describe('search filter', () => {
 
 
 test.describe('version change', () => {
-  test.describe.configure({ mode: 'serial' }); // strict order
 
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
@@ -179,9 +178,7 @@ test.describe('version change', () => {
         targetRow.getByRole('button', { name: /change/i }).click(),
       ]);
 
-      await expect(
-        page.getByText(new RegExp(`updated from ${currentVersion} to ${version}`, 'i'))
-      ).toBeVisible();
+      await expect(page.getByText(new RegExp(`updated from ${currentVersion} to ${version}`, 'i'))).toBeVisible();
 
       const versionShort = version.match(/\d+\.\d+/)?.[0] ?? version;
 
