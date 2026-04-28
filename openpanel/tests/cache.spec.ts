@@ -108,7 +108,7 @@ if ($res === false) {
  
 
 for (const service of services) {
-  test(`${service.name} page`, async ({ page }) => {
+  test(service.name, async ({ page }) => {
 
     if (service.name === 'elasticsearch' || service.name === 'opensearch') {
       test.setTimeout(60_000); // 60s
@@ -124,8 +124,7 @@ for (const service of services) {
     expect(nameText?.toLowerCase()).toContain(service.name);
     await expect(page.locator('#service-page-port')).toHaveText(service.port);
 
-    console.log(`${service.name} has correct data`);
-
+    console.log(`${service.name} page has expected info`);
 
     // ENABLE
     const enableBtn = page.locator('button', { hasText: 'Click to Enable' });
@@ -138,13 +137,11 @@ for (const service of services) {
       await page.waitForTimeout(5000);
     }
 
-
-  
     await navigateToPage(page, service.name);
     await expect(statusText).toHaveText('Running');
     const greenBars = page.locator('.bg-emerald-500').first();
     await expect(greenBars).toBeVisible();
-    console.log(`${service.name} is running`);
+    console.log(`${service.name} starts successfully`);
 
     // TEST CONNECTION
     await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?editor=text&new=true`); 
@@ -155,7 +152,7 @@ for (const service of services) {
     const body = await page.locator('body').textContent();
     const expectedOk = `${service.name.toUpperCase()}_OK`;
     expect(body?.trim().includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
-    console.log(`${service.name} connection test passed`);
+    console.log(`${service.name} connection test from php passed`);
 
     // CONTAINER STATS
     await navigateToPage(page, service.name);
@@ -203,7 +200,7 @@ for (const service of services) {
     const logContent = page.locator('#log-content');
     await expect(logContent).not.toHaveText('No logs.');
     await expect(logContent).not.toBeEmpty();
-    console.log(`${service.name} logs are working`);
+    console.log(`${service.name} logs are available`);
 
     // DISABLE
     await navigateToPage(page, service.name);
@@ -212,7 +209,6 @@ for (const service of services) {
     await expect(page.locator('text=is now disabled')).toBeVisible();
     await expect(statusText).toHaveText('Disabled');
     await expect(redBars).toBeVisible();
-    console.log(`${service.name} is disabled`);
-
+    console.log(`${service.name} is disabled successfully`);
   });
 }
