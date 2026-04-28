@@ -300,5 +300,66 @@ test('delete dns record', async ({ page }) => {
 });
 
 
+
+test('export dns zone', async ({ page, context }) => {
+  await page.goto(`/domains/edit-dns-zone/${domain}`);
+
+  const downloadPromise = page.waitForEvent('download');
+  const pagePromise = context.waitForEvent('page');
+
+  await page.locator('#dropdownHoverButton').click();
+  await page.locator('a:has-text("Export Zone")[href*="export"]').click();
+
+  const download = await downloadPromise;
+  const path = await download.path();
+  
+  const fs = require('fs');
+  const stats = fs.statSync(path);
+  expect(stats.size).toBeGreaterThan(1024);
+
+  const newTab = await pagePromise;
+  await newTab.waitForLoadState();
+  expect(newTab.url()).toContain('export'); 
+});
+
+
+
+test('reset dns zone', async ({ page }) => {
+  await page.goto(`/domains/edit-dns-zone/${domain}`);
+  const tmprecordValue = `temporary-${randomBytes(6).toString('hex')}`;
+
+  // 1. create random TXT record
+  await page.locator('#AddDNSRecord').click();
+  const addRow = page.locator('#addRecordRow');
+  await expect(addRow).toBeVisible();
+  await addRow.locator('input[name="Name"]').fill(domain);
+  await addRow.locator('select[name="Type"]').selectOption('TXT');
+  await addRow.locator('input[name="Record"]').fill(tmprecordValue);
+  await page.locator('#save-row').click();
+  await expect(page.getByText(/DNS record added successfully/i)).toBeVisible();
+
+  // 2. validate on page
+  const newRow = page.locator('tr.domain_row', { hasText: tmprecordValue });
+  await expect(newRow).toBeVisible();
+  await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
+  await expect(newRow.locator('td').nth(3)).toContainText(tmprecordValue);
+
+  // 3. restart
+  await page.locator('#dropdownHoverButton').click();
+  await page.locator('a[data-drawer-target="drawer-right-restart-zone"]').click();
+  const resetBtn = page.getByRole('button', { name: 'Reset Zone' });
+  await expect(resetBtn).toBeVisible();
+  await resetBtn.click();
+  
+  // 4. validate
+  const successMsg = page.getByText('DNS zone restarted successfully.');
+  await expect(successMsg).toBeVisible();
+  await expect(newRow).not.toBeVisible();
+
+  // TODO: validate extenral dig  
+  console.log('dns zone restart is working');
+});
+
+
 // TODO: test delete record, test edit record,
 //       test edit file, export zone and reset
