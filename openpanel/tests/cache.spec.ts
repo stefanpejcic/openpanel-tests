@@ -25,6 +25,73 @@ const services = [
   },
 ];
 
+const domain = 'wp.tests.openpanel.org';
+ 
+// PHP connection test scripts per service
+const connectionPhpScripts: Record<string, string> = {
+  redis: `<?php
+$redis = new Redis();
+try {
+  $redis->connect('redis', 6379, 3);
+  $pong = $redis->ping();
+  if ($pong === true || $pong === '+PONG' || $pong === 'PONG') {
+    echo 'REDIS_OK';
+  } else {
+    echo 'REDIS_FAIL:unexpected_ping_response';
+  }
+} catch (Exception $e) {
+  echo 'REDIS_FAIL:' . $e->getMessage();
+}`,
+ 
+  memcached: `<?php
+$mc = new Memcached();
+$mc->addServer('memcached', 11211);
+$key = 'openpanel_test_' . time();
+$mc->set($key, 'ok', 10);
+$val = $mc->get($key);
+if ($val === 'ok') {
+  echo 'MEMCACHED_OK';
+} else {
+  echo 'MEMCACHED_FAIL:get_returned_' . var_export($val, true);
+}`,
+ 
+  elasticsearch: `<?php
+$url = 'http://elasticsearch:9200/_cluster/health';
+$ctx = stream_context_create(['http' => ['timeout' => 5]]);
+$res = @file_get_contents($url, false, $ctx);
+if ($res === false) {
+  echo 'ELASTICSEARCH_FAIL:could_not_reach_host';
+} else {
+  $json = json_decode($res, true);
+  $status = $json['status'] ?? 'unknown';
+  if (in_array($status, ['green', 'yellow'])) {
+    echo 'ELASTICSEARCH_OK';
+  } else {
+    echo 'ELASTICSEARCH_FAIL:status_' . $status;
+  }
+}`,
+ 
+  opensearch: `<?php
+$url = 'http://opensearch:9200/_cluster/health';
+$ctx = stream_context_create(['http' => ['timeout' => 5]]);
+$res = @file_get_contents($url, false, $ctx);
+if ($res === false) {
+  echo 'OPENSEARCH_FAIL:could_not_reach_host';
+} else {
+  $json = json_decode($res, true);
+  $status = $json['status'] ?? 'unknown';
+  if (in_array($status, ['green', 'yellow'])) {
+    echo 'OPENSEARCH_OK';
+  } else {
+    echo 'OPENSEARCH_FAIL:status_' . $status;
+  }
+}`,
+};
+ 
+const connectionFileName = 'cache_connection_test.php';
+
+
+
 for (const service of services) {
   test(`${service.name} page`, async ({ page }) => {
 
@@ -61,7 +128,33 @@ for (const service of services) {
     await expect(greenBars).toBeVisible();
     console.log(`${service.name} is running`);
 
-    // TODO: test connection
+    // TEST CONNECTION
+    try {
+      // 1. create test PHP file via file manager
+      await page.goto(`/files/${domain}`);
+      await page.getByRole('button', { name: ' New File' }).click();
+      await page.getByRole('textbox', { name: 'File Name*' }).fill(connectionFileName);
+      await page.getByRole('button', { name: 'Create' }).click();
+ 
+      // 2. write the service-specific PHP script into the file
+      await page.goto(`/file-manager/edit-file/${domain}/${connectionFileName}`);
+      await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(connectionPhpScripts[service.name]);
+      await page.getByRole('button', { name: 'Save' }).click();
+ 
+      // 3. Open the PHP file in the browser and verify output
+      const testUrl = `https://${domain}/${connectionFileName}?nocache=${Math.floor(Math.random() * 100_000)}`;
+      await page.goto(testUrl);
+      const body = await page.locator('body').textContent();
+      const expectedOk = `${service.name.toUpperCase()}_OK`;
+      expect(body?.includes(expectedOk),`Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
+      console.log(`${service.name} connection test passed`);
+    } finally {
+      // 4. clean up
+      await page.goto(`/files/${domain}`);
+      await page.locator('#filemanager_table div').filter({ hasText: connectionFileName }).click();
+      await page.getByRole('button', { name: ' Delete' }).click();
+      await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    }    
 
     // CONTAINER STATS
     await page.waitForResponse(response => response.url().includes(`/api/services?name=${service.name}`) && response.status() === 200);
