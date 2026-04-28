@@ -67,7 +67,11 @@ test('view ssl info', async ({ page }) => {
   await page.goto(`/domains/ssl?domain_name=${DOMAIN}`);
   // Confirm the SSL info panel is actually rendered
   await expect(page.locator('#view-cert')).toBeVisible();
-  console.log('ssl info is visible');
+
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText(/US, CloudFlare, Inc|US, Let's Encrypt/i).first()).toBeVisible();
+  
+  console.log('ssl info for a domain is visible');
 });
 
 
@@ -91,7 +95,10 @@ test('add custom ssl', async ({ page }) => {
   await page.locator('input[name="private_path"]').fill('/var/www/html/private.txt');
   await page.getByRole('button', { name: 'Configure Custom Certificate' }).click();
 
-  await expect(page.getByText(/certificate configured|ssl updated|success/i).first()).toBeVisible(); //TODO: check mode
+  await expect(page.getByText(/to use custom ssl/i).first()).toBeVisible();
+
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText(/US, CloudFlare, Inc/i).first()).toBeVisible();
 
   // 3. verify panel shows it
   await page.locator('a#view-cert').click();
@@ -110,4 +117,36 @@ test('add custom ssl', async ({ page }) => {
   await domainPage.close();
 
   console.log('custom ssl is working');
+});
+
+
+
+test('switch back to Lets Encrypt', async ({ page }) => {
+
+  // 1. set autossl in UI
+  await page.goto(`/domains/ssl?domain_name=${DOMAIN}`);
+  await page.getByRole('button', { name: 'Switch back to AutoSSL' }).click();
+
+  await expect(page.getByText(/to use AutoSSL/i).first()).toBeVisible();
+
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText(/US, Let's Encrypt/i).first()).toBeVisible();
+
+  // 2. verify panel shows it
+  await page.locator('a#view-cert').click();
+  const certCode = page.locator('pre#certCode');
+  await expect(certCode).toBeVisible();
+
+  await expect(certCode).toContainText('BEGIN CERTIFICATE');
+  await expect(certCode).toContainText('BEGIN PRIVATE KEY');
+
+  // 3. verify domain uses it
+  const domainPage = await page.context().newPage();
+  await domainPage.goto(`https://${DOMAIN}`);
+
+  const title = await domainPage.title();
+  expect(title).not.toMatch(/privacy error|your connection is not private|err_cert/i);
+  await domainPage.close();
+
+  console.log('switch from custom to LE is working');
 });
