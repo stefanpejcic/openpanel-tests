@@ -249,7 +249,9 @@ test('edit dns record', async ({ page }) => {
   if (await field4.isVisible({ timeout: 2_000 }).catch(() => false)) {
     await field4.fill(`${recordValue}-edited`);
   }
-  const editedRow = page.locator('tr.domain_row').filter({has: locator('input[value="verify-9a2c21485e13-edited"]')})
+
+  //const editedRow = page.locator('tr.domain_row').filter({has: locator('input[value="`${recordValue}-edited`"]')})
+  const editedRow = page.locator('tr.domain_row').filter({has: page.locator('input[value="`${recordValue}-edited`"]')});
   
   await expect(editedRow).toBeVisible();  
   await editedRow.locator('button:has-text("Save"), button:has-text("Save"), button:has-text("Save")').click();
