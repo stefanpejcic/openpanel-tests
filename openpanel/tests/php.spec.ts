@@ -199,16 +199,16 @@ test.describe('Change version', () => {
 test.describe('info.php live PHP version check', () => {
   test('info.php is reachable and reports the expected PHP version', async ({ page }) => {
     // 1. create info.php
-    await page.goto(`/files/php.tests.openpanel.org`);
+    await page.goto(`/files/wp.tests.openpanel.org`);
     await page.getByRole('button', { name: ' New File' }).click();
     await page.getByRole('textbox', { name: 'File Name*' }).fill(`info.php`);
     await page.getByRole('button', { name: 'Create' }).click();
   
-    await page.goto(`/file-manager/edit-file/php.tests.openpanel.org/info.php`);
+    await page.goto(`/file-manager/edit-file/wp.tests.openpanel.org/info.php`);
     await page3.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('<?php phpinfo();');
     await page3.getByRole('button', { name: 'Save' }).click();
     
-    const domain = 'php.tests.openpanel.org';
+    const domain = 'wp.tests.openpanel.org';
     
     await openPhpPage(page);
     const rows = domainRows(page);
