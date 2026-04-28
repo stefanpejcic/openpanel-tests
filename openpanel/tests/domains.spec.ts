@@ -68,9 +68,14 @@ test('verify files created for a new domain', async ({ page }) => {
       // retry
     }
   }
-  
   await expect(certData).toBeVisible();
   console.log(`cert file exists`);
+
+  // logs
+  await page.goto('/domains/log/wp.tests.openpanel.org');
+  const logRows = page.locator('#logs-table tbody tr');
+  await expect(logRows.filter({ hasText: '/' }).first()).toBeVisible();
+  console.log('logs are working');
 });
 
 test('search domains', async ({ page }) => {
