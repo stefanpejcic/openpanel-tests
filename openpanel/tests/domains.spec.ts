@@ -161,6 +161,10 @@ test('change docroot', async ({ page }) => {
   const DOMAIN = 'wp.tests.openpanel.org';
 
   // 1. Create a dummy PHP file in the new folder
+  await page.goto(`/files`);
+  await page.getByRole('button', { name: ' New Folder' }).click();
+  await page.locator('#foldername').fill(NEW_FOLDER);
+  await page.getByRole('button', { name: 'Create' }).click();  
   await page.goto(`/file-manager/edit-file/${NEW_FOLDER}/testing.php?editor=text&new=true`);
   await page.locator('#editor-text').fill(`<?php echo "File is shown from folder: ${NEW_FOLDER}"; ?>`);
   await page.getByRole('button', { name: 'Save' }).click();
