@@ -72,6 +72,7 @@ function getCert(domain: string) {
         host: domain,
         port: 443,
         servername: domain, // SNI REQUIRED
+        rejectUnauthorized: false, // Error: unable to verify the first certificate
       },
       () => {
         const cert = socket.getPeerCertificate(true);
