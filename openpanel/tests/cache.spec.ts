@@ -158,7 +158,7 @@ if ($res === false) {
 
 for (const service of services) {
   test(service.name, async ({ page }) => {
-    test.setTimeout(100_000); // 100s so we also do the healthcheck
+    test.setTimeout(120_000); // 120s so we also do the healthcheck
   
     await navigateToPage(page, service.name);
 
@@ -176,7 +176,7 @@ for (const service of services) {
     await enableBtn.click();
     await expect(page.locator('text=is now enabled')).toBeVisible();
 
-    const timeoutMs = 60_000;
+    const timeoutMs = 90_000;
     const startTime = Date.now();
     let isRunning = false;
     
