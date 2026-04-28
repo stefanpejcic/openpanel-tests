@@ -1,7 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
-test('edit conf', async ({ page }) => {
-  await page.goto('/server/webserver_conf');
+const CONF_URL = '/server/webserver_conf';
+const TEST_DOMAIN = 'https://wp.tests.openpanel.org';
 
-  console.log(`/server/webserver_conf functional`);
-});
