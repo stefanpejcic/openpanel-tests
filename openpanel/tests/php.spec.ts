@@ -230,7 +230,7 @@ test.describe('info.php live PHP version check', () => {
       return;
     }
 
-    await page.goto(`${domain}/info.php?nocache=${Math.floor(Math.random() * 100000)}`);
+    await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100000)}`);
     await expect(page.locator('body')).toContainText(`PHP Version ${expectedVersion}`);
 
     // cleanup
