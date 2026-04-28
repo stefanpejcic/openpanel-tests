@@ -94,7 +94,7 @@ if (class_exists('Memcached')) {
   $key = 'openpanel_test_' . time();
   $value = 'ok';
   
-  $cmd = "set $key 0 10 " . strlen($value) . "\r\n$value\r\n";
+  $cmd = "set $key 0 10 " . strlen($value) . "\\r\\n$value\\r\\n";
   fwrite($fp, $cmd);
   $setResponse = trim(fgets($fp));
   
@@ -102,7 +102,7 @@ if (class_exists('Memcached')) {
       fclose($fp);
       die("MEMCACHED_FAIL:set_" . $setResponse);
   }
-  fwrite($fp, "get $key\r\n");
+  fwrite($fp, "get $key\\r\\n");
   
   $getResponse = '';
   while (!feof($fp)) {
