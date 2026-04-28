@@ -158,7 +158,7 @@ if ($res === false) {
 
 for (const service of services) {
   test(service.name, async ({ page }) => {
-    test.setTimeout(60_000); // 60s
+    test.setTimeout(100_000); // 100s so we also do the healthcheck
   
     await navigateToPage(page, service.name);
 
