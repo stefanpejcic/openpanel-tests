@@ -183,7 +183,7 @@ test('switch back to Lets Encrypt', async ({ page }) => {
   const cert = await getCert(DOMAIN);
   const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
   console.log('Issuer:', issuer);
-  expect(issuer).toMatch(/let'?s encrypt|isrg|r3/);
+  expect(issuer).toMatch(/let'?s encrypt|isrg|r3/i);
 
   console.log('switch from custom to LE is working!');
 });
