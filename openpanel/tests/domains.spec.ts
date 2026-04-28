@@ -247,13 +247,13 @@ test('edit dns record', async ({ page }) => {
 
   const field4 = page.locator('[name="field4"]').first();
   if (await field4.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await field4.fill('probasamo');
+    await field4.fill(`${recordValue}-edited`);
   }
   await newRow.locator('button:has-text("Save"), button:has-text("Save"), button:has-text("Save")').click();
 
   // 2. verify row is changed
   await expect(page.locator('tr.domain_row', { hasText: recordValue })).toHaveCount(0);
-  await expect(page.locator('tr.domain_row', { hasText: `probasamo` })).toHaveCount(1);
+  await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(1);
 
   // 3. validate using dig tools
   await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
@@ -261,7 +261,7 @@ test('edit dns record', async ({ page }) => {
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
   await expect(page.locator('body')).not.toContainText(recordValue);  
-  await expect(page.locator('body')).toContainText(`probasamo`);  
+  await expect(page.locator('body')).toContainText(`${recordValue}-edited`);  
   console.log('dns record deletion is working');
 });
 
@@ -271,7 +271,7 @@ test('delete dns record', async ({ page }) => {
   await page.goto(`/domains/edit-dns-zone/${domain}`);
 
   // 1. find and delete the record created in the previous test
-  const newRow = page.locator('tr.domain_row', { hasText: recordValue });
+  const newRow = page.locator('tr.domain_row', { hasText: `${recordValue}-edited` });
   await expect(newRow).toBeVisible();
   await newRow.locator('button[data-action="delete"], button.delete-record, .btn-delete').click();
 
@@ -283,14 +283,14 @@ test('delete dns record', async ({ page }) => {
   await expect(page.getByText(/DNS record deleted successfully/i)).toBeVisible();
 
   // 2. verify row is gone
-  await expect(page.locator('tr.domain_row', { hasText: recordValue })).toHaveCount(0);
+  await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(0);
 
   // 3. validate using dig tools
   await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
-  await expect(page.locator('body')).not.toContainText(recordValue);  
+  await expect(page.locator('body')).not.toContainText(`${recordValue}-edited`);  
   console.log('dns record deletion is working');
 });
 
