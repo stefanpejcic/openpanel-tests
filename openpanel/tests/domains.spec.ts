@@ -283,7 +283,7 @@ test('delete dns record', async ({ page }) => {
     await confirmBtn.click();
   }
 
-  await expect(page.getByText(/DNS record deleted successfully/i)).toBeVisible();
+  await expect(page.getByText(/record deleted successfully/i)).toBeVisible();
 
   // 2. verify row is gone
   await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(0);
