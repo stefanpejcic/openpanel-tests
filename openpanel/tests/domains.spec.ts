@@ -85,7 +85,7 @@ test('search domains', async ({ page }) => {
 
   const visibleRows = rows.filter({ has: page.locator(':visible') });
   await expect(visibleRows).toHaveCount(1);
-  await expect(visibleRows.first()).toContainText(/wp1\.jecmenica\.rs/i);
+  await expect(visibleRows.first()).toContainText(/wp\.tests\.openpanel\.org/i);
 
   await expect(rows.filter({ hasNot: page.locator(':visible') })).toHaveCount(
     (await rows.count()) - 1
