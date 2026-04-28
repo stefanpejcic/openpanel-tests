@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import tls from 'tls';
 
 test.use({ ignoreHTTPSErrors: true });
 
@@ -64,6 +65,22 @@ Q1KxOtc7x30jSEzV4+veNew=
 -----END PRIVATE KEY-----
 `;
 
+function getCert(domain: string) {
+  return new Promise<any>((resolve, reject) => {
+    const socket = tls.connect(
+      443,
+      domain,
+      { servername: domain },
+      () => {
+        const cert = socket.getPeerCertificate();
+        socket.end();
+        resolve(cert);
+      }
+    );
+
+    socket.on('error', reject);
+  });
+}
 
 
 
@@ -115,11 +132,14 @@ test('add custom ssl', async ({ page }) => {
   // 4. verify domain uses it
   const domainPage = await page.context().newPage();
   await domainPage.goto(`https://${DOMAIN}`);
-
   const title = await domainPage.title();
   expect(title).not.toMatch(/privacy error|your connection is not private|err_cert/i);
   await domainPage.close();
 
+  const cert = await getCert(DOMAIN);
+  const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
+  console.log('Issuer:', issuer);
+  expect(issuer).toMatch(/cloudflare/i);
   console.log('custom ssl is working');
 });
 
@@ -152,5 +172,10 @@ test('switch back to Lets Encrypt', async ({ page }) => {
   expect(title).not.toMatch(/privacy error|your connection is not private|err_cert/i);
   await domainPage.close();
 
-  console.log('switch from custom to LE is working');
+  const cert = await getCert(DOMAIN);
+  const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
+  console.log('Issuer:', issuer);
+  expect(issuer).toMatch(/let'?s encrypt/i);
+
+  console.log('switch from custom to LE is working!');
 });
