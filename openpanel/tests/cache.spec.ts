@@ -88,9 +88,6 @@ if ($res === false) {
 }`,
 };
  
-const connectionFileName = 'cache_connection_test.php';
-
-
 
 for (const service of services) {
   test(`${service.name} page`, async ({ page }) => {
@@ -130,33 +127,17 @@ for (const service of services) {
       console.log(`${service.name} is running`);
 
       // TEST CONNECTION
-      try {
-        // 1. create test PHP file via file manager
-        await page.goto(`/files/${domain}`);
-        await page.getByRole('button', { name: ' New File' }).click();
-        await page.getByRole('textbox', { name: 'File Name*' }).fill(connectionFileName);
-        await page.getByRole('button', { name: 'Create' }).click();
-   
-        // 2. write the service-specific PHP script into the file
-        await page.goto(`/file-manager/edit-file/${domain}/${connectionFileName}`);
-        await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(connectionPhpScripts[service.name]);
-        await page.getByRole('button', { name: 'Save' }).click();
-   
-        // 3. Open the PHP file in the browser and verify output
-        const testUrl = `https://${domain}/${connectionFileName}?nocache=${Math.floor(Math.random() * 100_000)}`;
-        await page.goto(testUrl);
-        const body = await page.locator('body').textContent();
-        const expectedOk = `${service.name.toUpperCase()}_OK`;
-        expect(body?.includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
-        console.log(`${service.name} connection test passed`);
-      } finally {
-        // 4. clean up
-        await page.goto(`/files/${domain}`);
-        await page.locator('#filemanager_table div').filter({ hasText: connectionFileName }).click();
-        await page.getByRole('button', { name: ' Delete' }).click();
-        await page.getByRole('button', { name: 'Delete', exact: true }).click();
-      }    
-
+      await page.goto(`/file-manager/edit-file/${domain}/cache_connection_test.php?new=true`);        
+      await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(connectionPhpScripts[service.name]);
+      await page.getByRole('button', { name: 'Save' }).click();
+ 
+      const testUrl = `https://${domain}/cache_connection_test.php?nocache=${Math.floor(Math.random() * 100_000)}`;
+      await page.goto(testUrl);
+      const body = await page.locator('body').textContent();
+      const expectedOk = `${service.name.toUpperCase()}_OK`;
+      expect(body?.includes(expectedOk), `Expected "${expectedOk}" in response but got: ${body}`).toBe(true);
+      console.log(`${service.name} connection test passed`);
+ 
       // CONTAINER STATS
       await page.waitForResponse(response => response.url().includes(`/api/services?name=${service.name}`) && response.status() === 200);
       const statsContainer = page.locator('#service-page-stats');
