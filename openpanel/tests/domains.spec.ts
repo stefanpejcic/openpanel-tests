@@ -5,30 +5,30 @@ test('add domain', async ({ page }) => {
   await expect(page).toHaveURL(/domains/);
   await page.getByRole('link', { name: 'New Domain', exact: true }).click();
   await expect(page).toHaveURL(/domains\/new/);
-  await page.getByRole('textbox', { name: 'Domain*' }).fill('wp1.jecmenica.rs');
+  await page.getByRole('textbox', { name: 'Domain*' }).fill('domain.tests.openpanel.org');
   await page.getByRole('button', { name: 'Add Domain' }).click();
-  await expect(page.getByText(/Domain name wp1.jecmenica.rs added successfully/i)).toBeVisible();
+  await expect(page.getByText(/Domain name domain.tests.openpanel.org added successfully/i)).toBeVisible();
   console.log(`domain add successfull`);
 
   await page.goto(`/domains`);
-  await expect(page.locator('td[x-show="columns.domain"]', { hasText: 'wp1.jecmenica.rs' })).toBeVisible();
+  await expect(page.locator('td[x-show="columns.domain"]', { hasText: 'domain.tests.openpanel.org' })).toBeVisible();
   console.log(`domain visible`);
 
   await page.goto(`/files`);
   await expect(page).toHaveURL(/files/);
-  await expect(page.getByText(/wp1.jecmenica.rs/i)).toBeVisible();
+  await expect(page.getByText(/domain.tests.openpanel.org/i)).toBeVisible();
   console.log(`document root visible`);
 
-  await page.goto(`/domains\/edit-dns-zone\/wp1.jecmenica.rs`);
-  await expect(page).toHaveURL(/domains\/edit-dns-zone\/wp1.jecmenica.rs/);
+  await page.goto(`/domains\/edit-dns-zone\/domain.tests.openpanel.org`);
+  await expect(page).toHaveURL(/domains\/edit-dns-zone\/domain.tests.openpanel.org/);
   await expect(page.getByText(/spf1/i)).toBeVisible();
   console.log(`zone file exists`);
 
-  await page.goto(`/domains\/vhosts?domain=wp1.jecmenica.rs`);
+  await page.goto(`/domains\/vhosts?domain=domain.tests.openpanel.org`);
   await expect(page.locator('#editor')).toContainText('index.php');  
   console.log(`vhost file exists`);
   
-  await page.goto(`/domains\/ssl?domain_name=wp1.jecmenica.rs`);
+  await page.goto(`/domains\/ssl?domain_name=domain.tests.openpanel.org`);
   const certData = page.locator('#certData');
   await expect(certData).toBeVisible();
   console.log(`cert file exists`);
@@ -43,7 +43,7 @@ test('search domains', async ({ page }) => {
   const searchBox = page.getByRole('searchbox', { name: 'Search' });
   const rows = page.locator('tbody tr');
 
-  await searchBox.fill('wp1.jecmenica.rs');
+  await searchBox.fill('domain.tests.openpanel.org');
   const count = await rows.count();
   expect(count).toBeGreaterThan(0);
 
@@ -111,7 +111,7 @@ test('check columns for domains table', async ({ page }) => {
 
 
 test('vhost editor', async ({ page }) => {
-  await page.goto(`/domains/vhosts?domain=wp1.jecmenica.rs`);
+  await page.goto(`/domains/vhosts?domain=domain.tests.openpanel.org`);
 
   // TODO: add header for ols, apache, nginx
   //       then curl the domain and check for header
