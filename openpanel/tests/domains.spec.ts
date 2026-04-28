@@ -308,17 +308,19 @@ test('export dns zone', async ({ page, context }) => {
   await page.locator('#dropdownHoverButton').click();
   await page.locator('#dropdownHover').locator('a:has-text("Export Zone")[href*="export"]').click();
 
+  const newTab = await pagePromise;
+  
+  await newTab.waitForLoadState('domcontentloaded');
+  expect(newTab.url()).toContain('export'); 
+
   const download = await downloadPromise;
   const path = await download.path();
   
   const fs = require('fs');
   const stats = fs.statSync(path);
   expect(stats.size).toBeGreaterThan(1024);
-
-  const newTab = await pagePromise;
-  await newTab.waitForLoadState();
-  expect(newTab.url()).toContain('export'); 
 });
+
 
 
 test('edit zone file', async ({ page }) => {
@@ -372,7 +374,7 @@ test('reset dns zone', async ({ page }) => {
 
   // 3. restart
   await page.locator('#dropdownHoverButton').click();
-  await page.locator('#dropdownHover').locator('a:has-text(Reset")').click();  
+  await page.locator('#dropdownHover').locator('a:has-text("Reset")').click();
   //await page.locator('a[data-drawer-target="drawer-right-restart-zone"]').click();
   //const resetBtn = page.getByRole('button', { name: 'Reset', exact: true });
   await expect(resetBtn).toBeVisible();
