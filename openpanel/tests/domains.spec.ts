@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { randomBytes } from 'crypto';
 
 const DOMAINS = [
   'wp.tests.openpanel.org',
@@ -153,4 +154,46 @@ test('vhost editor', async ({ page }) => {
   //       then curl the domain and check for header
 
   console.log('vhost editor is working');
+});
+
+
+
+
+
+test('dns zone editor', async ({ page }) => {
+  const domain = 'wp.tests.openpanel.org';
+
+  await page.goto(`/domains/edit-dns-zone/${domain}`);
+
+  const randomSuffix = randomBytes(3).toString('hex');
+  const recordName = `test-${randomSuffix}`;
+  const recordValue = `verify-${randomBytes(6).toString('hex')}`;
+
+  await page.locator('#AddDNSRecord').click();
+
+  const addRow = page.locator('#addRecordRow');
+  await expect(addRow).toBeVisible();
+
+  await addRow.locator('input[name="Name"]').fill(recordName);
+  await addRow.locator('select[name="Type"]').selectOption('TXT');
+  await addRow.locator('input[name="Record"]').fill(recordValue);
+  // await addRow.locator('input[name="TTL"]').fill('14400');
+  await page.locator('#save-row').click();
+
+  // TODO: DNS record added successfully.
+
+  const newRow = page.locator('tr.domain_row', { hasText: recordName });
+  await expect(newRow).toBeVisible();
+
+  await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
+  await expect(newRow.locator('td').nth(3)).toContainText(recordValue);
+
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+
+  const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
+  await expect(resultsArea).toBeVisible({ timeout: 10_000 });
+  await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'),{ timeout: 30_000 });
+  await expect(page.locator('body')).toContainText(recordValue, { timeout: 30_000 });
+
+  console.log('dns editor is working');
 });
