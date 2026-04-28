@@ -372,7 +372,7 @@ test('reset dns zone', async ({ page }) => {
   await page.locator('#dropdownHoverButton').click();
   await page.locator('#dropdownHover').locator('a:has-text("Reset")').click();
   //await page.locator('a[data-drawer-target="drawer-right-restart-zone"]').click();
-  const resetBtn = page.getByRole('button', { name: 'Reset', exact: true });
+  await expect(page.getByRole('link', { name: 'Reset', exact: true })).toBeVisible();
   await expect(resetBtn).toBeVisible();
   await resetBtn.click();
   
