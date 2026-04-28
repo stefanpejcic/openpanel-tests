@@ -166,7 +166,6 @@ test('dns zone editor', async ({ page }) => {
   await page.goto(`/domains/edit-dns-zone/${domain}`);
 
   const randomSuffix = randomBytes(3).toString('hex');
-  const recordName = `test-${randomSuffix}`;
   const recordValue = `verify-${randomBytes(6).toString('hex')}`;
 
   await page.locator('#AddDNSRecord').click();
@@ -174,7 +173,7 @@ test('dns zone editor', async ({ page }) => {
   const addRow = page.locator('#addRecordRow');
   await expect(addRow).toBeVisible();
 
-  await addRow.locator('input[name="Name"]').fill(recordName);
+  await addRow.locator('input[name="Name"]').fill(domain);
   await addRow.locator('select[name="Type"]').selectOption('TXT');
   await addRow.locator('input[name="Record"]').fill(recordValue);
   // await addRow.locator('input[name="TTL"]').fill('14400');
@@ -182,7 +181,7 @@ test('dns zone editor', async ({ page }) => {
 
   // TODO: DNS record added successfully.
 
-  const newRow = page.locator('tr.domain_row', { hasText: recordName });
+  const newRow = page.locator('tr.domain_row', { hasText: recordValue });
   await expect(newRow).toBeVisible();
 
   await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
