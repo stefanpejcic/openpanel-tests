@@ -170,7 +170,7 @@ test('switch back to Lets Encrypt', async ({ page }) => {
   await expect(certCode).toBeVisible();
 
   await expect(certCode).toContainText('BEGIN CERTIFICATE');
-  await expect(certCode).toContainText('BEGIN PRIVATE KEY');
+  await expect(certCode).toContainText('BEGIN EC PRIVATE KEY');
 
   // 3. verify domain uses it
   const domainPage = await page.context().newPage();
