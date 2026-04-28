@@ -196,3 +196,7 @@ test('dns zone editor', async ({ page }) => {
 
   console.log('dns editor is working');
 });
+
+
+// TODO: test delete record, test edit record,
+//       test edit file, export zone and reset
