@@ -122,17 +122,14 @@ test.describe('search filter', () => {
 
 
 test('change every PHP version and verify info.php', async ({ page }) => {
-  test.setTimeout(120_000); // 2min
+  test.setTimeout(120_000); // 2min per version!
   const domain = 'wp.tests.openpanel.org';
 
-  // 1. Create info.php
-  await page.goto(`/files/${domain}`);
-  await page.getByRole('button', { name: ' New File' }).click();
-  await page.getByRole('textbox', { name: 'File Name*' }).fill('info.php');
-  await page.getByRole('button', { name: 'Create' }).click();
-  await page.goto(`/file-manager/edit-file/${domain}/info.php`);
-  await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('<?php phpinfo();');
+  // 1. Edit info.php
+  await page.goto('/file-manager/edit-file/${domain}/info.php?editor=text&new=true');
+  await page.locator('#editor-text').fill('<?php phpinfo();');
   await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
   try {
     await openPhpPage(page);
