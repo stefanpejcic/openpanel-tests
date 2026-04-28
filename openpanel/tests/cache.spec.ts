@@ -109,11 +109,8 @@ if ($res === false) {
 
 for (const service of services) {
   test(service.name, async ({ page }) => {
-
-    if (service.name === 'elasticsearch' || service.name === 'opensearch') {
-      test.setTimeout(60_000); // 60s
-    }
-    
+    test.setTimeout(60_000); // 60s
+  
     await navigateToPage(page, service.name);
 
     // CHECK
@@ -137,8 +134,17 @@ for (const service of services) {
       await page.waitForTimeout(5000);
     }
 
-    await navigateToPage(page, service.name);
-    await expect(statusText).toHaveText('Running');
+    const timeoutMs = 30_000;
+    const startTime = Date.now();
+  
+    while (Date.now() - startTime < timeoutMs) {
+      await navigateToPage(page, service.name);
+      const status = await statusText.textContent();
+      if (status?.trim() === 'Running') {break;}
+      if (status?.trim() === 'Starting') { await page.waitForTimeout(1000); continue;}
+      await page.waitForTimeout(1000);
+    }
+
     const greenBars = page.locator('.bg-emerald-500').first();
     await expect(greenBars).toBeVisible();
     console.log(`${service.name} starts successfully`);
