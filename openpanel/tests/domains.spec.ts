@@ -1,40 +1,57 @@
 import { test, expect } from '@playwright/test';
 
-test('add domain', async ({ page }) => {
-  await page.goto(`/domains`);
-  await expect(page).toHaveURL(/domains/);
-  await page.getByRole('link', { name: 'New Domain', exact: true }).click();
-  await expect(page).toHaveURL(/domains\/new/);
-  await page.getByRole('textbox', { name: 'Domain*' }).fill('domain.tests.openpanel.org');
-  await page.getByRole('button', { name: 'Add Domain' }).click();
-  await expect(page.getByText(/Domain name domain.tests.openpanel.org added successfully/i)).toBeVisible();
-  console.log(`domain add successfull`);
+const DOMAINS = [
+  'wp.tests.openpanel.org',
+  'php.tests.openpanel.org',
+  'nodejs.tests.openpanel.org',
+  'python.tests.openpanel.org',
+  'website-builder.tests.openpanel.org',
+  'files.tests.openpanel.org',
+];
 
+async function addDomain(page, domain) {
+  await page.goto(`/domains/new`);
+  await expect(page).toHaveURL(/domains\/new/);
+  await page.getByRole('textbox', { name: 'Domain*' }).fill(domain);
+  await page.getByRole('button', { name: 'Add Domain' }).click();
+
+  const domainPrefix = domain.split('.').slice(0, 2).join('.');
+  await expect(page.getByText(new RegExp(`Domain name ${domainPrefix} added successfully`, 'i'))).toBeVisible();
+  console.log(`Domain added: ${domain}`);
+}
+
+
+
+test('add domains', async ({ page }) => {
+  for (const domain of DOMAINS) {
+    await addDomain(page, domain);
+  }
+});
+
+test('verify files created for a new domain', async ({ page }) => {
   await page.goto(`/domains`);
-  await expect(page.locator('td[x-show="columns.domain"]', { hasText: 'domain.tests.openpanel.org' })).toBeVisible();
+  await expect(page.locator('td[x-show="columns.domain"]', { hasText: 'wp.tests.openpanel.org' })).toBeVisible();
   console.log(`domain visible`);
 
   await page.goto(`/files`);
   await expect(page).toHaveURL(/files/);
-  await expect(page.getByText(/domain.tests.openpanel.org/i)).toBeVisible();
+  await expect(page.getByText(/wp.tests.openpanel.org/i)).toBeVisible();
   console.log(`document root visible`);
 
-  await page.goto(`/domains\/edit-dns-zone\/domain.tests.openpanel.org`);
-  await expect(page).toHaveURL(/domains\/edit-dns-zone\/domain.tests.openpanel.org/);
+  await page.goto(`/domains\/edit-dns-zone\/wp.tests.openpanel.org`);
+  await expect(page).toHaveURL(/domains\/edit-dns-zone\/wp.tests.openpanel.org/);
   await expect(page.getByText(/spf1/i)).toBeVisible();
   console.log(`zone file exists`);
 
-  await page.goto(`/domains\/vhosts?domain=domain.tests.openpanel.org`);
+  await page.goto(`/domains\/vhosts?domain=wp.tests.openpanel.org`);
   await expect(page.locator('#editor')).toContainText('index.php');  
   console.log(`vhost file exists`);
   
-  await page.goto(`/domains\/ssl?domain_name=domain.tests.openpanel.org`);
+  await page.goto(`/domains\/ssl?domain_name=wp.tests.openpanel.org`);
   const certData = page.locator('#certData');
   await expect(certData).toBeVisible();
   console.log(`cert file exists`);
 });
-
-
 
 test('search domains', async ({ page }) => {
   await page.goto(`/domains`);
@@ -43,7 +60,7 @@ test('search domains', async ({ page }) => {
   const searchBox = page.getByRole('searchbox', { name: 'Search' });
   const rows = page.locator('tbody tr');
 
-  await searchBox.fill('domain.tests.openpanel.org');
+  await searchBox.fill('wp.tests.openpanel.org');
   const count = await rows.count();
   expect(count).toBeGreaterThan(0);
 
@@ -111,7 +128,7 @@ test('check columns for domains table', async ({ page }) => {
 
 
 test('vhost editor', async ({ page }) => {
-  await page.goto(`/domains/vhosts?domain=domain.tests.openpanel.org`);
+  await page.goto(`/domains/vhosts?domain=wp.tests.openpanel.org`);
 
   // TODO: add header for ols, apache, nginx
   //       then curl the domain and check for header
