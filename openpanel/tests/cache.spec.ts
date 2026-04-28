@@ -190,7 +190,6 @@ for (const service of services) {
       await navigateToPage(page, service.name);
       const status = await statusText.textContent();
       if (status?.trim() === 'Running') {break;}
-      if (status?.trim() === 'Starting') { await page.waitForTimeout(1000); continue;}
       await page.waitForTimeout(1000);
     }
 
