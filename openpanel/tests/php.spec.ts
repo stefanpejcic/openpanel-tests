@@ -131,54 +131,47 @@ test('change every PHP version and verify info.php', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
-  try {
+  await openPhpPage(page);
+  const rows = domainRows(page);
+  const rowCount = await rows.count();
+
+  let targetRow = null;
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
+    const domainCell = await row.locator('td').first().textContent();
+    if (domainCell?.trim() && domain.includes(domainCell.trim())) {
+      targetRow = row;
+      break;
+    }
+  }
+  if (!targetRow) {
+    test.skip(true, `Could not find domain "${domain}" in the PHP settings table`);
+    return;
+  }
+
+  const select = targetRow.locator('select[name="new_php_version"]');
+  const options = await select.locator('option:not([disabled])').all();
+  if (options.length === 0) {
+    test.skip(true, 'No PHP versions available to switch to');
+    return;
+  }
+
+  // 2. Cycle through every available version
+  for (const option of options) {
+    const newVersion = await option.getAttribute('value');
+    if (!newVersion) continue;
+
+    const currentVersion = (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
+
+    await select.selectOption(newVersion);
+    await Promise.all([page.waitForResponse((res) => res.request().method() === 'POST' && res.status() === 200,{ timeout: 90_000 }),targetRow.getByRole('button', { name: /change/i }).click(),]);
+    await expect(page.getByText(new RegExp(`PHP version for domain .* updated from ${currentVersion} to ${newVersion}`, 'i'))).toBeVisible({ timeout: 10_000 });
+    await expect(targetRow).toContainText(newVersion, { timeout: 5_000 });
+
+    const versionShort = newVersion.match(/\d+\.\d+/)?.[0] ?? newVersion;
+    await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100_000)}`);
+    await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
     await openPhpPage(page);
-    const rows = domainRows(page);
-    const rowCount = await rows.count();
-
-    let targetRow = null;
-    for (let i = 0; i < rowCount; i++) {
-      const row = rows.nth(i);
-      const domainCell = await row.locator('td').first().textContent();
-      if (domainCell?.trim() && domain.includes(domainCell.trim())) {
-        targetRow = row;
-        break;
-      }
-    }
-    if (!targetRow) {
-      test.skip(true, `Could not find domain "${domain}" in the PHP settings table`);
-      return;
-    }
-
-    const select = targetRow.locator('select[name="new_php_version"]');
-    const options = await select.locator('option:not([disabled])').all();
-    if (options.length === 0) {
-      test.skip(true, 'No PHP versions available to switch to');
-      return;
-    }
-
-    // 2. Cycle through every available version
-    for (const option of options) {
-      const newVersion = await option.getAttribute('value');
-      if (!newVersion) continue;
-
-      const currentVersion = (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
-
-      await select.selectOption(newVersion);
-      await Promise.all([page.waitForResponse((res) => res.request().method() === 'POST' && res.status() === 200,{ timeout: 90_000 }),targetRow.getByRole('button', { name: /change/i }).click(),]);
-      await expect(page.getByText(new RegExp(`PHP version for domain .* updated from ${currentVersion} to ${newVersion}`, 'i'))).toBeVisible({ timeout: 10_000 });
-      await expect(targetRow).toContainText(newVersion, { timeout: 5_000 });
-
-      const versionShort = newVersion.match(/\d+\.\d+/)?.[0] ?? newVersion;
-      await page.goto(`https://${domain}/info.php?nocache=${Math.floor(Math.random() * 100_000)}`);
-      await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
-      await openPhpPage(page);
-      console.log(`php ${versionShort} is working`);
-    }
-  } finally {
-    await page.goto(`/files/${domain}`);
-    await page.locator('#filemanager_table div').filter({ hasText: 'info.php' }).click();
-    await page.getByRole('button', { name: ' Delete' }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    console.log(`php ${versionShort} is working`);
   }
 });
