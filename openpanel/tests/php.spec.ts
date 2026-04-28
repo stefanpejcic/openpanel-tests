@@ -183,7 +183,7 @@ test.describe('version change', () => {
 
       await page.waitForTimeout(5000); // Service Unavailable
       await page.goto(`https://${domain}/info.php?nocache=${Date.now()}`);
-      await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
+      await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`,{ timeout: 1000 });
 
       console.log(`php ${versionShort} is working`);
     });
