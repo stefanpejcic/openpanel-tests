@@ -9,73 +9,56 @@ function domainRows(page: Page) {
   return page.locator('tbody tr');
 }
 
-test.describe('page structure', () => {
-  test('page loads and shows the heading', async ({ page }) => {
-    await openPhpPage(page);
-    await expect(page.getByRole('heading', { name: /PHP version for domains/i })).toBeVisible();
-  });
+test('list versions', async ({ page }) => {
+  await openPhpPage(page);
 
-  test('table has 3 columns', async ({ page }) => {
-    await openPhpPage(page);
-    const headers = page.locator('thead th');
-    await expect(headers).toHaveCount(3);
-    await expect(headers.nth(0)).toContainText(/domain/i);
-    await expect(headers.nth(1)).toContainText(/current php version/i);
-    await expect(headers.nth(2)).toContainText(/change version/i);
-  });
+  // header is ok
+  await expect(page.getByRole('heading', { name: /PHP version for domains/i })).toBeVisible();
+
+  // table is ok
+  const headers = page.locator('thead th');
+  await expect(headers).toHaveCount(3);
+  await expect(headers.nth(0)).toContainText(/domain/i);
+  await expect(headers.nth(1)).toContainText(/current php version/i);
+  await expect(headers.nth(2)).toContainText(/change version/i);
+
+  // versions are shown in the table
+  const rows = domainRows(page);
+  const rowCount = await rows.count();
+
+  if (rowCount === 1) {
+    const empty = rows.first();
+    const text = await empty.textContent();
+    if (text?.includes('No domains')) {
+      test.skip();
+      return;
+    }
+  }
+
+  expect(rowCount).toBeGreaterThan(0);
+  for (let i = 0; i < rowCount; i++) {
+    const row = rows.nth(i);
+    const versionCell = row.locator('td').nth(1);
+
+    // version format is ok
+    const text = await versionCell.textContent();
+    expect(text?.trim()).toMatch(/\d+\.\d+/);
+  
+    // status indicators are ok
+    const bars = versionCell.locator('div.flex.gap-0\\.5 > div');
+    await expect(bars).toHaveCount(3);   
+  }
+
+  // summary per version
+  const counters = page.locator('dl > div');
+  const count = await counters.count();
+  if (rowCount > 0) {
+    expect(count).toBeGreaterThan(0);
+  }  
+
 });
 
-test.describe('version 4 domain', () => {
-  test('non-empty PHP version', async ({ page }) => {
-    await openPhpPage(page);
 
-    const rows = domainRows(page);
-    const rowCount = await rows.count();
-
-    if (rowCount === 1) {
-      const empty = rows.first();
-      const text = await empty.textContent();
-      if (text?.includes('No domains')) {
-        test.skip();
-        return;
-      }
-    }
-
-    expect(rowCount).toBeGreaterThan(0);
-
-    for (let i = 0; i < rowCount; i++) {
-      const row = rows.nth(i);
-      const versionCell = row.locator('td').nth(1);
-      const text = await versionCell.textContent();
-      expect(text?.trim()).toMatch(/\d+\.\d+|\//);
-    }
-  });
-
-  test('status indicator bars', async ({ page }) => {
-    await openPhpPage(page);
-    const rows = domainRows(page);
-    const rowCount = await rows.count();
-    if (rowCount === 0) return;
-
-    for (let i = 0; i < rowCount; i++) {
-      const row = rows.nth(i);
-      const versionCell = row.locator('td').nth(1);
-      const bars = versionCell.locator('div.flex.gap-0\\.5 > div');
-      await expect(bars).toHaveCount(3);
-    }
-  });
-
-  test('summary counters', async ({ page }) => {
-    await openPhpPage(page);
-    const counters = page.locator('dl > div');
-    const count = await counters.count();
-    const rows = domainRows(page);
-    const rowCount = await rows.count();
-    if (rowCount > 0) {
-      expect(count).toBeGreaterThan(0);
-    }
-  });
-});
 
 test.describe('search filter', () => {
   test('filter table rows', async ({ page }) => {
