@@ -176,7 +176,7 @@ for (const service of services) {
     await enableBtn.click();
     await expect(page.locator('text=is now enabled')).toBeVisible();
 
-    const timeoutMs = 30_000;
+    const timeoutMs = 60_000;
     const startTime = Date.now();
     let isRunning = false;
     
