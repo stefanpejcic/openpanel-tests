@@ -200,11 +200,12 @@ test('change default php version', async ({ page }) => {
   console.log(`Starting version: ${oldVersion}`);
 
   const dropdown = page.locator('#new_php_version');
-  const options = await dropdown.locator('option').allAttributes();
-  const values = options
-    .map(attr => attr.value)
-    .filter(val => val !== oldVersion && val !== "");
-
+  const values = await dropdown.locator('option').evaluateAll(options => 
+    options
+      .map(opt => opt.value)
+      .filter(val => val !== "" && val !== "oldVersionValueHere") 
+  );
+  
   if (values.length === 0) {
     throw new Error('No alternative PHP versions available to select.');
   }
@@ -226,13 +227,14 @@ test('change default php version', async ({ page }) => {
 test('edit php options', async ({ page }) => {
   await page.goto('/php/options');  
   const dropdown = page.locator('#php_version');
-  const options = await dropdown.locator('option').allAttributes();
-  const values = options
-    .map(attr => attr.value)
-    .filter(val => val !== oldVersion && val !== "");
-
+  const values = await dropdown.locator('option').evaluateAll(options => 
+    options
+      .map(opt => opt.value)
+      .filter(val => val !== "" && val !== "oldVersionValueHere") 
+  );
+  
   if (values.length === 0) {
-    throw new Error('No PHP versions available to select.');
+    throw new Error('No alternative PHP versions available to select.');
   }
 
   const randomVersion = values[Math.floor(Math.random() * values.length)];
