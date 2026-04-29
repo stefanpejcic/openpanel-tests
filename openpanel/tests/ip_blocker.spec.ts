@@ -11,7 +11,7 @@ test('IP Blocker', async ({ page, context }) => {
     await page.goto('/security/ip-blocker');
     await expect(page.getByText('CIDR')).toBeVisible();
     await page.locator('#blocked_ips').fill(serverIP);
-    await page.click('#save-changes');
+    await page.click('#save-ips');
     await expect(page.getByText('IP addresses have been successfully added to blocklist and can no longer access websites')).toBeVisible();
 
     // 3. test
@@ -33,7 +33,7 @@ test('IP Blocker', async ({ page, context }) => {
     // 4. remove ip from the blocklist
     await page.goto('/security/ip-blocker');
     await page.locator('#blocked_ips').clear();
-    await page.click('#save-changes');
+    await page.click('#save-ips');
     await expect(page.getByText('All IP addresses have been successfully removed from blocklist and can now access websites')).toBeVisible();
 
     // 5. test again
