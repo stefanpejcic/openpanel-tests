@@ -190,3 +190,34 @@ test.describe('version change', () => {
     });
   }
 });
+
+
+
+test('change default version', async ({ page }) => {
+  await page.goto('/php/default');
+  await expect(page.getByText(/Current default version/i)).toBeVisible();
+  
+  const oldVersion = await page.locator('#current_default_version').innerText();
+  console.log(`Starting version: ${oldVersion}`);
+
+  const dropdown = page.locator('#new_php_version');
+  const options = await dropdown.locator('option').allAttributes();
+  const values = options
+    .map(attr => attr.value)
+    .filter(val => val !== oldVersion && val !== "");
+
+  if (values.length === 0) {
+    throw new Error('No alternative PHP versions available to select.');
+  }
+
+  const randomVersion = values[Math.floor(Math.random() * values.length)];
+  await dropdown.selectOption(randomVersion);
+  await page.click('#change-php-version');
+
+  const successRegex = new RegExp(`PHP version ${randomVersion} set as default for new domains`, 'i');
+  await expect(page.getByText(successRegex)).toBeVisible();
+  await expect(page.locator('#current_default_version')).toHaveText(randomVersion);
+
+  console.log(`Default PHP version switch to ${randomVersion} is working`);
+});
+
