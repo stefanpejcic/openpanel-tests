@@ -219,6 +219,7 @@ test('change default version', async ({ page }) => {
   await expect(page.locator('#current_default_version')).toHaveText(randomVersion);
 
   console.log(`Default PHP version switch to ${randomVersion} is working`);
+  // TODO: test if used on a new domain!
 });
 
 
