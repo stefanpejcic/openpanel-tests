@@ -221,3 +221,51 @@ test('change default version', async ({ page }) => {
   console.log(`Default PHP version switch to ${randomVersion} is working`);
 });
 
+
+
+test('change default version', async ({ page }) => {
+  await page.goto('/php/options');
+  await expect(page.getByText(/Select PHP version/i)).toBeVisible();
+  
+  const dropdown = page.locator('#php_version');
+  const options = await dropdown.locator('option').allAttributes();
+  const values = options
+    .map(attr => attr.value)
+    .filter(val => val !== oldVersion && val !== "");
+
+  if (values.length === 0) {
+    throw new Error('No PHP versions available to select.');
+  }
+
+  const randomVersion = values[Math.floor(Math.random() * values.length)];
+  await dropdown.selectOption(randomVersion);
+  await page.click('#submit_version');
+
+  const successRegex = new RegExp(`${randomVersion} Options`, 'i');
+  await expect(page.getByText(successRegex)).toBeVisible(); 
+  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}/options\\?php_version=${randomVersion}`));
+
+  // 1. max_execution_time
+  const maxExecTime = page.locator('input[name="max_execution_time"]');
+  await maxExecTime.fill('600');
+
+  // 2. disable_functions
+  const disableFuncs = page.locator('input[name="disable_functions"]');
+  await disableFuncs.fill('exec,passthru,shell_exec,system');
+
+  // 3. post_max_size
+  const postMaxSizeContainer = page.locator('div[data-key="post_max_size"]');
+  await postMaxSizeContainer.locator('input.numeric-part').fill('2');
+  await postMaxSizeContainer.locator('select.unit-part').selectOption('G');
+  
+  await page.click('#save-changes-button');
+  await expect(page.getByText(/Configuration edited successfully and PHP-FPM service restarted/i)).toBeVisible();
+
+  await expect(maxExecTime).toHaveValue('600');
+  await expect(disableFuncs).toHaveValue('exec,passthru,shell_exec,system');
+  await expect(postMaxSizeContainer.locator('input.numeric-part')).toHaveValue('2');
+  await expect(postMaxSizeContainer.locator('select.unit-part')).toHaveValue('G');
+  
+  console.log(`PHP options editor for version ${randomVersion} is working and verified.`);
+  // TODO: test on a website and test on page Search to filter table!
+});
