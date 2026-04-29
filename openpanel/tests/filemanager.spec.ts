@@ -16,16 +16,20 @@ const ZIP_ARCHIVE_NAME = `rasizip_${suffix}.zip`;
 
 // Subdirectory used for tests that need cleanup, to avoid deleting docroots
 const TEST_SUBDIR = `test_subdir_${suffix}`;
+const TEST_FILE = `test_file_${suffix}`;
+const TEST_DIR = `test_dir_${suffix}`;
+
 
 async function navigateToFiles(page: any) {
   await page.goto(`/files`);
 }
 
 async function navigateToSubdir(page: any) {
-  await page.goto(`/files/${TEST_SUBDIR}`);
+
+  	await page.goto(`/files/${TEST_SUBDIR}`);
 }
 
-async function createFile(page: any, fileName: string, openAfterCreate = false) {
+async function createFileInRoot(page: any, fileName: string, openAfterCreate = false) {
   await navigateToFiles(page);
   await page.getByRole('button', { name: ' New File' }).click();
   await page.getByRole('textbox', { name: 'File Name*' }).fill(fileName);
@@ -35,8 +39,24 @@ async function createFile(page: any, fileName: string, openAfterCreate = false) 
   await page.getByRole('button', { name: 'Create' }).click();
 }
 
-async function createFolder(page: any, folderName: string) {
+async function createFile(page: any, fileName: string, openAfterCreate = false) {
+  await page.getByRole('button', { name: ' New File' }).click();
+  await page.getByRole('textbox', { name: 'File Name*' }).fill(fileName);
+  if (openAfterCreate) {
+    await page.locator('#open').check();
+  }
+  await page.getByRole('button', { name: 'Create' }).click();
+}
+
+
+async function createFolderInRoot(page: any, folderName: string) {
   await navigateToFiles(page);
+  await page.getByRole('button', { name: ' New Folder' }).click();
+  await page.locator('#foldername').fill(folderName);
+  await page.getByRole('button', { name: 'Create' }).click();
+}
+
+async function createFolder(page: any, folderName: string) {
   await page.getByRole('button', { name: ' New Folder' }).click();
   await page.locator('#foldername').fill(folderName);
   await page.getByRole('button', { name: 'Create' }).click();
@@ -49,7 +69,7 @@ async function selectItem(page: any, name: string, multiSelect = false) {
 }
 
 async function deleteSelected(page: any, skipTrash = false) {
-  await page.getByRole('button', { name: ' Delete' }).click();
+  await page.locator('#deleteButton').click();
   if (skipTrash) {
     await page.getByRole('checkbox', { name: 'Skip the trash and' }).check();
   }
@@ -58,12 +78,17 @@ async function deleteSelected(page: any, skipTrash = false) {
 
 // Cleanup scoped to TEST_SUBDIR only, to avoid deleting docroots
 async function cleanupSubdir(page: any) {
-  await navigateToSubdir(page);
-  await page.getByRole('button', { name: ' Select all' }).click();
-  await page.getByRole('button', { name: ' Delete' }).click();
-  await page.getByText('Skip the trash and').click();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(page.locator('body')).toContainText(/No items found/i);
+	await createFolderInRoot(page, TEST_SUBDIR);
+	await page.waitForTimeout(5000);
+	await navigateToSubdir(page);
+	await createFile(page, TEST_FILE);
+	await page.waitForTimeout(5000);
+	await createFolder(page, TEST_DIR);
+	await page.getByRole('button', { name: ' Select all' }).click();
+	await page.locator('#deleteButton').click();
+	await page.getByText('Skip the trash and').click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+	await expect(page.locator('body')).toContainText(/No items found/i);
 }
 // TODO: test toggle column names makes them visible in the table
 	
@@ -82,7 +107,7 @@ async function cleanupSubdir(page: any) {
 test('create file', async ({ page }) => {
   await navigateToFiles(page);
 
-  await createFile(page, FILE_NAME);
+  await createFileInRoot(page, FILE_NAME);
   await expect(page.locator('body')).toContainText(/File created successfully/i);
   await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
 
@@ -92,7 +117,7 @@ test('create file', async ({ page }) => {
 test('create folder', async ({ page }) => {
   await navigateToFiles(page);
 
-  await createFolder(page, FOLDER_NAME);
+  await createFolderInRoot(page, FOLDER_NAME);
   await expect(page.locator('body')).toContainText(/Folder created successfully/i);
   await expect(page.locator('body')).toContainText(new RegExp(FOLDER_NAME, 'i'));
 
@@ -141,7 +166,7 @@ test('delete file to trash', async ({ page }) => {
   await navigateToFiles(page);
 
   await selectItem(page, FILE_NAME);
-  await page.getByRole('button', { name: ' Delete' }).click();
+  await page.locator('#deleteButton').click();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
 
@@ -182,7 +207,7 @@ test('delete multiple items permanently', async ({ page }) => {
 
 async function createFileWithEditor(page: any, fileName: string) {
   await navigateToFiles(page);
-  await createFile(page, fileName, true);
+  await createFileInRoot(page, fileName, true);
   await page.locator('.view-lines').click();
   await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('nekitext');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -270,13 +295,10 @@ test('change file permissions', async ({ page }) => {
   console.log('File permissions changed successfully');
 });
 
-
 test('upload file from URL', async ({ page }) => {
   test.setTimeout(180_000);
 
-  // Navigate into test subdirectory so cleanup doesn't touch docroots
-  await navigateToSubdir(page);
-  await cleanupSubdir(page);
+  await navigateToFiles(page);
 
   const page5Promise = page.waitForEvent('popup');
   await page.getByRole('button', { name: ' Upload' }).click();
@@ -290,7 +312,7 @@ test('upload file from URL', async ({ page }) => {
   await page5.getByRole('link', { name: 'File Manager' }).click();
   await page5.getByRole('heading', { name: '20MB.zip', exact: true }).click();
 
-  await navigateToSubdir(page);
+  await navigateToFiles(page);
   await expect(page.locator('body')).toContainText(/20MB.zip/i);
 
   console.log('File uploaded from URL successfully');
@@ -300,8 +322,8 @@ test('upload file from URL', async ({ page }) => {
 async function compressFiles(page: any) {
   await navigateToFiles(page);
 
-  await createFile(page, ZIP_FILE);
-  await createFolder(page, ZIP_FOLDER);
+  await createFileInRoot(page, ZIP_FILE);
+  await createFolderInRoot(page, ZIP_FOLDER);
 
   await selectItem(page, ZIP_FOLDER);
   await selectItem(page, ZIP_FILE, true);
@@ -340,10 +362,13 @@ test('extract files', async ({ page }) => {
   await extractFiles(page);
   // TODO: cover all 3 supported archive extensions
   // Cleanup scoped to test subdir to avoid deleting docroots
-  await cleanupSubdir(page);
 });
 
-
+test('cleanup subdir', async ({ page }) => {
+  await cleanupSubdir(page);
+  // TODO: cover all 3 supported archive extensions
+  // Cleanup scoped to test subdir to avoid deleting docroots
+});
 
 
 // INODES AND DISK USAGE EXPLORERS
