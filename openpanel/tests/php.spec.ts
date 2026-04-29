@@ -242,7 +242,7 @@ test('edit php options', async ({ page }) => {
   await page.click('#submit_version');
 
   const successRegex = new RegExp(`${randomVersion} Options`, 'i');
-  await expect(page.getByText(successRegex)).toBeVisible(); 
+  await expect(page.getByText(successRegex).first()).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}/options\\?php_version=${randomVersion}`));
 
   // 1. max_execution_time
