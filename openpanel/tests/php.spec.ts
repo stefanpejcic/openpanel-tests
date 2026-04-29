@@ -223,7 +223,7 @@ test('change default version', async ({ page }) => {
 
 
 
-test('change default version', async ({ page }) => {
+test('edit php options', async ({ page }) => {
   await page.goto('/php/options');
   await expect(page.getByText(/Select PHP version/i)).toBeVisible();
   
@@ -268,4 +268,66 @@ test('change default version', async ({ page }) => {
   
   console.log(`PHP options editor for version ${randomVersion} is working and verified.`);
   // TODO: test on a website and test on page Search to filter table!
+});
+
+
+
+test('edit php.ini files', async ({ page }) => {
+  await page.goto('/php/php_ini_editor');
+  await expect(page.getByText(/Select PHP version/i)).toBeVisible();
+  
+  const dropdown = page.locator('#php_version');
+  const options = await dropdown.locator('option').allAttributes();
+  const values = options
+    .map(attr => attr.value)
+    .filter(val => val !== oldVersion && val !== "");
+
+  if (values.length === 0) {
+    throw new Error('No PHP versions available to select.');
+  }
+
+  const randomVersion = values[Math.floor(Math.random() * values.length)];
+  await dropdown.selectOption(randomVersion);
+  await page.click('#submit_version');
+
+  const successRegex = new RegExp(`Edit PHP.INI file for version ${randomVersion}`, 'i');
+  await expect(page.getByText(successRegex)).toBeVisible(); 
+  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}.ini/editor\\?php_version=${randomVersion}`));
+
+  const editorLocator = page.locator('.CodeMirror'); 
+  await expect(editorLocator).toBeVisible();
+
+  const updates = {
+    'max_input_time': '120',
+    'opcache.enable': '1'
+  };
+  
+  await page.evaluate((settings) => {
+    const cm = document.querySelector('.CodeMirror').CodeMirror;
+    let content = cm.getValue();
+  
+    for (const [key, value] of Object.entries(settings)) {
+      const regex = new RegExp(`^(${key}\\s*=\\s*).*`, 'm');
+      if (regex.test(content)) {
+        content = content.replace(regex, `$1${value}`);
+      } else {
+        // show error!
+      }
+    }
+    cm.setValue(content);
+  }, updates);
+
+  await page.click('#save-changes-button');
+  const feedbackRegex = new RegExp(`PHP.INI file for PHP-FPM version ${randomVersion} edited successfully`, 'i');
+  await expect(page.getByText(feedbackRegex)).toBeVisible();
+
+  const updatedContent = await page.evaluate(() => {
+    return document.querySelector('.CodeMirror').CodeMirror.getValue(); //or just textarea!
+  });
+  
+  expect(updatedContent).toContain('max_input_time = 120');
+  expect(updatedContent).toContain('opcache.enable = 1');
+
+  console.log(`PHP.INI editor for version ${randomVersion} is working and verified.`);
+  // TODO: test on a website
 });
