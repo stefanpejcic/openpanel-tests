@@ -192,8 +192,7 @@ test.describe('version change', () => {
 });
 
 
-
-test('change default version', async ({ page }) => {
+test('change default php version', async ({ page }) => {
   await page.goto('/php/default');
   await expect(page.getByText(/Current default version/i)).toBeVisible();
   
