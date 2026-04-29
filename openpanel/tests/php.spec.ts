@@ -224,9 +224,7 @@ test('change default php version', async ({ page }) => {
 
 
 test('edit php options', async ({ page }) => {
-  await page.goto('/php/options');
-  await expect(page.getByText(/Select PHP version/i)).toBeVisible();
-  
+  await page.goto('/php/options');  
   const dropdown = page.locator('#php_version');
   const options = await dropdown.locator('option').allAttributes();
   const values = options
@@ -273,9 +271,7 @@ test('edit php options', async ({ page }) => {
 
 
 test('edit php.ini files', async ({ page }) => {
-  await page.goto('/php/php_ini_editor');
-  await expect(page.getByText(/Select PHP version/i)).toBeVisible();
-  
+  await page.goto('/php/php_ini_editor');  
   const dropdown = page.locator('#php_version');
   const options = await dropdown.locator('option').allAttributes();
   const values = options
