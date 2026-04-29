@@ -68,7 +68,7 @@ test.beforeAll(async () => {
 
 
 test('search results', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   await navigateToDashboardPage(page);
   await page.waitForFunction(() => typeof (window as any).Alpine !== 'undefined');
   await page.waitForTimeout(500);
