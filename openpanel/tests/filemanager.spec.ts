@@ -65,6 +65,7 @@ async function cleanupAll(page: any) {
 // TODO: looooong breadcrumbs test
 // TODO: test upload drag and drop
 // TODO: test upload multiple files
+// TODO: delete files/folder deleted all docroots so tests after this are failing! edit to delete only in some subdir
 
 
 test('create file', async ({ page }) => {
