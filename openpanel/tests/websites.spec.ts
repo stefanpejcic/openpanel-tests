@@ -92,6 +92,37 @@ test('wp manager data', async ({ page }) => {
 
 
 
+test('live preview', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+
+  const popupPromise = page.waitForEvent('popup');
+  await page.locator('button[onclick="sendDataToPreview(event)"]').click();
+
+  const previewPage = await popupPromise;
+  await previewPage.waitForLoadState();
+  await expect(previewPage.locator('body')).toContainText('Hello world!');
+
+  console.log('live preview is working');
+});
+
+
+
+test('wp-admin autologin', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+
+  const popupPromise = page.waitForEvent('popup');
+  await page.locator('#login_button_text').click();
+  await expect(page.locator('body')).toContainText('Generating auto-login link');
+
+  const previewPage = await popupPromise;
+  await previewPage.waitForLoadState();
+  await expect(previewPage.locator('body')).toContainText('admin');
+
+  console.log('wp-admin login is working');
+});
+
+
+
 test('cache flush', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
