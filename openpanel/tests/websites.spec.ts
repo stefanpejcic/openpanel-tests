@@ -19,8 +19,7 @@ test('auto-installer page has install links', async ({ page }) => {
 });
 
 
-test('wordpress', async ({ page }) => {
-  // 1. install
+test('wordpress install', async ({ page }) => {
   await page.goto('/wordpress/install');
   await page.fill('input[name="website_name"]', 'My Site');
   await page.fill('input[name="site_description"]', 'another site testing');
@@ -32,14 +31,38 @@ test('wordpress', async ({ page }) => {
 
   await expect(page.locator('text=WordPress installation complete!')).toBeVisible({ timeout: 30000 });
 
-  // 2. visit installed site
   await page.goto('http://wp.tests.openpanel.org');
   await expect(page.locator('body')).toContainText('Hello world!');
+  console.log('wordpress install is working');
+});
 
-  
+test('wordpress links', async ({ page }) => {
+
   // 3. test links on /wordpress
+  console.log('skipped');
+});
 
-  // 4. test WP manager on /website?domain=wp.tests.openpanel.org/44444
+
+test('wp manager', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+  
+  const wpVersion = await page.locator('#wp-version').textContent();       // WP version (e.g. 6.5.2)
+  expect(wpVersion).toMatch(/\b\d+\.\d+(\.\d+)?\b/);
+
+  const phpVersion = await page.locator('#php-version').textContent();     // PHP version (e.g. 8.1.12)
+  expect(phpVersion).toMatch(/\b\d+\.\d+(\.\d+)?\b/);
+
+  const mysqlVersion = await page.locator('#mysql-version').textContent(); // MySQL / MariaDB version (e.g. 10.6.12-MariaDB or 8.0.36)
+  expect(mysqlVersion).toMatch(/\b(\d+\.\d+(\.\d+)?)([-\w]*)\b/i);
+
+  const createdDate = await page.locator('#created_date').textContent();   // Created date
+  expect(createdDate?.trim().length).toBeGreaterThan(0);
+  
+  console.log('wp manager options are functional');
+
+});
+
+test('wp remove', async ({ page }) => {
 
   // 5. test remove
   await page.goto('/website?domain=website-builder.tests.openpanel.org');
