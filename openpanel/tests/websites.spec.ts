@@ -45,19 +45,31 @@ test('wordpress links', async ({ page }) => {
 
 test('wp manager', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
-  
-  const wpVersion = await page.locator('#wp-version').textContent();       // WP version (e.g. 6.5.2)
+
+  // WP version (e.g. 6.5.2)
+  const wpVersion = await page.locator('#wp-version').textContent();      
   expect(wpVersion).toMatch(/\b\d+\.\d+(\.\d+)?\b/);
 
-  const phpVersion = await page.locator('#php-version').textContent();     // PHP version (e.g. 8.1.12)
+  // PHP version (e.g. 8.1.12)
+  const phpVersion = await page.locator('#php-version').textContent();     
   expect(phpVersion).toMatch(/\b\d+\.\d+(\.\d+)?\b/);
 
-  const mysqlVersion = await page.locator('#mysql-version').textContent(); // MySQL / MariaDB version (e.g. 10.6.12-MariaDB or 8.0.36)
+  // MySQL / MariaDB version (e.g. 10.6.12-MariaDB or 8.0.36)
+  const mysqlVersion = await page.locator('#mysql-version').textContent(); 
   expect(mysqlVersion).toMatch(/\b(\d+\.\d+(\.\d+)?)([-\w]*)\b/i);
 
-  const createdDate = await page.locator('#created_date').textContent();   // Created date
+  // Created date
+  const createdDate = await page.locator('#created_date').textContent();   
   expect(createdDate?.trim().length).toBeGreaterThan(0);
-  
+
+  // Files size (e.g. 83M, 1.2 GB, 512KB)
+  const filesSize = await page.locator('#filesSize').textContent();        
+  expect(filesSize).toMatch(/\b\d+(\.\d+)?\s?(K|M|G|T)?B?\b/i);
+
+  // Database size (e.g. 0.78 MB)
+  const databaseSize = await page.locator('#databaseSize').textContent();
+  expect(databaseSize).toMatch(/\b\d+(\.\d+)?\s?(K|M|G|T)?B\b/i);
+
   console.log('wp manager options are functional');
 
 });
