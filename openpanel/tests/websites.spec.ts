@@ -15,7 +15,7 @@ test('auto-installer page has install links', async ({ page }) => {
     await expect(links.first()).toBeVisible();
   }
 
-  console.log('all links present);  
+  console.log('all links present');  
 });
 
 
