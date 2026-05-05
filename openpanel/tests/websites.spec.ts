@@ -78,7 +78,8 @@ test('wp manager data', async ({ page }) => {
   const selectors = [
     '#database-table-prefix',
     '#database-password',
-    '#database-name'
+    '#database-name',
+    '#wp_cache_type'
   ];
   
   for (const selector of selectors) {
@@ -91,15 +92,58 @@ test('wp manager data', async ({ page }) => {
 
 
 
+test('cache flush', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+
+  await page.locator('button[click="flushCache"]').click();
+  const message = await page.getByText(/Cache flushed successfully/).innerText();  
+  console.log('flush wp cache is working');
+});
+
+
+
+test('cache flush', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+
+  // 1. Get initial value
+  const initialText = await page.locator('#visitors_data').innerText();
+  const initialValue = parseInt(initialText, 10);
+
+  // 2. Trigger a real request
+  await page.request.get('https://wp.tests.openpanel.org');
+
+  // 3. Reload page
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+
+  // 4. Wait up to 60s for value to change
+  await page.waitForFunction(
+    (selector, oldValue) => {
+      const el = document.querySelector(selector);
+      if (!el) return false;
+
+      const current = parseInt(el.textContent || '0', 10);
+      return current !== oldValue;
+    },
+    '#visitors_data',
+    initialValue,
+    { timeout: 60_000 }
+  );
+
+  console.log('live visitor counter is working');
+});
+
+
+
 test('waf on/off', async ({ page }) => {
-  const domain = 'https://wp.tests.openpanel.org';
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+
   await page.locator('#waf_toggle_btn').click();
   const message = await page.getByText(/Firewall for wp\.tests\.openpanel\.org is now (On|Off)/).innerText();
   const isOn = message.includes('On');
 
   await page.waitForTimeout(5000);
 
-  const response = await page.request.get(domain);
+  const response = await page.request.get('https://wp.tests.openpanel.org');
   
   if (isOn) {
     // WAF ON
