@@ -46,6 +46,8 @@ test('wordpress links', async ({ page }) => {
 
 
 
+// TODO: cover wp-manager tabs: security, updates, debugging, backup, clone, remove
+
 test('wp manager data', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
