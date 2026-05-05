@@ -36,6 +36,8 @@ test('wordpress install', async ({ page }) => {
   console.log('wordpress install is working');
 });
 
+
+
 test('wordpress links', async ({ page }) => {
 
   // 3. test links on /wordpress
@@ -43,7 +45,8 @@ test('wordpress links', async ({ page }) => {
 });
 
 
-test('wp manager', async ({ page }) => {
+
+test('wp manager data', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
   // WP version (e.g. 6.5.2)
@@ -62,17 +65,53 @@ test('wp manager', async ({ page }) => {
   const createdDate = await page.locator('#created_date').textContent();   
   expect(createdDate?.trim().length).toBeGreaterThan(0);
 
-  // Files size (e.g. 83M, 1.2 GB, 512KB)
+  // files size (e.g. 83M, 1.2 GB, 512KB)
   const filesSize = await page.locator('#filesSize').textContent();        
   expect(filesSize).toMatch(/\b\d+(\.\d+)?\s?(K|M|G|T)?B?\b/i);
 
-  // Database size (e.g. 0.78 MB)
+  // db size (e.g. 0.78 MB)
   const databaseSize = await page.locator('#databaseSize').textContent();
   expect(databaseSize).toMatch(/\b\d+(\.\d+)?\s?(K|M|G|T)?B\b/i);
 
-  console.log('wp manager options are functional');
+  // db logins
+  await expect(page.locator('#database-host')).toHaveText(/mysql|mariadb/i);
+  const selectors = [
+    '#database-table-prefix',
+    '#database-password',
+    '#database-name'
+  ];
+  
+  for (const selector of selectors) {
+    const text = await page.locator(selector).textContent();
+    expect(text?.trim().length).toBeGreaterThan(0);
+  }
 
+  console.log('wp manager options are functional');
 });
+
+
+
+test('waf on/off', async ({ page }) => {
+  const domain = 'https://wp.tests.openpanel.org';
+  await page.locator('#waf_toggle_btn').click();
+  const message = await page.getByText(/Firewall for wp\.tests\.openpanel\.org is now (On|Off)/).innerText();
+  const isOn = message.includes('On');
+
+  await page.waitForTimeout(5000);
+
+  const response = await page.request.get(domain);
+  
+  if (isOn) {
+    // WAF ON
+    expect([403, 406, 409, 422]).toContain(response.status());
+  } else {
+    // WAF OFF
+    expect(response.status()).toBe(200);
+  }
+  console.log('wp manager firewall on/off is working as expected!');
+});
+
+
 
 test('wp remove', async ({ page }) => {
 
