@@ -123,6 +123,125 @@ test('wp-admin autologin', async ({ page }) => {
 
 
 
+test('general options', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+  await page.locator('#settings-tab').click();
+  await expect(page.getByText('Checking options from WP-CLI')).toBeVisible();
+  await expect(page.getByText('WordPress Options loaded')).toBeVisible();
+
+  // new values
+  const newBlogName = 'Test Blog Name';
+  const newBlogDescription = 'Test Blog Description';
+  const newAdminEmail = 'test@example.com';
+
+  // Edit text inputs
+  await page.locator('#blogname').clear();
+  await page.locator('#blogname').fill(newBlogName);
+
+  await page.locator('#blogdescription').clear();
+  await page.locator('#blogdescription').fill(newBlogDescription);
+
+  await page.locator('#admin_email').clear();
+  await page.locator('#admin_email').fill(newAdminEmail);
+
+  // get current, then click to change
+  const usersCanRegister = page.locator('#users_can_register');
+  const usersCanRegisterChecked = await usersCanRegister.isChecked();
+  await usersCanRegister.click();
+  const expectedUsersCanRegister = !usersCanRegisterChecked;
+
+  const blogPublic = page.locator('#blog_public');
+  const blogPublicChecked = await blogPublic.isChecked();
+  await blogPublic.click();
+  const expectedBlogPublic = !blogPublicChecked;
+
+  const defaultPingStatus = page.locator('#default_ping_status');
+  const defaultPingStatusChecked = await defaultPingStatus.isChecked();
+  await defaultPingStatus.click();
+  const expectedDefaultPingStatus = !defaultPingStatusChecked;
+
+  // Save
+  await page.locator('#saveGeneralBtn').click();
+  await expect(page.getByText('Saving general settings')).toBeVisible();
+  await expect(page.getByText('General options edited successfully')).toBeVisible();
+
+  // Reload and re-navigate to settings
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+  await page.locator('#settings-tab').click();
+  await expect(page.getByText('Checking options from WP-CLI')).toBeVisible();
+  await expect(page.getByText('WordPress Options loaded')).toBeVisible();
+
+  // Verify updated text values
+  await expect(page.locator('#blogname')).toHaveValue(newBlogName);
+  await expect(page.locator('#blogdescription')).toHaveValue(newBlogDescription);
+  await expect(page.locator('#admin_email')).toHaveValue(newAdminEmail);
+
+  // Verify checkbox states persisted
+  await expect(page.locator('#users_can_register')).toBeChecked({ checked: expectedUsersCanRegister });
+  await expect(page.locator('#blog_public')).toBeChecked({ checked: expectedBlogPublic });
+  await expect(page.locator('#default_ping_status')).toBeChecked({ checked: expectedDefaultPingStatus });
+
+  console.log('general options are working');
+});
+
+
+
+test('maintenance mode', async ({ page }) => {
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+  await page.locator('#maintenance-tab').click();
+
+  // Wait for the status span to appear and get its text
+  await page.waitForSelector('#current_maintenance_mode_status span');
+  const statusText = await page.locator('#current_maintenance_mode_status span').innerText();
+  const wasEnabled = statusText.trim().toLowerCase() === 'enabled';
+
+  // --- Round 1: toggle to the opposite state and verify ---
+  await page.locator('#runMaintenance_action').click();
+
+  if (wasEnabled) {
+    await expect(page.getByText('Maintenance mode is now disabled.')).toBeVisible();
+  } else {
+    await expect(page.getByText('Maintenance mode is now enabled.')).toBeVisible();
+  }
+
+  await page.waitForTimeout(5000);
+
+  const randomUri = `https://wp.tests.openpanel.org?${Math.random().toString(36).slice(2)}`;
+  await page.goto(randomUri);
+
+  if (wasEnabled) {
+    await expect(page.locator('body')).toContainText('Hello world!');
+  } else {
+    await expect(page.locator('body')).toContainText('Briefly unavailable for scheduled maintenance.');
+  }
+
+  // --- Round 2: toggle back to original state and verify ---
+  await page.goto('/website?domain=wp.tests.openpanel.org');
+  await page.locator('#maintenance-tab').click();
+  await page.locator('#runMaintenance_action').click();
+
+  if (wasEnabled) {
+    await expect(page.getByText('Maintenance mode is now enabled.')).toBeVisible();
+  } else {
+    await expect(page.getByText('Maintenance mode is now disabled.')).toBeVisible();
+  }
+
+  await page.waitForTimeout(5000);
+
+  const randomUri2 = `https://wp.tests.openpanel.org?${Math.random().toString(36).slice(2)}`;
+  await page.goto(randomUri2);
+
+  if (wasEnabled) {
+    await expect(page.locator('body')).toContainText('Briefly unavailable for scheduled maintenance.');
+  } else {
+    await expect(page.locator('body')).toContainText('Hello world!');
+  }
+
+  console.log('maintenance mode on/off is working');
+});
+
+
+
 test('cache flush', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
