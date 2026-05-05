@@ -254,7 +254,7 @@ test('cache flush', async ({ page }) => {
 
 
 
-test('cache flush', async ({ page }) => {
+test('live visitors count', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
   // 1. Get initial value
