@@ -126,3 +126,89 @@ test('waf on/off and disabled rules for domain', async ({ page }) => {
 
   console.log('WAF on/off + disabled rules by ID + disabled rules by tag test completed successfully!');
 });
+
+
+
+
+
+
+
+test('waf logs show blocked requests for domain', async ({ page }) => {
+  const domain = 'wp.tests.openpanel.org';
+  const blockedUrl = `https://${domain}/?q=<script>alert(1)</script>`;
+
+  await page.goto(`/server/waf/${domain}`);
+
+  const getToggleState = async () => {
+    const checked = await page.locator('button[aria-checked]').getAttribute('aria-checked');
+    return checked === 'true';
+  };
+
+  const setWaf = async (desiredOn) => {
+    const isOn = await getToggleState();
+    if (isOn !== desiredOn) {
+      await page.locator('button[aria-checked]').click();
+      await page.waitForTimeout(2000);
+      await page.reload();
+    }
+  };
+
+  await setWaf(true);
+  expect(await getToggleState()).toBe(true);
+
+  const requestCount = 3;
+  const blockedStatuses = [];
+
+  for (let i = 0; i < requestCount; i++) {
+    const res = await page.request.get(blockedUrl, { failOnStatusCode: false });
+    blockedStatuses.push(res.status());
+    console.log(`Blocked request ${i + 1} → status: ${res.status()}`);
+  }
+
+  for (const status of blockedStatuses) {
+    expect([403, 406, 409, 422]).toContain(status);
+  }
+
+  await page.waitForTimeout(3000);
+
+  await page.goto(`/server/waf/log/${domain}`);
+
+  await expect(page.locator('#waf-logs-table')).toBeVisible();
+
+  await expect(page.locator('h1')).toContainText(domain);
+
+  await page.waitForFunction(() => {
+    const rows = document.querySelectorAll('#waf-logs-table tbody tr');
+    return rows.length > 0;
+  }, { timeout: 10000 });
+
+  const rows = page.locator('#waf-logs-table tbody tr');
+  const rowCount = await rows.count();
+  console.log(`WAF log table rows: ${rowCount}`);
+  expect(rowCount).toBeGreaterThan(0);
+
+  const searchInput = page.locator('input[type="search"]');
+  await searchInput.fill('alert(1)');
+  await page.waitForTimeout(500); // Alpine filters reactively
+
+  const filteredRows = page.locator('#waf-logs-table tbody tr');
+  const filteredCount = await filteredRows.count();
+  console.log(`Rows matching "alert(1)": ${filteredCount}`);
+  expect(filteredCount).toBeGreaterThan(0);
+
+  const firstRow = filteredRows.first();
+
+  const rowText = await firstRow.innerText();
+  console.log(`First matched row text: ${rowText}`);
+  expect(rowText).toContain('alert(1)');
+
+  await searchInput.fill('');
+  await page.waitForTimeout(500);
+
+  const allRowsAfterClear = page.locator('#waf-logs-table tbody tr');
+  const allCount = await allRowsAfterClear.count();
+  expect(allCount).toBeGreaterThanOrEqual(filteredCount);
+  console.log(`Rows after clearing search: ${allCount}`);
+
+  console.log('WAF log visibility test completed successfully!');
+});
