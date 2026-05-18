@@ -31,12 +31,14 @@ opencli email-server install
 # ENABLE FTP
 cd /root && docker compose up -d openadmin_ftp
 
+# RESTART USER-PANEL TO APPLY ALL CHANGES!
+docker --context=default restart openpanel
+
 # CREATE USER FOR TESTS
 opencli user-add "$PANEL_USERNAME" "$PANEL_PASSWORD" "$PANEL_EMAIL" 'Developer plus'
 BASE_URL=$(opencli user-login testinguser | sed -E 's#(https?://[^/]+).*#\1#')
 
-#####################################################
-# info for /root/playwright-test/openpanel/.env
+# PRINT INFO for /root/playwright-test/openpanel/.env
 echo "BASE_URL=$BASE_URL"
 echo "PANEL_USERNAME=$PANEL_USERNAME"
 echo "PANEL_PASSWORD=$PANEL_PASSWORD"
