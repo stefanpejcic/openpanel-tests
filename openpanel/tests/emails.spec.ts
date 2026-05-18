@@ -16,9 +16,12 @@ async function createEmail(page, email) {
 }
 
 
+// CREATE EMAIL
+// todo: test with quotas: 10K 100M 420G 1T 0
 test('create emails', async ({ page }) => {
   for (const email of EMAILS) {
     await createEmail(page, email);
+    // todo: check if email exists in the table, and check on /dashboard emails count matches new count
   }
 });
 
@@ -42,6 +45,7 @@ async function autoLogintest (page) {
   //await popup.close();
 }
 
+// WEBMAIL AUTOLOGON
 test('Webmail autologin tests', async ({ page }) => {
   await autoLogintest(page);
 });
@@ -78,6 +82,8 @@ async function suspendIncoming(page, email) {
   await expect(alert).toContainText('Settings saved for email');
   console.log(`Email receiving suspended for ${email}@wp.tests.openpanel.org`);
 }
+// SUSPEND IN
+// todo: test sending TO this address
 test('suspend incoming', async ({ page }) => {
   for (const email of EMAILS) {
     await suspendIncoming(page, email);
@@ -94,6 +100,8 @@ async function suspendOutgoing(page, email) {
   await expect(alert).toContainText('Settings saved for email');
   console.log(`Email sending suspended for ${email}@wp.tests.openpanel.org`);
 }
+// SUSPEND OUT
+// todo: test sending FROM this address
 test('suspend outgoing', async ({ page }) => {
   for (const email of EMAILS) {
     await suspendOutgoing(page, email);
@@ -110,6 +118,8 @@ async function changePass(page, email) {
   await expect(alert).toContainText('Settings saved for email');
   console.log(`Password changed for ${email}@wp.tests.openpanel.org`);
 }
+
+// PASSWORD CHANGE
 test('change passwords', async ({ page }) => {
   for (const email of EMAILS) {
     await changePass(page, email);
@@ -126,8 +136,37 @@ async function deleteEmails(page, email) {
 
 }
 
+// DELETE EMAIL
 test('delete created emails', async ({ page }) => {
   for (const email of EMAILS) {
     await deleteEmails(page, email);
+    // todo: check if email no longer exists in the table, and check on /dashboard emails count matches new count
   }
 });
+
+
+// EMAIL FILTERS
+// test create: every scenario in GUI and test IN email for each
+// test create in raw mode by replacing `gui` with `raw` in url
+// test editing filter
+// test deleting filter
+
+// ALIASES
+// test create alias for existing acc, check msg
+// test create alias for NON-existing acc, check msg
+// test sending to the alias and viewing webmail for recepient
+// test editing alias
+// test editing alias to add another recepient
+// test deleting alias
+
+
+// DEFAULT ADDRESS
+// test create
+// test edit
+// test delete
+// test sending email to NON-existing address on that domain
+
+// ADDRESS IMPORTER
+// test import: acconts from domains user does and does NOT own, test quotas over limit, another column, SQL and exec commands..
+// test manual webmail login for such account with password from table
+// test panel actions on such account: edit, autologin to webmail, create
