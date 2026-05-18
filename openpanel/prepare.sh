@@ -29,7 +29,7 @@ opencli license $LICENSE_KEY
 opencli email-server install
 
 # ENABLE FTP
-cd /root && docker compose up -d openadmin_ftp
+cd /root && docker --context=default compose up -d openadmin_ftp
 
 # RESTART USER-PANEL TO APPLY ALL CHANGES!
 docker --context=default restart openpanel
