@@ -462,6 +462,7 @@ test('dynamic dns record', async ({ page }) => {
   await page.goto('/domains/dynamic-dns');
 
   // 1. create dynamic dns entry
+  await page.locator('#add-entry').click();
   const form = page.locator('form[action="/domains/dynamic-dns"]');
   await expect(form).toBeVisible();
   await form.locator('select[name="domain"]').selectOption(domain);
