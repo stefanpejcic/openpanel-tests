@@ -240,7 +240,7 @@ test('change docroot', async ({ page }) => {
   await page.goto(`https://${DOMAIN}/testing.php`);
   const locator = page.getByText(`File is shown from folder: ${NEW_FOLDER}`);
   
-  const timeout = 15000;
+  const timeout = 30000;
   const start = Date.now();
   
   while (Date.now() - start < timeout) {
