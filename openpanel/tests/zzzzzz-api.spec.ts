@@ -3,9 +3,9 @@ import { test, expect, request, APIRequestContext } from '@playwright/test';
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5000';
-const VALID_EMAIL    = process.env.PANEL_USER    ?? 'testuser@example.com';
-const VALID_PASSWORD = process.env.PANEL_PASSWORD ?? 'password123';
+const BASE_URL = process.env.BASE_URL;
+const VALID_EMAIL    = process.env.PANEL_USER;
+const VALID_PASSWORD = process.env.PANEL_PASSWORD;
 const TOTP_SECRET    = process.env.API_TOTP_SECRET ?? ''; // leave empty if 2FA not enabled
 
 // ---------------------------------------------------------------------------
