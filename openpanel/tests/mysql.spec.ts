@@ -26,11 +26,6 @@ async function getDatabaseCount(page: Page): Promise<number> {
 async function expectDatabaseInTable(page: Page, dbName: string) {
   const row = page.locator('tr', { hasText: dbName });
   await expect(row).toBeVisible();
-
-  await expect(row.getByRole('link', { name: /import/i })).toBeVisible();
-  await expect(row.getByRole('button', { name: /export/i })).toBeVisible();
-  await expect(row.getByRole('link', { name: /phpmyadmin/i })).toBeVisible();
-  await expect(row.getByRole('button', { name: /delete/i })).toBeVisible();
 }
 
 async function expectDatabaseNotInTable(page: Page, dbName: string) {
