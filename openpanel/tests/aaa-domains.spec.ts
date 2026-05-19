@@ -58,20 +58,19 @@ test('add domains', async ({ page }) => {
   const initialCount = await getDomainCount(page);
   let expectedCount = initialCount;
 
+  await page.goto('/domains');
   for (const domain of DOMAINS) {
     await addDomain(page, domain);
 
     // table check
+    await page.goto('/domains');
     await expectDomainInTable(page, domain);
 
     expectedCount++;
 
     // dashboard check
     await page.goto('/dashboard');
-
-    await expect.poll(async () => {
-      return await getDomainCount(page);
-    }).toBe(expectedCount);
+    await expect.poll(async () => {return await getDomainCount(page);}).toBe(expectedCount);
   }
 });
 
