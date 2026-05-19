@@ -577,7 +577,7 @@ test('delete domain', async ({ page }) => {
   const deleteButton = page.getByRole('button', { name: /delete domain/i });
   await expect(deleteButton).toBeVisible();
   await deleteButton.click();
-  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  await expect(page.locator('body')).toContainText(/deleted successfully/i);
   console.log(`Domain deleted: ${domain}`);
 
   // verify it's gone from table/listing page
