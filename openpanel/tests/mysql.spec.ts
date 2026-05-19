@@ -54,10 +54,11 @@ test('list databases', async ({ page }) => {
 
 
 test('create database', async ({ page }) => {
-  await navigateToMySQLPage(page);
 
   const initialCount = await getDatabaseCount();
   let expectedCount = initialCount;
+
+  await navigateToMySQLPage(page);
 
   await page.getByRole('link', { name: 'Create your first database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_baza');
@@ -535,10 +536,11 @@ test('phpmyadmin settings', async ({ page }) => {
 
 
 test('delete database', async ({ page }) => {
-  await navigateToMySQLPage(page);
 
   const initialCount = await getDatabaseCount();
   let expectedCount = initialCount;
+
+  await navigateToMySQLPage(page);
 
   const dbName = 'stefan_baza';
   const row = page.locator('tr', { hasText: dbName });
