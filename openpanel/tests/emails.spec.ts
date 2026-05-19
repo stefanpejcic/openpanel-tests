@@ -16,12 +16,47 @@ async function createEmail(page, email) {
 }
 
 
+async function getEmailCount(page: Page): Promise<number> {
+  const text = await page.locator('#dashboard_usage_emails').locator('p').nth(1).textContent();
+  if (!text) throw new Error('Cannot read email count');
+
+  const match = text.match(/(\d+)\s*\//);
+  if (!match) throw new Error(`Cannot parse email count from: ${text}`);
+
+  return parseInt(match[1], 10);
+}
+
+async function expectEmailInTable(page: Page, email: string) {
+  const fullEmail = `${email}@wp.tests.openpanel.org`;
+
+  const row = page.locator('#email-accounts').getByText(fullEmail);
+  await expect(row).toBeVisible();
+}
+
+
+
+
 // CREATE EMAIL
 // todo: test with quotas: 10K 100M 420G 1T 0
 test('create emails', async ({ page }) => {
+  await page.goto('/dashboard');
+
+  const initialCount = await getEmailCount(page);
+  let expectedCount = initialCount;
+
   for (const email of EMAILS) {
     await createEmail(page, email);
-    // todo: check if email exists in the table, and check on /dashboard emails count matches new count
+
+    // 1. verify table update
+    await expectEmailInTable(page, email);
+    expectedCount++;
+
+    // 2. go dashboard and verify count
+    await page.goto('/dashboard');
+
+    await expect.poll(async () => {
+      return await getEmailCount(page);
+    }).toBe(expectedCount);
   }
 });
 
