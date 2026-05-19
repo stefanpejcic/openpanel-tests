@@ -54,26 +54,24 @@ test('list databases', async ({ page }) => {
 
 
 test('create database', async ({ page }) => {
-
+  // 1. Check dashboard count FIRST, before going anywhere else
   const initialCount = await getDatabaseCount();
   let expectedCount = initialCount;
 
+  // 2. Now navigate to MySQL and perform the action
   await navigateToMySQLPage(page);
-
   await page.getByRole('link', { name: 'Create your first database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_baza');
   await page.getByRole('button', { name: 'Create Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully created a database/i);
 
-  // table validation
+  // 3. Validate in the table (still on MySQL page)
   await expectDatabaseInTable(page, 'stefan_baza');
-
   expectedCount++;
 
-  // dashboard validation
+  // 4. Go back to dashboard and verify count incremented
   await page.goto('/dashboard');
-
-  await expect.poll(async () => {return await getDatabaseCount();}).toBe(expectedCount);
+  await expect.poll(async () => getDatabaseCount()).toBe(expectedCount);
 
   console.log('database created + validated');
 });
@@ -536,11 +534,10 @@ test('phpmyadmin settings', async ({ page }) => {
 
 
 test('delete database', async ({ page }) => {
+  await navigateToMySQLPage(page);
 
   const initialCount = await getDatabaseCount();
   let expectedCount = initialCount;
-
-  await navigateToMySQLPage(page);
 
   const dbName = 'stefan_baza';
   const row = page.locator('tr', { hasText: dbName });
