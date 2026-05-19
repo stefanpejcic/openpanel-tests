@@ -164,20 +164,40 @@ test('change passwords', async ({ page }) => {
 });
 
 
-async function deleteEmails(page, email) {
+
+async function expectEmailNotInTable(page: Page, email: string) {
+  const fullEmail = `${email}@wp.tests.openpanel.org`;
+  await expect(page.locator('#email-accounts').getByText(fullEmail)).toHaveCount(0);
+}
+
+async function deleteEmails(page: Page, email: string) {
   await page.goto(`/emails/delete/${email}@wp.tests.openpanel.org`);
   await expect(page).toHaveURL(/emails\/delete/);
   await page.getByRole('button', { name: 'Confirm Delete' }).click();
   await expect(page).toHaveURL(/\/emails$/);
-  console.log(`Email account ${email}@wp.tests.openpanel.org has been deleted.`);
-
+  console.log(`Deleted: ${email}@wp.tests.openpanel.org`);
 }
 
 // DELETE EMAIL
 test('delete created emails', async ({ page }) => {
+  await page.goto('/dashboard');
+
+  const initialCount = await getEmailCount(page);
+  let expectedCount = initialCount;
+
   for (const email of EMAILS) {
     await deleteEmails(page, email);
-    // todo: check if email no longer exists in the table, and check on /dashboard emails count matches new count
+
+    // 1. verify it is gone from table
+    await expectEmailNotInTable(page, email);
+    expectedCount--;
+
+    // 2. verify dashboard count decreases
+    await page.goto('/dashboard');
+
+    await expect.poll(async () => {
+      return await getEmailCount(page);
+    }).toBe(expectedCount);
   }
 });
 
