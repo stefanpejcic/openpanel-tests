@@ -8,7 +8,37 @@ const DOMAINS = [
   'python.tests.openpanel.org',
   'website-builder.tests.openpanel.org',
   'files.tests.openpanel.org',
+  'to-be-removed.com',
 ];
+
+
+async function getDomainCount(page: Page): Promise<number> {
+  const text = await page
+    .locator('#dashboard_usage_domains')
+    .locator('p')
+    .nth(1)
+    .textContent();
+
+  if (!text) throw new Error('Cannot read domain count');
+
+  const match = text.match(/(\d+)\s*\//);
+  if (!match) throw new Error(`Cannot parse domain count from: ${text}`);
+
+  return parseInt(match[1], 10);
+}
+
+async function expectDomainInTable(page: Page, domain: string) {
+  await expect(page.locator('table')).toContainText(domain);
+}
+
+async function expectDomainNotInTable(page: Page, domain: string) {
+  await expect(page.locator('table')).not.toContainText(domain);
+}
+
+
+
+
+
 
 async function addDomain(page, domain) {
   await page.goto(`/domains/new`);
@@ -23,8 +53,25 @@ async function addDomain(page, domain) {
 
 
 test('add domains', async ({ page }) => {
+  await page.goto('/dashboard');
+
+  const initialCount = await getDomainCount(page);
+  let expectedCount = initialCount;
+
   for (const domain of DOMAINS) {
     await addDomain(page, domain);
+
+    // table check
+    await expectDomainInTable(page, domain);
+
+    expectedCount++;
+
+    // dashboard check
+    await page.goto('/dashboard');
+
+    await expect.poll(async () => {
+      return await getDomainCount(page);
+    }).toBe(expectedCount);
   }
 });
 
@@ -517,3 +564,39 @@ test('unsuspend domain', async ({ page }) => {
   console.log('Domain unsuspension verified successfully!');
 });
 
+
+// DELETE SINGLE DOMAIN!
+async function deleteDomain(page: Page, domain: string) {
+  await page.goto(`/domains/delete?domain=${domain}`);
+
+  const deleteButton = page.getByRole('button', { name: /delete domain/i });
+  await expect(deleteButton).toBeVisible();
+  await deleteButton.click();
+  await expect(page.locator('body')).toContainText(/successfully deleted|deleted successfully/i);
+
+  console.log(`Domain deleted: ${domain}`);
+}
+
+test('delete domain', async ({ page }) => {
+  const domain = 'to-be-removed.com';
+  await page.goto('/dashboard');
+  const initialCount = await getDomainCount(page);
+
+  // go to delete page
+  await page.goto(`/domains/delete?domain=${domain}`);
+
+  const deleteButton = page.getByRole('button', { name: /delete domain/i });
+  await expect(deleteButton).toBeVisible();
+  await deleteButton.click();
+  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  console.log(`Domain deleted: ${domain}`);
+
+  // verify it's gone from table/listing page
+  await page.goto('/domains');
+  await expect(page.locator('table')).not.toContainText(domain);
+
+  // verify dashboard count decreased
+  await page.goto('/dashboard');
+  const finalCount = await getDomainCount(page);
+  expect(finalCount).toBe(initialCount - 1);
+});
