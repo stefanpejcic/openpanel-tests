@@ -32,7 +32,8 @@ async function autoLogintest (page) {
   await page.locator('[data-email^="test1@"]').click();
   const popup = await popupPromise;
   await popup.waitForLoadState();
-  await popup.goto(`http://185.119.89.17:8080/?_task=mail&_action=compose`)
+  await popup.goto(`http://185.119.89.17:8080/?_task=mail&_action=compose`) //todo
+  
   //await popup.locator('#rcmbtn103').click();
   //await expect(popup.locator('#composebody')).toBeVisible();
   //await popup.goto(`/?_task=mail&_action=compose`)
@@ -132,7 +133,7 @@ async function deleteEmails(page, email) {
   await page.goto(`/emails/delete/${email}@wp.tests.openpanel.org`);
   await expect(page).toHaveURL(/emails\/delete/);
   await page.getByRole('button', { name: 'Confirm Delete' }).click();
-  await expect(page).toHaveURL('https://185.119.89.17:2083/emails');
+  await expect(page).toHaveURL(/\/emails$/);
   console.log(`Email account ${email}@wp.tests.openpanel.org has been deleted.`);
 
 }
