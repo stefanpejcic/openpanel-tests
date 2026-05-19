@@ -451,7 +451,7 @@ test('reset dns zone', async ({ page }) => {
 });
 
 // DDNS
-test('dynamic dns record', async ({ page }) => {
+test('dynamic dns record', async ({ page, context }) => {
   await page.goto(`/domains/dynamic-dns`);
   const subdomain = `ddns-${Date.now()}`;
   const fqdn = `${subdomain}.${domain}`;
