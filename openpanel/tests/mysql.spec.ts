@@ -531,6 +531,7 @@ test('delete database', async ({ page }) => {
   const initialCount = await getDatabaseCount(page);
   let expectedCount = initialCount;
 
+  await navigateToMySQLPage(page);
   const dbName = 'stefan_baza';
   const row = page.locator('tr', { hasText: dbName });
   const deleteButton = row.locator('button.btn-danger');
