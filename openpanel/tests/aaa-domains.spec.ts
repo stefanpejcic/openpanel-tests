@@ -405,6 +405,71 @@ test('reset dns zone', async ({ page }) => {
   console.log('dns zone restart is working');
 });
 
+// DDNS
+test('dynamic dns record', async ({ page }) => {
+  await page.goto(`/domains/dynamic-dns`);
+  const subdomain = `ddns-${Date.now()}`;
+  const fqdn = `${subdomain}.${domain}`;
+
+  await page.goto('/domains/dynamic-dns');
+
+  // 1. create dynamic dns entry
+  const form = page.locator('form[action="/domains/dynamic-dns"]');
+  await expect(form).toBeVisible();
+  await form.locator('select[name="domain"]').selectOption(domain);
+  await form.locator('input[name="subdomain"]').fill(subdomain);
+  await form.locator('input[name="ip"]').fill('0.0.0.0');
+  await form.locator('button[type="submit"]').click();
+
+  // 2. verify
+  const table = page.locator('table');
+  await expect(table).toBeVisible();
+  const row = table.locator('tbody tr', {hasText: subdomain,});
+  await expect(row).toBeVisible({ timeout: 10000 });
+  await expect(row.locator('td').nth(0)).toContainText(subdomain);
+  await expect(row.locator('td').nth(1)).toContainText('A');
+  await expect(row.locator('td').nth(2)).toContainText('0.0.0.0');
+
+  // 3. grab update url
+  const updateCode = row.locator('code');
+  await expect(updateCode).toBeVisible();
+  const relativeUpdateUrl = await updateCode.evaluate((el) => {return el.getAttribute('title') || el.textContent || '';});
+  expect(relativeUpdateUrl).toContain('/dynamic-dns/update?token=');
+
+  // 4. open update url in new tab
+  const updatePage = await context.newPage();
+  await updatePage.goto(relativeUpdateUrl);
+  await expect(updatePage.locator('body')).toContainText(/updated|success|ip/i,{ timeout: 15000 });
+  await updatePage.close();
+
+  // 5. go back and verify IP changed
+  await page.reload();
+  const updatedRow = page.locator('tbody tr', {hasText: subdomain,});
+  await expect(updatedRow).toBeVisible();
+  await expect(updatedRow.locator('td').nth(2)).not.toContainText('0.0.0.0');
+  const updatedIp = (await updatedRow.locator('td').nth(2).textContent())?.trim();
+  console.log(`Updated IP: ${updatedIp}`);
+
+  // 6. validate publicly using dig tool
+  await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10`);
+  const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
+  await expect(resultsArea).toBeVisible({ timeout: 10000 });
+
+  await page.waitForFunction(
+    () =>
+      !document.querySelector(
+        '.loading, .spinner, [aria-busy="true"]'
+      ),
+    { timeout: 30000 }
+  );
+
+  await expect(page.locator('body')).toContainText(fqdn, {timeout: 30000,});
+  if (updatedIp) {await expect(page.locator('body')).toContainText(updatedIp, {timeout: 30000,});}
+
+  console.log('dynamic dns is working');
+});
+
+
 
 
 test('suspend domain', async ({ page }) => {
