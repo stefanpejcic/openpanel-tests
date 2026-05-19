@@ -9,19 +9,16 @@ async function navigateToMySQLPage(page: any) {
 }
 
 
-async function getDatabaseCount(): Promise<number> {
-  await page.goto(`/dashboard`);
+async function getDatabaseCount(page: Page): Promise<number> {
+  await page.goto('/dashboard');
   const text = await page
     .locator('#dashboard_usage_databases')
     .locator('p')
     .nth(1)
     .textContent();
-
   if (!text) throw new Error('Cannot read database count');
-
   const match = text.match(/(\d+)\s*\//);
   if (!match) throw new Error(`Cannot parse database count from: ${text}`);
-
   return parseInt(match[1], 10);
 }
 
@@ -55,7 +52,7 @@ test('list databases', async ({ page }) => {
 
 test('create database', async ({ page }) => {
   // 1. Check dashboard count FIRST, before going anywhere else
-  const initialCount = await getDatabaseCount();
+  const initialCount = await getDatabaseCount(page);
   let expectedCount = initialCount;
 
   // 2. Now navigate to MySQL and perform the action
@@ -71,7 +68,7 @@ test('create database', async ({ page }) => {
 
   // 4. Go back to dashboard and verify count incremented
   await page.goto('/dashboard');
-  await expect.poll(async () => getDatabaseCount()).toBe(expectedCount);
+  await expect.poll(async () => getDatabaseCount(page)).toBe(expectedCount);
 
   console.log('database created + validated');
 });
@@ -536,7 +533,7 @@ test('phpmyadmin settings', async ({ page }) => {
 test('delete database', async ({ page }) => {
   await navigateToMySQLPage(page);
 
-  const initialCount = await getDatabaseCount();
+  const initialCount = await getDatabaseCount(page);
   let expectedCount = initialCount;
 
   const dbName = 'stefan_baza';
@@ -560,7 +557,7 @@ test('delete database', async ({ page }) => {
   // dashboard validation
   await page.goto('/dashboard');
 
-  await expect.poll(async () => {return await getDatabaseCount();}).toBe(expectedCount);
+  await expect.poll(async () => {return await getDatabaseCount(page)}).toBe(expectedCount);
 
   console.log('database deleted + validated');
 });
