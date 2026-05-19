@@ -406,6 +406,7 @@ test('reset dns zone', async ({ page }) => {
 });
 
 // DDNS
+// TODO: extend to cover edit and delete!
 test('dynamic dns record', async ({ page }) => {
   await page.goto(`/domains/dynamic-dns`);
   const subdomain = `ddns-${Date.now()}`;
