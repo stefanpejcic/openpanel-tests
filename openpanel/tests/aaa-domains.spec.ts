@@ -572,7 +572,7 @@ async function deleteDomain(page: Page, domain: string) {
   const deleteButton = page.getByRole('button', { name: /delete domain/i });
   await expect(deleteButton).toBeVisible();
   await deleteButton.click();
-  await expect(page.locator('body')).toContainText(/successfully deleted|deleted successfully/i);
+  await expect(page.locator('body')).toContainText(/deleted successfully/i);
 
   console.log(`Domain deleted: ${domain}`);
 }
