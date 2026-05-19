@@ -5,7 +5,7 @@ import path from 'path';
 
 async function navigateToMySQLPage(page: any) {
   await page.goto(`/mysql`);
-  await expect(page).toHaveURL(/mysql/);
+  await expect(page).toHaveURL(/mysql);
 }
 
 
