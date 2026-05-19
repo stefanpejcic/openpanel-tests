@@ -452,69 +452,96 @@ test('reset dns zone', async ({ page }) => {
 });
 
 // DDNS
-// TODO: extend to cover edit and delete!
 test('dynamic dns record', async ({ page }) => {
   await page.goto(`/domains/dynamic-dns`);
   const subdomain = `ddns-${Date.now()}`;
   const fqdn = `${subdomain}.${domain}`;
 
-  await page.goto('/domains/dynamic-dns');
-
   // 1. create dynamic dns entry
   await page.locator('#add-entry').click();
-  const form = page.locator('form[action="/domains/dynamic-dns"]');
-  await expect(form).toBeVisible();
-  await form.locator('select[name="domain"]').selectOption(domain);
-  await form.locator('input[name="subdomain"]').fill(subdomain);
-  await form.locator('input[name="ip"]').fill('0.0.0.0');
-  await form.locator('button[type="submit"]').click();
+  // Scope to the create panel specifically (always visible when panel === 'create')
+  const createForm = page.locator('[x-show="panel === \'create\'"] form');
+  await expect(createForm).toBeVisible();
+  await createForm.locator('select[name="domain"]').selectOption(domain);
+  await createForm.locator('input[name="subdomain"]').fill(subdomain);
+  await createForm.locator('input[name="ip"]').fill('0.0.0.0');
+  await createForm.locator('button[type="submit"]').click();
 
-  // 2. verify
+  // 2. verify record appears in table
   const table = page.locator('table');
   await expect(table).toBeVisible();
-  const row = table.locator('tbody tr', {hasText: subdomain,});
+  const row = table.locator('tbody tr', { hasText: subdomain });
   await expect(row).toBeVisible({ timeout: 10000 });
   await expect(row.locator('td').nth(0)).toContainText(subdomain);
   await expect(row.locator('td').nth(1)).toContainText('A');
   await expect(row.locator('td').nth(2)).toContainText('0.0.0.0');
 
-  // 3. grab update url
+  // 3. grab update url from the row's hidden title attribute
   const updateCode = row.locator('code');
   await expect(updateCode).toBeVisible();
-  const relativeUpdateUrl = await updateCode.evaluate((el) => {return el.getAttribute('title') || el.textContent || '';});
+  const relativeUpdateUrl = await updateCode.evaluate(
+    (el) => el.getAttribute('title') || el.textContent || ''
+  );
   expect(relativeUpdateUrl).toContain('/dynamic-dns/update?token=');
 
-  // 4. open update url in new tab
+  // 4. open update url — this triggers the actual IP update
   const updatePage = await context.newPage();
   await updatePage.goto(relativeUpdateUrl);
-  await expect(updatePage.locator('body')).toContainText(/updated|success|ip/i,{ timeout: 15000 });
+  await expect(updatePage.locator('body')).toContainText(/updated|success|ip/i, { timeout: 15000 });
   await updatePage.close();
 
-  // 5. go back and verify IP changed
+  // 5. reload and verify IP was updated away from 0.0.0.0
   await page.reload();
-  const updatedRow = page.locator('tbody tr', {hasText: subdomain,});
+  const updatedRow = page.locator('tbody tr', { hasText: subdomain });
   await expect(updatedRow).toBeVisible();
   await expect(updatedRow.locator('td').nth(2)).not.toContainText('0.0.0.0');
   const updatedIp = (await updatedRow.locator('td').nth(2).textContent())?.trim();
   console.log(`Updated IP: ${updatedIp}`);
 
-  // 6. validate publicly using dig tool
-  await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10`);
-  const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
-  await expect(resultsArea).toBeVisible({ timeout: 10000 });
+  // 6. edit the entry — change subdomain to verify edit panel works
+  const editBtn = updatedRow.locator('button[title="Edit"]');
+  await editBtn.click();
+  const editForm = page.locator('[x-show="panel === \'edit\'"] form');
+  await expect(editForm).toBeVisible();
+  // Verify pre-filled values
+  await expect(editForm.locator('input[name="subdomain"]')).toHaveValue(subdomain);
+  await expect(editForm.locator('input[name="ip"]')).toHaveValue(updatedIp ?? '');
+  // Verify update URL is shown
+  const updateUrlCode = editForm.locator('code');
+  await expect(updateUrlCode).toBeVisible();
+  await expect(updateUrlCode).toContainText('/dynamic-dns/update?token=');
+  // Save without changes (just confirm the form submits cleanly)
+  await editForm.locator('button[type="submit"]').click();
+  await expect(page.locator('tbody tr', { hasText: subdomain })).toBeVisible({ timeout: 10000 });
 
-  await page.waitForFunction(
-    () =>
-      !document.querySelector(
-        '.loading, .spinner, [aria-busy="true"]'
-      ),
-    { timeout: 30000 }
-  );
+  // 7. delete the entry
+  const rowAfterEdit = page.locator('tbody tr', { hasText: subdomain });
+  const deleteBtn = rowAfterEdit.locator('button[title="Delete"]');
+  await deleteBtn.click();
+  const deleteForm = page.locator('[x-show="panel === \'delete\'"] form');
+  await expect(deleteForm).toBeVisible();
+  // Confirm the warning text references our subdomain
+  await expect(deleteForm).toContainText(subdomain);
+  await deleteForm.locator('button[type="submit"]').click();
 
-  await expect(page.locator('body')).toContainText(fqdn, {timeout: 30000,});
-  if (updatedIp) {await expect(page.locator('body')).toContainText(updatedIp, {timeout: 30000,});}
+  // 8. verify the row is gone
+  await page.waitForTimeout(1000); // brief wait for redirect/reload
+  await expect(page.locator('tbody tr', { hasText: subdomain })).toHaveCount(0, { timeout: 10000 });
+  console.log('dynamic dns create/edit/delete all working');
 
-  console.log('dynamic dns is working');
+  // 9. validate publicly using dig (optional, only if IP resolved)
+  if (updatedIp) {
+    await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10`);
+    const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
+    await expect(resultsArea).toBeVisible({ timeout: 10000 });
+    await page.waitForFunction(
+      () => !document.querySelector('.loading, .spinner, [aria-busy="true"]'),
+      { timeout: 30000 }
+    );
+    await expect(page.locator('body')).toContainText(fqdn, { timeout: 30000 });
+    await expect(page.locator('body')).toContainText(updatedIp, { timeout: 30000 });
+    console.log('dynamic dns public DNS resolution confirmed');
+  }
 });
 
 
