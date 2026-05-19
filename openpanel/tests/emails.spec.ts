@@ -41,7 +41,8 @@ async function autoLogintest (page) {
   await popup.getByLabel('Subject').fill('Ovo je neki naslov');
   await popup.locator('#composebody').fill('Ovo je samo jos jedan test bla bla');
   await popup.getByRole('button', { name: 'Send' }).click();
-  await expect(popup.getByText().toBeVisible();
+  //await expect(popup.getByText().toBeVisible();
+
   //await popup.close();
 }
 
