@@ -566,17 +566,6 @@ test('unsuspend domain', async ({ page }) => {
 
 
 // DELETE SINGLE DOMAIN!
-async function deleteDomain(page: Page, domain: string) {
-  await page.goto(`/domains/delete?domain=${domain}`);
-
-  const deleteButton = page.getByRole('button', { name: /delete domain/i });
-  await expect(deleteButton).toBeVisible();
-  await deleteButton.click();
-  await expect(page.locator('body')).toContainText(/deleted successfully/i);
-
-  console.log(`Domain deleted: ${domain}`);
-}
-
 test('delete domain', async ({ page }) => {
   const domain = 'to-be-removed.com';
   await page.goto('/dashboard');
