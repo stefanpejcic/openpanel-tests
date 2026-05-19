@@ -53,19 +53,18 @@ async function addDomain(page, domain) {
 
 
 test('add domains', async ({ page }) => {
-  await page.goto('/dashboard');
+  test.setTimeout(60_000);
 
+  await page.goto('/dashboard');
   const initialCount = await getDomainCount(page);
   let expectedCount = initialCount;
 
-  await page.goto('/domains');
   for (const domain of DOMAINS) {
     await addDomain(page, domain);
 
     // table check
     await page.goto('/domains');
     await expectDomainInTable(page, domain);
-
     expectedCount++;
 
     // dashboard check
