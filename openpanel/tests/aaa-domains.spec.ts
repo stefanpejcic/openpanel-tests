@@ -545,27 +545,47 @@ test('dynamic dns record', async ({ page, context }) => {
 });
 
 
-test('redirect domain', async ({ page }) => {
+
+test('redirects', async ({ page }) => {
   const domain = 'redirect.tests.openpanel.org';
   const redirectUrl = 'https://pejcic.rs/?proba';
+  const editedUrl = 'https://pejcic.rs/?edited';
 
-  // Set redirect
+  // CREATE
   await page.goto(`/domains/redirect?domain=${domain}`);
-  await page.fill('input[name="redirect_url"]', redirectUrl);
+  await page.fill('input[name="redirect_url"][type="url"]', redirectUrl);
   await page.click('#save-redirect');
-
-  // Confirm success flash
   await expect(page.locator(`text=Successfully created redirect from domain ${domain} to ${redirectUrl}`)).toBeVisible();
 
-  // Reload page and verify input is pre-populated
   await page.goto(`/domains/redirect?domain=${domain}`);
   await expect(page.locator('input[name="redirect_url"][type="url"]')).toHaveValue(redirectUrl);
 
-  // Verify the redirect actually works
-  const response = await page.goto(`https://${domain}`, {waitUntil: 'load',});
+  let response = await page.goto(`https://${domain}`, { waitUntil: 'load' });
   expect(response?.url()).toContain('pejcic.rs');
+  console.log('Domain redirect created and verified successfully!');
 
-  console.log('Domain redirect verified successfully!');
+  // EDIT
+  await page.goto(`/domains/redirect?domain=${domain}`);
+  await page.fill('input[name="redirect_url"][type="url"]', editedUrl);
+  await page.click('#save-redirect');
+  await expect(page.locator(`text=Successfully created redirect from domain ${domain} to ${editedUrl}`)).toBeVisible();
+
+  await page.goto(`/domains/redirect?domain=${domain}`);
+  await expect(page.locator('input[name="redirect_url"][type="url"]')).toHaveValue(editedUrl);
+
+  response = await page.goto(`https://${domain}`, { waitUntil: 'load' });
+  expect(response?.url()).toContain('pejcic.rs');
+  console.log('Domain redirect edited and verified successfully!');
+
+  // DELETE
+  await page.goto(`/domains/redirect?domain=${domain}`);
+  await page.click('button[type="submit"]:has-text("Delete Redirect")');
+  await page.goto(`/domains/redirect?domain=${domain}`);
+  await expect(page.locator('input[name="redirect_url"][type="url"]')).toHaveValue('');
+
+  response = await page.goto(`https://${domain}`, { waitUntil: 'load' });
+  expect(response?.url()).not.toContain('pejcic.rs');
+  console.log('Domain redirect deleted and verified successfully!');
 });
 
 
