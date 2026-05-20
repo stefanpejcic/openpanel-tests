@@ -559,7 +559,7 @@ test('redirect domain', async ({ page }) => {
 
   // Reload page and verify input is pre-populated
   await page.goto(`/domains/redirect?domain=${domain}`);
-  await expect(page.locator('input[name="redirect_url"]')).toHaveValue(redirectUrl);
+  await expect(page.locator('input[name="redirect_url"][type="url"]')).toHaveValue(redirectUrl);
 
   // Verify the redirect actually works
   const response = await page.goto(`https://${domain}`, {waitUntil: 'load',});
