@@ -8,6 +8,7 @@ const DOMAINS = [
   'python.tests.openpanel.org',
   'website-builder.tests.openpanel.org',
   'files.tests.openpanel.org',
+  'redirect.tests.openpanel.org',
   'to-be-removed.com',
 ];
 
@@ -543,6 +544,29 @@ test('dynamic dns record', async ({ page, context }) => {
   }
 });
 
+
+test('redirect domain', async ({ page }) => {
+  const domain = 'redirect.tests.openpanel.org';
+  const redirectUrl = 'https://pejcic.rs/?proba';
+
+  // Set redirect
+  await page.goto(`/domains/redirect?domain=${domain}`);
+  await page.fill('input[name="redirect_url"]', redirectUrl);
+  await page.click('#save-redirect');
+
+  // Confirm success flash
+  await expect(page.locator(`text=Successfully created redirect from domain ${domain} to ${redirectUrl}`)).toBeVisible();
+
+  // Reload page and verify input is pre-populated
+  await page.goto(`/domains/redirect?domain=${domain}`);
+  await expect(page.locator('input[name="redirect_url"]')).toHaveValue(redirectUrl);
+
+  // Verify the redirect actually works
+  const response = await page.goto(`https://${domain}`, {waitUntil: 'load',});
+  expect(response?.url()).toContain('pejcic.rs');
+
+  console.log('Domain redirect verified successfully!');
+});
 
 
 
