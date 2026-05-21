@@ -4,9 +4,31 @@ import { Readable, Writable } from 'stream';
 
 const FTP_USER = 'ftp';
 const FTP_PASS = 'b&tK3C9+cncXl%Ut';
+const FTP_NEW_PASS = 'N3wP@ssw0rd!xyz';
 const FTP_PATH = '/var/www/html/files.tests.openpanel.org';
 
 let ftpHost: string;
+
+async function resolveFtpHost(page: any): Promise<string> {
+  if (!ftpHost) {
+    await page.goto('/ftp');
+    ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
+  }
+  return ftpHost;
+}
+
+async function ftpConnect(host: string, password: string): Promise<ftp.Client> {
+  const client = new ftp.Client();
+  client.ftp.verbose = true;
+  await client.access({
+    host,
+    port: 21,
+    user: `${FTP_USER}.testinguser`,
+    password,
+    secure: false,
+  });
+  return client;
+}
 
 test('create account', async ({ page }) => {
   await page.goto('/ftp/new');
@@ -35,92 +57,89 @@ test('create account', async ({ page }) => {
 });
 
 test('login, upload, list, download, delete', async ({ page }) => {
-  if (!ftpHost) {
-    await page.goto('/ftp');
-    ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
-  }
-  expect(ftpHost).toBeTruthy();
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
 
-  const client = new ftp.Client();
-  client.ftp.verbose = true;
-
+  const client = await ftpConnect(host, FTP_PASS);
   try {
-    await client.access({
-      host: ftpHost,
-      port: 21,
-      user: `${FTP_USER}.testinguser`,
-      password: FTP_PASS,
-      secure: false,
-    });
-
-    // Upload
     const testContent = Buffer.from('playwright-ftp-test');
     await client.uploadFrom(Readable.from(testContent), 'pw_test.txt');
-    
-    // List
+
     const list = await client.list();
     const found = list.find(f => f.name === 'pw_test.txt');
     expect(found).toBeTruthy();
     expect(found!.size).toBe(testContent.byteLength);
-    console.log(`ftp upload is working`);
+    console.log('ftp upload is working');
 
-    // Download
     const chunks: Buffer[] = [];
-    const sink = new Writable({write(chunk, _enc, cb) { chunks.push(chunk); cb(); }});
+    const sink = new Writable({ write(chunk, _enc, cb) { chunks.push(chunk); cb(); } });
     await client.downloadTo(sink, 'pw_test.txt');
     expect(Buffer.concat(chunks).toString()).toBe('playwright-ftp-test');
-    console.log(`ftp download is working`);
+    console.log('ftp download is working');
 
-    // Delete
     await client.remove('pw_test.txt');
     const listAfter = await client.list();
     expect(listAfter.find(f => f.name === 'pw_test.txt')).toBeUndefined();
-    console.log(`ftp delete is working`);
-
+    console.log('ftp delete is working');
   } finally {
     client.close();
   }
 });
-
-
 
 test('connection list', async ({ page }) => {
-  if (!ftpHost) {
-    await page.goto('/ftp');
-    ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
-  }
-  expect(ftpHost).toBeTruthy();
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
 
-  const client = new ftp.Client();
-  client.ftp.verbose = true;
+  const client = await ftpConnect(host, FTP_PASS);
+  const keepAlive = setInterval(async () => {
+    try { await client.pwd(); } catch { /* ignore */ }
+  }, 3000);
 
   try {
-    await client.access({
-      host: ftpHost,
-      port: 21,
-      user: `${FTP_USER}.testinguser`,
-      password: FTP_PASS,
-      secure: false,
-    });
-
-    const keepAlive = setInterval(async () => {
-      try { await client.pwd(); } catch { /* ignore, connection may be closing */ }
-    }, 3000);
-
-    try {
-      await page.goto('/ftp/connections');
-      const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
-      await expect(row).toBeVisible();
-      console.log('ftp connection list is working');
-    } finally {
-      clearInterval(keepAlive);
-    }
-
+    await page.goto('/ftp/connections');
+    const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+    await expect(row).toBeVisible();
+    console.log('ftp connection list is working');
   } finally {
+    clearInterval(keepAlive);
     client.close();
   }
 });
 
+test('password change', async ({ page }) => {
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
+
+  await page.goto(`/ftp/password/${FTP_USER}.testinguser`);
+  await page.locator('#new_password').fill(FTP_NEW_PASS);
+  await page.locator('#confirm_password').fill(FTP_NEW_PASS);
+  await page.getByRole('button', { name: /Update/i }).click();
+  await expect(page.getByText(/password changed successfully/i)).toBeVisible();
+  console.log('ftp password change is working');
+
+  // Verify old password no longer works
+  const oldClient = new ftp.Client();
+  oldClient.ftp.verbose = false;
+  let oldFailed = false;
+  try {
+    await oldClient.access({ host, port: 21, user: `${FTP_USER}.testinguser`, password: FTP_PASS, secure: false });
+  } catch {
+    oldFailed = true;
+  } finally {
+    oldClient.close();
+  }
+  expect(oldFailed, 'old password should be rejected').toBe(true);
+
+  // Verify new password works
+  const client = await ftpConnect(host, FTP_NEW_PASS);
+  try {
+    const list = await client.list();
+    expect(Array.isArray(list)).toBe(true);
+    console.log('ftp new password login is working');
+  } finally {
+    client.close();
+  }
+});
 
 test('path change', async ({ page }) => {
   const host = await resolveFtpHost(page);
@@ -153,9 +172,7 @@ test('path change', async ({ page }) => {
   }
 });
 
-
-
-test('delete', async ({ page }) => {
+test('account delete', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
