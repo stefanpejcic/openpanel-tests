@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+// https://github.com/stefanpejcic/python-helloworld
+
 const DOMAIN = 'python.tests.openpanel.org';
 const APP_NAME = 'pythonaplikacija';
 const PORT = '5000';
