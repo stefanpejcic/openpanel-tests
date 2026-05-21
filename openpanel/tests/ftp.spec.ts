@@ -236,6 +236,29 @@ test('cyberduck config', async ({ page }) => {
 });
 
 
+test('search', async ({ page }) => {
+  await page.goto('/ftp');
+
+  const searchInput = page.locator('input[type="search"]');
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  await expect(row).toBeVisible();
+
+  // Search for our user
+  await searchInput.fill(`${FTP_USER}.testinguser`);
+  await expect(row).toBeVisible();
+
+  // Only one row should be visible
+  const visibleRows = page.locator('tbody tr').filter({ visible: true });
+  await expect(visibleRows).toHaveCount(1);
+
+  // Search for something else
+  await searchInput.fill('zzznomatchzzz');
+  await expect(row).not.toBeVisible();
+
+  console.log('ftp account search is working');
+});
+
+
 test('account delete', async ({ page }) => {
   // 1. check count
   await page.goto('/dashboard');
