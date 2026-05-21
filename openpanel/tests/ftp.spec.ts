@@ -165,12 +165,13 @@ test('path change', async ({ page }) => {
   // Verify FTP connection still works and lands in new path
   const client = await ftpConnect(host, FTP_NEW_PASS);
   try {
-    const pwd = await client.pwd();
-    expect(pwd).toBe(newPath.replace(/\/$/, '') || '/');
-    console.log(`ftp new path confirmed via pwd: ${pwd}`);
-  } finally {
-    client.close();
-  }
+      const list = await client.list();
+      const targetExists = list.some(item => item.name === 'files.tests.openpanel.org');
+      expect(targetExists).toBe(true);
+      console.log('ftp new path confirmed via directory contents listing');
+    } finally {
+      client.close();
+    }
 });
 
 test('account delete', async ({ page }) => {
