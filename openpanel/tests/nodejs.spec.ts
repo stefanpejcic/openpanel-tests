@@ -99,6 +99,6 @@ test.describe('Node.js PM2 autoinstaller', () => {
     console.log('Node.js PM2 autoinstaller is fully working');
   });
 
-  // TODO: cover manager, actions:
+  // TODO: cover manager actions
 
 });
