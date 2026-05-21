@@ -239,7 +239,7 @@ test('cyberduck config', async ({ page }) => {
 test('search', async ({ page }) => {
   await page.goto('/ftp');
 
-  const searchInput = page.locator('input[type="search"]');
+  const searchInput = page.locator('input[x-model="searchQuery"]');
   const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
   await expect(row).toBeVisible();
 
