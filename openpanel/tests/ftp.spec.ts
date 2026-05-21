@@ -176,23 +176,14 @@ test('path change', async ({ page }) => {
 
 
 
-test('filezilla config', async ({ page }) => {
+test('filezilla config download and validate', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.goto(`/ftp/configuration/filezilla/${FTP_USER}.testinguser`),
-  ]);
+  const response = await page.request.get(`/ftp/configuration/filezilla/${FTP_USER}.testinguser`);
+  expect(response.ok()).toBeTruthy();
 
-  const stream = await download.createReadStream();
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    stream.on('end', resolve);
-    stream.on('error', reject);
-  });
-  const xml = Buffer.concat(chunks).toString('utf-8');
+  const xml = await response.text();
 
   expect(xml).toMatch(/^<\?xml/);
   expect(xml).toContain('<FileZilla3>');
@@ -204,23 +195,14 @@ test('filezilla config', async ({ page }) => {
   console.log('filezilla config is valid and contains correct connection info');
 });
 
-test('cyberduck config', async ({ page }) => {
+test('cyberduck config download and validate', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.goto(`/ftp/configuration/cyberduck/${FTP_USER}.testinguser`),
-  ]);
+  const response = await page.request.get(`/ftp/configuration/cyberduck/${FTP_USER}.testinguser`);
+  expect(response.ok()).toBeTruthy();
 
-  const stream = await download.createReadStream();
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    stream.on('end', resolve);
-    stream.on('error', reject);
-  });
-  const xml = Buffer.concat(chunks).toString('utf-8');
+  const xml = await response.text();
 
   expect(xml).toMatch(/^<\?xml/);
   expect(xml).toContain('<bookmark>');
@@ -230,7 +212,6 @@ test('cyberduck config', async ({ page }) => {
 
   console.log('cyberduck config is valid and contains correct connection info');
 });
-
 
 
 test('account delete', async ({ page }) => {
