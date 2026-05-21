@@ -8,7 +8,7 @@ const FTP_PATH = '/var/www/html/files.tests.openpanel.org';
 
 let ftpHost: string;
 
-test('create FTP account and verify FTP server info', async ({ page }) => {
+test('create account', async ({ page }) => {
   await page.goto('/ftp/new');
   await expect(page.getByRole('heading', { name: 'New FTP Account' })).toBeVisible();
   await page.locator('#new_ftp_username').fill(FTP_USER);
@@ -34,7 +34,7 @@ test('create FTP account and verify FTP server info', async ({ page }) => {
   console.log(`PORT:     ${ftpPort}`);
 });
 
-test('FTP login, upload, list, download, delete', async ({ page }) => {
+test('login, upload, list, download, delete', async ({ page }) => {
   if (!ftpHost) {
     await page.goto('/ftp');
     ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
@@ -84,7 +84,7 @@ test('FTP login, upload, list, download, delete', async ({ page }) => {
 
 
 
-test('FTP connection list', async ({ page }) => {
+test('connection list', async ({ page }) => {
   if (!ftpHost) {
     await page.goto('/ftp');
     ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
@@ -119,4 +119,70 @@ test('FTP connection list', async ({ page }) => {
   } finally {
     client.close();
   }
+});
+
+
+test('path change', async ({ page }) => {
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
+
+  const newPath = '/var/www/html/';
+
+  await page.goto(`/ftp/path/${FTP_USER}.testinguser`);
+  await page.locator('#new_user_path').fill(newPath);
+  await page.getByRole('button', { name: /Update/i }).click();
+  await expect(page.getByText(/path changed successfully/i)).toBeVisible();
+  console.log('ftp path change is working');
+
+  // Verify new path shown in table
+  await page.goto('/ftp');
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText(newPath);
+  await expect(row).not.toContainText(FTP_PATH);
+  console.log('ftp path updated in table');
+
+  // Verify FTP connection still works and lands in new path
+  const client = await ftpConnect(host, FTP_NEW_PASS);
+  try {
+    const pwd = await client.pwd();
+    expect(pwd).toBe(newPath.replace(/\/$/, '') || '/');
+    console.log(`ftp new path confirmed via pwd: ${pwd}`);
+  } finally {
+    client.close();
+  }
+});
+
+
+
+test('delete', async ({ page }) => {
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
+
+  await page.goto('/ftp');
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  await expect(row).toBeVisible();
+
+  await row.getByRole('button', { name: /delete/i }).click();
+  // Confirm dialog
+  await page.getByRole('button', { name: /confirm/i }).click();
+  await expect(page.getByText(/deleted successfully/i)).toBeVisible();
+  console.log('ftp account delete is working');
+
+  // Verify row gone from table
+  await expect(row).not.toBeVisible();
+
+  // Verify FTP access is rejected
+  const client = new ftp.Client();
+  client.ftp.verbose = false;
+  let rejected = false;
+  try {
+    await client.access({ host, port: 21, user: `${FTP_USER}.testinguser`, password: FTP_NEW_PASS, secure: false });
+  } catch {
+    rejected = true;
+  } finally {
+    client.close();
+  }
+  expect(rejected, 'deleted account should be rejected by FTP server').toBe(true);
+  console.log('ftp deleted account correctly rejected');
 });
