@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import * as ftp from 'basic-ftp';
 import { Readable, Writable } from 'stream';
 
+// npm install basic-ftp
+
 const FTP_USER = 'ftp';
 const FTP_PASS = 'b&tK3C9+cncXl%Ut';
 const FTP_NEW_PASS = 'N3wP@ssw0rd!xyz';
