@@ -30,7 +30,23 @@ async function ftpConnect(host: string, password: string): Promise<ftp.Client> {
   return client;
 }
 
+async function getFTPCount(page: Page): Promise<number> {
+  const text = await page.locator('#dashboard_usage_ftp').locator('p').nth(1).textContent();
+  if (!text) throw new Error('Cannot read ftp count');
+
+  const match = text.match(/(\d+)\s*\//);
+  if (!match) throw new Error(`Cannot parse ftp count from: ${text}`);
+
+  return parseInt(match[1], 10);
+}
+
 test('create account', async ({ page }) => {
+  // 1. check current user count
+  await page.goto('/dashboard');
+  const initialCount = await getFTPCount(page);
+  let expectedCount = initialCount;
+
+  // 1. create account
   await page.goto('/ftp/new');
   await expect(page.getByRole('heading', { name: 'New FTP Account' })).toBeVisible();
   await page.locator('#new_ftp_username').fill(FTP_USER);
@@ -49,11 +65,17 @@ test('create account', async ({ page }) => {
   expect(ftpHost).toBeTruthy();
   expect(ftpPort).toBe('21');
 
+  expectedCount++;
+
   console.log(`Account created, logins:`);
   console.log(`USERNAME: ${FTP_USER}.testinguser`);
   console.log(`PASSWORD: ${FTP_PASS}`);
   console.log(`SERVER:   ${ftpHost}`);
   console.log(`PORT:     ${ftpPort}`);
+
+  // 3. check count again
+  await page.goto('/dashboard');
+  await expect.poll(async () => {return await getFTPCount(page);}).toBe(expectedCount);
 });
 
 test('login, upload, list, download, delete', async ({ page }) => {
@@ -215,6 +237,12 @@ test('cyberduck config', async ({ page }) => {
 
 
 test('account delete', async ({ page }) => {
+  // 1. check count
+  await page.goto('/dashboard');
+  const initialCount = await getFTPCount(page);
+  let expectedCount = initialCount;
+
+  // 2. delete
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
@@ -227,10 +255,10 @@ test('account delete', async ({ page }) => {
   await expect(page.getByText(/deleted successfully/i)).toBeVisible();
   console.log('ftp account delete is working');
 
-  // Verify row gone from table
   await expect(row).not.toBeVisible();
+  expectedCount--;
 
-  // Verify FTP access is rejected
+  // 3. test connection
   const client = new ftp.Client();
   client.ftp.verbose = false;
   let rejected = false;
@@ -243,4 +271,8 @@ test('account delete', async ({ page }) => {
   }
   expect(rejected, 'deleted account should be rejected by FTP server').toBe(true);
   console.log('ftp deleted account correctly rejected');
+
+  // 4. check count again
+  await page.goto('/dashboard');
+  await expect.poll(async () => {return await getEmailCount(page);}).toBe(expectedCount);
 });
