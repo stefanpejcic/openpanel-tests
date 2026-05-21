@@ -148,7 +148,7 @@ test('path change', async ({ page }) => {
   const newPath = '/var/www/html/';
 
   await page.goto(`/ftp/path/${FTP_USER}.testinguser`);
-  await page.locator('#new_user_path').fill(newPath);
+  await page.locator('#new_path').fill(newPath);
   await page.getByRole('button', { name: /Update/i }).click();
   await expect(page.getByText(/path changed successfully/i)).toBeVisible();
   console.log('ftp path change is working');
