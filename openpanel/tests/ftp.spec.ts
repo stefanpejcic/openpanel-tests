@@ -176,7 +176,7 @@ test('path change', async ({ page }) => {
 
 
 
-test('filezilla config download and validate', async ({ page }) => {
+test('filezilla config', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
@@ -195,7 +195,7 @@ test('filezilla config download and validate', async ({ page }) => {
   console.log('filezilla config is valid and contains correct connection info');
 });
 
-test('cyberduck config download and validate', async ({ page }) => {
+test('cyberduck config', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
