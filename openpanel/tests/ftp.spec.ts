@@ -174,6 +174,65 @@ test('path change', async ({ page }) => {
     }
 });
 
+
+
+test('filezilla config', async ({ page }) => {
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.goto(`/ftp/configuration/filezilla/${FTP_USER}.testinguser`),
+  ]);
+
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    stream.on('end', resolve);
+    stream.on('error', reject);
+  });
+  const xml = Buffer.concat(chunks).toString('utf-8');
+
+  expect(xml).toMatch(/^<\?xml/);
+  expect(xml).toContain('<FileZilla3>');
+  expect(xml).toContain(`<Host>${host}</Host>`);
+  expect(xml).toContain('<Port>21</Port>');
+  expect(xml).toContain(`<User>${FTP_USER}.testinguser</User>`);
+  expect(xml).toContain(`<Name>${FTP_USER}.testinguser</Name>`);
+
+  console.log('filezilla config is valid and contains correct connection info');
+});
+
+test('cyberduck config', async ({ page }) => {
+  const host = await resolveFtpHost(page);
+  expect(host).toBeTruthy();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.goto(`/ftp/configuration/cyberduck/${FTP_USER}.testinguser`),
+  ]);
+
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    stream.on('end', resolve);
+    stream.on('error', reject);
+  });
+  const xml = Buffer.concat(chunks).toString('utf-8');
+
+  expect(xml).toMatch(/^<\?xml/);
+  expect(xml).toContain('<bookmark>');
+  expect(xml).toContain(`<hostname>${host}</hostname>`);
+  expect(xml).toContain(`<username>${FTP_USER}.testinguser</username>`);
+  expect(xml).toContain('<protocol>ftp</protocol>');
+
+  console.log('cyberduck config is valid and contains correct connection info');
+});
+
+
+
 test('account delete', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
@@ -183,7 +242,6 @@ test('account delete', async ({ page }) => {
   await expect(row).toBeVisible();
 
   await row.getByRole('button', { name: /delete/i }).click();
-  // Confirm dialog
   await page.getByRole('button', { name: /confirm/i }).click();
   await expect(page.getByText(/deleted successfully/i)).toBeVisible();
   console.log('ftp account delete is working');
