@@ -99,7 +99,7 @@ test('connection list', async ({ page }) => {
     await page.goto('/ftp/connections');
     const pre = page.locator('pre');
     await expect(pre).toBeVisible();
-    // TODO: check for content!
+    await expect(pre).toContainText(FTP_USER);
     console.log('ftp connection list is working');
   } finally {
     clearInterval(keepAlive);
