@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+// https://github.com/stefanpejcic/nodejs-helloworld
+
 const DOMAIN = 'nodejs.tests.openpanel.org';
 const APP_NAME = 'nodeaplikacija';
 const PORT = '3000';
