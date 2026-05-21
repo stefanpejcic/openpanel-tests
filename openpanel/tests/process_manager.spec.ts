@@ -38,6 +38,7 @@ test.describe('Process Manager', () => {
         await terminateBtn.click();
         const response = await responsePromise;
         const body = await response.json();
+        console.log('Kill response:', JSON.stringify(body));
         expect(body.success).toBe(true);
 
         // Row should be gone from DOM
