@@ -5,6 +5,7 @@ import { Readable, Writable } from 'stream';
 // npm install basic-ftp
 
 const FTP_USER = 'ftp';
+const FTP_DOMAIN = 'files.tests.openpanel.org';
 const FTP_PASS = 'b&tK3C9+cncXl%Ut';
 const FTP_NEW_PASS = 'N3wP@ssw0rd!xyz';
 const FTP_PATH = '/var/www/html/files.tests.openpanel.org';
@@ -25,7 +26,7 @@ async function ftpConnect(host: string, password: string): Promise<ftp.Client> {
   await client.access({
     host,
     port: 21,
-    user: `${FTP_USER}.testinguser`,
+    user: `${FTP_USER}@${FTP_DOMAIN}`,
     password,
     secure: false,
   });
@@ -52,14 +53,15 @@ test('create account', async ({ page }) => {
   await page.goto('/ftp/new');
   await expect(page.getByRole('heading', { name: 'New FTP Account' })).toBeVisible();
   await page.locator('#new_ftp_username').fill(FTP_USER);
+  await page.locator('#domain').selectOption({ label: FTP_DOMAIN });
   await page.locator('#password').fill(FTP_PASS);
   await page.locator('#new_user_path').fill(FTP_PATH);
   await page.getByRole('button', { name: /Create Account/i }).click();
   await expect(page.getByText(/created successfully/i)).toBeVisible();
 
-  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}@${FTP_DOMAIN}` });
   await expect(row).toBeVisible();
-  await expect(row).toContainText(`${FTP_USER}.testinguser`);
+  await expect(row).toContainText(`${FTP_USER}@${FTP_DOMAIN}`);
   await expect(row).toContainText(FTP_PATH);
 
   ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
@@ -70,7 +72,7 @@ test('create account', async ({ page }) => {
   expectedCount++;
 
   console.log(`Account created, logins:`);
-  console.log(`USERNAME: ${FTP_USER}.testinguser`);
+  console.log(`USERNAME: ${FTP_USER}@${FTP_DOMAIN}`);
   console.log(`PASSWORD: ${FTP_PASS}`);
   console.log(`SERVER:   ${ftpHost}`);
   console.log(`PORT:     ${ftpPort}`);
@@ -135,7 +137,7 @@ test('password change', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
-  await page.goto(`/ftp/password/${FTP_USER}.testinguser`);
+  await page.goto(`/ftp/password/${FTP_USER}@${FTP_DOMAIN}`);
   await page.locator('#new_password').fill(FTP_NEW_PASS);
   await page.locator('#confirm_password').fill(FTP_NEW_PASS);
   await page.getByRole('button', { name: /Update/i }).click();
@@ -147,7 +149,7 @@ test('password change', async ({ page }) => {
   oldClient.ftp.verbose = false;
   let oldFailed = false;
   try {
-    await oldClient.access({ host, port: 21, user: `${FTP_USER}.testinguser`, password: FTP_PASS, secure: false });
+    await oldClient.access({ host, port: 21, user: `${FTP_USER}@${FTP_DOMAIN}`, password: FTP_PASS, secure: false });
   } catch {
     oldFailed = true;
   } finally {
@@ -172,7 +174,7 @@ test('path change', async ({ page }) => {
 
   const newPath = '/var/www/html/';
 
-  await page.goto(`/ftp/path/${FTP_USER}.testinguser`);
+  await page.goto(`/ftp/path/${FTP_USER}@${FTP_DOMAIN}`);
   await page.locator('#new_path').fill(newPath);
   await page.getByRole('button', { name: /Update/i }).click();
   await expect(page.getByText(/path changed successfully/i)).toBeVisible();
@@ -180,7 +182,7 @@ test('path change', async ({ page }) => {
 
   // Verify new path shown in table
   await page.goto('/ftp');
-  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}@${FTP_DOMAIN}` });
   await expect(row).toBeVisible();
   await expect(row).toContainText(newPath);
   await expect(row).not.toContainText(FTP_PATH);
@@ -204,7 +206,7 @@ test('filezilla config', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
-  const response = await page.request.get(`/ftp/configuration/filezilla/${FTP_USER}.testinguser`);
+  const response = await page.request.get(`/ftp/configuration/filezilla/${FTP_USER}@${FTP_DOMAIN}`);
   expect(response.ok()).toBeTruthy();
 
   const xml = await response.text();
@@ -213,8 +215,8 @@ test('filezilla config', async ({ page }) => {
   expect(xml).toContain('<FileZilla3>');
   expect(xml).toContain(`<Host>${host}</Host>`);
   expect(xml).toContain('<Port>21</Port>');
-  expect(xml).toContain(`<User>${FTP_USER}.testinguser</User>`);
-  expect(xml).toContain(`<Name>${FTP_USER}.testinguser</Name>`);
+  expect(xml).toContain(`<User>${FTP_USER}@${FTP_DOMAIN}</User>`);
+  expect(xml).toContain(`<Name>${FTP_USER}@${FTP_DOMAIN}</Name>`);
 
   console.log('filezilla config is valid and contains correct connection info');
 });
@@ -223,7 +225,7 @@ test('cyberduck config', async ({ page }) => {
   const host = await resolveFtpHost(page);
   expect(host).toBeTruthy();
 
-  const response = await page.request.get(`/ftp/configuration/cyberduck/${FTP_USER}.testinguser`);
+  const response = await page.request.get(`/ftp/configuration/cyberduck/${FTP_USER}@${FTP_DOMAIN}`);
   expect(response.ok()).toBeTruthy();
 
   const xml = await response.text();
@@ -231,7 +233,7 @@ test('cyberduck config', async ({ page }) => {
   expect(xml).toMatch(/^<\?xml/);
   expect(xml).toContain('<bookmark>');
   expect(xml).toContain(`<hostname>${host}</hostname>`);
-  expect(xml).toContain(`<username>${FTP_USER}.testinguser</username>`);
+  expect(xml).toContain(`<username>${FTP_USER}@${FTP_DOMAIN}</username>`);
   expect(xml).toContain('<protocol>ftp</protocol>');
 
   console.log('cyberduck config is valid and contains correct connection info');
@@ -242,11 +244,11 @@ test('search', async ({ page }) => {
   await page.goto('/ftp');
 
   const searchInput = page.locator('input[x-model="searchQuery"]');
-  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}@${FTP_DOMAIN}` });
   await expect(row).toBeVisible();
 
   // Search for our user
-  await searchInput.fill(`${FTP_USER}.testinguser`);
+  await searchInput.fill(`${FTP_USER}@${FTP_DOMAIN}`);
   await expect(row).toBeVisible();
 
   // Only one row should be visible
@@ -272,7 +274,7 @@ test('account delete', async ({ page }) => {
   expect(host).toBeTruthy();
 
   await page.goto('/ftp');
-  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+  const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}@${FTP_DOMAIN}` });
   await expect(row).toBeVisible();
 
   await row.getByRole('button', { name: /delete/i }).click();
@@ -288,7 +290,7 @@ test('account delete', async ({ page }) => {
   client.ftp.verbose = false;
   let rejected = false;
   try {
-    await client.access({ host, port: 21, user: `${FTP_USER}.testinguser`, password: FTP_NEW_PASS, secure: false });
+    await client.access({ host, port: 21, user: `${FTP_USER}@${FTP_DOMAIN}`, password: FTP_NEW_PASS, secure: false });
   } catch {
     rejected = true;
   } finally {
