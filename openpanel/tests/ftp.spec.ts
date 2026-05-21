@@ -81,3 +81,42 @@ test('FTP login, upload, list, download, delete', async ({ page }) => {
     client.close();
   }
 });
+
+
+
+test('FTP connection list', async ({ page }) => {
+  if (!ftpHost) {
+    await page.goto('/ftp');
+    ftpHost = (await page.locator('#ftp_server_address').textContent())?.trim() ?? '';
+  }
+  expect(ftpHost).toBeTruthy();
+
+  const client = new ftp.Client();
+  client.ftp.verbose = true;
+
+  try {
+    await client.access({
+      host: ftpHost,
+      port: 21,
+      user: `${FTP_USER}.testinguser`,
+      password: FTP_PASS,
+      secure: false,
+    });
+
+    const keepAlive = setInterval(async () => {
+      try { await client.pwd(); } catch { /* ignore, connection may be closing */ }
+    }, 3000);
+
+    try {
+      await page.goto('/ftp/connections');
+      const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}.testinguser` });
+      await expect(row).toBeVisible();
+      console.log('ftp connection list is working');
+    } finally {
+      clearInterval(keepAlive);
+    }
+
+  } finally {
+    client.close();
+  }
+});
