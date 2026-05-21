@@ -297,5 +297,5 @@ test('account delete', async ({ page }) => {
 
   // 4. check count again
   await page.goto('/dashboard');
-  await expect.poll(async () => {return await getEmailCount(page);}).toBe(expectedCount);
+  await expect.poll(async () => {return await getFTPCount(page);}).toBe(expectedCount);
 });
