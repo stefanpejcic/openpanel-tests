@@ -22,7 +22,7 @@ const { test, expect } = require('@playwright/test');
       await page.goto(`/account/favorites`);
 
       const table = page.locator('table tbody');
-      await expect(table).toContainText('/dashboard', { timeout: 5000 });
+      await expect(table).toContainText('Dashboard', { timeout: 5000 });
   });
 
   test('Yellow star', async ({ page }) => {
@@ -50,11 +50,11 @@ const { test, expect } = require('@playwright/test');
 
       // Expect the item to disappear from the left sidebar
       const sidebar = page.locator('nav, aside, [class*="sidebar"], [class*="menu"]').first();
-      await expect(sidebar).not.toContainText('/dashboard', { timeout: 5000 });
+      await expect(sidebar).not.toContainText('Dashboard', { timeout: 5000 });
 
       await page.goto(`/account/favorites`);
       const table = page.locator('table tbody');
-      await expect(table).not.toContainText('/dashboard', { timeout: 5000 });
+      await expect(table).not.toContainText('Dashboard', { timeout: 5000 });
 
   });
 
@@ -69,14 +69,14 @@ const { test, expect } = require('@playwright/test');
   
       await page.goto(`/account/favorites`);
       const table = page.locator('table tbody');
-      await expect(table).toContainText('/dashboard', { timeout: 5000 });
+      await expect(table).toContainText('Dashboard', { timeout: 5000 });
 
       const searchInput = page.locator('input[type="search"]');
       await expect(searchInput).toBeVisible();
 
       // Search for "dashboard" - row should be visible
       await searchInput.fill('dashboard');
-      const dashboardRow = page.locator('table tbody tr').filter({ hasText: '/dashboard' });
+      const dashboardRow = page.locator('table tbody tr').filter({ hasText: 'Dashboard' });
       await expect(dashboardRow).toBeVisible({ timeout: 3000 });
 
       // Search for "lazr" - no rows should be visible
@@ -97,7 +97,7 @@ const { test, expect } = require('@playwright/test');
   test('delete in table', async ({ page }) => {
       await page.goto(`/account/favorites`);
 
-      const dashboardRow = page.locator('table tbody tr').filter({ hasText: '/dashboard' });
+      const dashboardRow = page.locator('table tbody tr').filter({ hasText: 'Dashboard' });
       const deleteBtn = dashboardRow.locator('button', { hasText: 'Delete' });
 
       await expect(deleteBtn).toBeVisible();
@@ -108,11 +108,11 @@ const { test, expect } = require('@playwright/test');
      await page.waitForLoadState('networkidle');
 
       const table = page.locator('table tbody');
-      await expect(table).not.toContainText('/dashboard', { timeout: 5000 });
+      await expect(table).not.toContainText('Dashboard', { timeout: 5000 });
 
       // Sidebar should not contain the favorite
       const sidebar = page.locator('nav, aside, [class*="sidebar"], [class*="menu"]').first();
-      await expect(sidebar).not.toContainText('/dashboard', { timeout: 5000 });
+      await expect(sidebar).not.toContainText('Dashboard', { timeout: 5000 });
 
       await page.goto(`/dashboard`);
       const starBtn = page.locator('#addFavoriteBtn');
