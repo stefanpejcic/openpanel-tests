@@ -53,7 +53,7 @@ const { test, expect } = require('@playwright/test');
       await expect(page.locator('text=Successfully removed from favorites')).toBeVisible({ timeout: 5000 });
 
       // Expect the item to disappear from the left sidebar
-      await expect(page.getByText('Dashboard')).toHaveCount(0);
+      await expect(page.getByText('Dashboard')).toHaveCount(1); // 1 is in header!
 
       await page.goto(`/account/favorites`);
       const table = page.locator('table tbody');
