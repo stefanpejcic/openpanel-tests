@@ -6,7 +6,6 @@ let totpSecret: string;
 function generateCode(): string {
   return totp.generate(totpSecret);
 }
----------------------------------------
 
 // ENABLE
 test('precondition: 2FA is disabled', async ({ page }) => {
