@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { totp } from 'otplib';
-import otplib from 'otplib';
+import * as OTPLib from 'otplib';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -20,7 +19,7 @@ function loadSecret(): string {
 }
 
 function generateCode(): string {
-  return otplib.totp.generate(loadSecret());
+  return OTPLib.totp.generate(loadSecret());
 }
 
 // ENABLE
