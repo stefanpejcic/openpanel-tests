@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test.txt';
+
+const DOMAIN = 'wp.tests.openpanel.org';
 
 test('enable varnish', async ({ page }) => {
   await page.goto('/cache/varnish');
@@ -8,7 +10,7 @@ test('enable varnish', async ({ page }) => {
   await expect(status).not.toHaveText('Disabled');
 });
 
-test('should show domains table and enable Varnish for wp.tests.openpanel.org', async ({ page }) => {
+test('should show domains table and enable Varnish', async ({ page }) => {
   await page.goto('/cache/varnish');
   const table = page.locator('table');
   await expect(table).toBeVisible();
@@ -17,15 +19,27 @@ test('should show domains table and enable Varnish for wp.tests.openpanel.org', 
   const domainCell = firstRow.locator('td').first();
   const domainName = (await domainCell.textContent())?.trim();
   expect(domainName).toBeTruthy();
-  expect(domainName).toBe('wp.tests.openpanel.org');
+  expect(domainName).toBe(DOMAIN);
   const toggleButton = firstRow.locator('button[type="submit"]');
   await expect(toggleButton).toHaveAttribute('aria-checked', 'false');
   await toggleButton.click();
   await page.waitForLoadState('networkidle');
   const alert = page.locator('#alert-stack .ms-3');
   await expect(alert).toContainText(`Varnish cache is now On for domain ${domainName}`, { timeout: 10_000 });
+
+  // create test files
+  await page.goto(`/file-manager/edit-file/${DOMAIN}/test.txt?editor=text&new=true`);
+  await page.locator('#editor-text').fill(`nista`);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
+  await page.goto(`/file-manager/edit-file/${DOMAIN}/test2.txt?editor=text&new=true`);
+  await page.locator('#editor-text').fill(`nista`);
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
+
+
   
-  const response = await page.request.get(`http://wp.tests.openpanel.org/test`);
+  const response = await page.request.get(`https://${DOMAIN}/test.txt`);
   const headers = response.headers();
   const isVarnishActive = 'x-varnish' in headers
     || headers['x-cache']?.toLowerCase().includes('hit')
@@ -80,7 +94,7 @@ test('should display container log and show Varnish Cache & Container stats', as
   }
 });
 
-test('should disable Varnish for wp.tests.openpanel.org', async ({ page }) => {
+test('should disable Varnish for domain', async ({ page }) => {
   await page.goto('/cache/varnish');
   
   const table = page.locator('table');
@@ -92,7 +106,7 @@ test('should disable Varnish for wp.tests.openpanel.org', async ({ page }) => {
   const domainCell = firstRow.locator('td').first();
   const domainName = (await domainCell.textContent())?.trim();
   expect(domainName).toBeTruthy();
-  expect(domainName).toBe('wp.tests.openpanel.org');
+  expect(domainName).toBe(DOMAIN);
   
   const toggleButton = firstRow.locator('button[type="submit"]');
   await expect(toggleButton).toHaveAttribute('aria-checked', 'true');
@@ -103,7 +117,7 @@ test('should disable Varnish for wp.tests.openpanel.org', async ({ page }) => {
   const alert = page.locator('#alert-stack .ms-3');
   await expect(alert).toContainText(`Varnish cache is now Off for domain ${domainName}`, { timeout: 10_000 });
   
-  const response = await page.request.get(`http://wp.tests.openpanel.org/test2`);
+  const response = await page.request.get(`https://${DOMAIN}/test2.txt`);
   const headers = response.headers();
   
   const xCache = headers['x-cache']?.toLowerCase() || '';
