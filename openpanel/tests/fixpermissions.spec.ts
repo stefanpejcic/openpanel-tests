@@ -44,7 +44,7 @@ test('fix permissions', async ({ page }) => {
   await expect(page.locator('#c-oct')).toHaveValue('775');
 
   await page.goto(`/files`);
-  await page.locator('div').filter({ hasText: /^test.txt$/ }).click();
+  await page.locator('#filemanager_table div').filter({ hasText: 'test.txt' }).click();
   await page.getByRole('button', { name: ' Permissions' }).click();
   await expect(page.locator('#c-oct')).toHaveValue('644');
 
