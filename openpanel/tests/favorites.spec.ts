@@ -87,7 +87,6 @@ const { test, expect } = require('@playwright/test');
       // Clear search
       await searchInput.fill('');
 
-      const dashboardRow = page.locator('table tbody tr').filter({ hasText: '/dashboard' });
       const link = dashboardRow.locator('a');
       await expect(link).toBeVisible();
       const href = await link.getAttribute('href');
