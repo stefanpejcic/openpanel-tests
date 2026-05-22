@@ -49,8 +49,7 @@ const { test, expect } = require('@playwright/test');
       await expect(page.locator('text=Successfully removed from favorites')).toBeVisible({ timeout: 5000 });
 
       // Expect the item to disappear from the left sidebar
-      const sidebar = page.locator('nav, aside, [class*="sidebar"], [class*="menu"]').first();
-      await expect(sidebar).not.toContainText('Dashboard', { timeout: 5000 });
+      await expect(page.getByText('Dashboard')).toHaveCount(0);
 
       await page.goto(`/account/favorites`);
       const table = page.locator('table tbody');
@@ -111,8 +110,7 @@ const { test, expect } = require('@playwright/test');
       await expect(table).not.toContainText('Dashboard', { timeout: 5000 });
 
       // Sidebar should not contain the favorite
-      const sidebar = page.locator('nav, aside, [class*="sidebar"], [class*="menu"]').first();
-      await expect(sidebar).not.toContainText('Dashboard', { timeout: 5000 });
+      await expect(page.getByText('Dashboard')).toHaveCount(0);
 
       await page.goto(`/dashboard`);
       const starBtn = page.locator('#addFavoriteBtn');
