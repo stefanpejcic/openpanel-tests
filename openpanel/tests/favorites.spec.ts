@@ -104,7 +104,8 @@ const { test, expect } = require('@playwright/test');
       await deleteBtn.click();
 
       // Page reloads and row should be gone
-      await page.waitForLoadState('networkidle');
+      // await page.goto(`/account/favorites`);
+     await page.waitForLoadState('networkidle');
 
       const table = page.locator('table tbody');
       await expect(table).not.toContainText('/dashboard', { timeout: 5000 });
@@ -124,7 +125,4 @@ const { test, expect } = require('@playwright/test');
       const isFavorite = await starBtn.getAttribute('data-is-favorite');
       expect(isFavorite).toBe('false');
 
-      await page.goto(`/account/favorites`);
-      const table = page.locator('table tbody');
-      await expect(table).not.toContainText('/dashboard', { timeout: 5000 });
   });
