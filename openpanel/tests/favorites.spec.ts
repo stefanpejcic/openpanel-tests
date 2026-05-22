@@ -34,6 +34,10 @@ const { test, expect } = require('@playwright/test');
       // The filled star SVG has an orange fill path
       const filledStar = starBtn.locator('svg path[fill="orange"]');
       await expect(filledStar).toBeVisible({ timeout: 5000 });
+
+      await page.waitForLoadState('networkidle');
+      const isFavorite = await starBtn.getAttribute('data-is-favorite');
+      expect(isFavorite).toBe('true');
   });
 
   test('Right-click to remove', async ({ page }) => {
@@ -120,6 +124,7 @@ const { test, expect } = require('@playwright/test');
       const filledStar = starBtn.locator('svg path[fill="orange"]');
       await expect(filledStar).not.toBeVisible({ timeout: 5000 });
 
+      await page.waitForLoadState('networkidle');
       const isFavorite = await starBtn.getAttribute('data-is-favorite');
       expect(isFavorite).toBe('false');
 
