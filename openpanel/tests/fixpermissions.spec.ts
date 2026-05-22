@@ -25,8 +25,7 @@ test('fix permissions', async ({ page }) => {
   await page.getByRole('button', { name: ' Permissions' }).click();
   await page.getByPlaceholder('775').fill('200');
   await page.getByRole('button', { name: 'Confirm' }).click();
-  
-  await page.locator('div').filter({ hasText: /^test.txt$/ }).click();
+  await page.locator('tr[data-file="test.txt"]').click();
   await page.getByRole('button', { name: ' Permissions' }).click();
   await page.getByPlaceholder('775').fill('200');
   await page.getByRole('button', { name: 'Confirm' }).click();
