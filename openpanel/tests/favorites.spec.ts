@@ -71,7 +71,7 @@ const { test, expect } = require('@playwright/test');
       const table = page.locator('table tbody');
       await expect(table).toContainText('Dashboard', { timeout: 5000 });
 
-      const searchInput = page.locator('input[type="search"]');
+      const searchInput = page.locator('[x-model="searchQuery"]');
       await expect(searchInput).toBeVisible();
 
       // Search for "dashboard" - row should be visible
