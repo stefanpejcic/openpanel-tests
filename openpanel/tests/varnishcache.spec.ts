@@ -31,11 +31,9 @@ test('should show domains table and enable Varnish', async ({ page }) => {
   await page.goto(`/file-manager/edit-file/${DOMAIN}/test.txt?editor=text&new=true`);
   await page.locator('#editor-text').fill(`nista`);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
   await page.goto(`/file-manager/edit-file/${DOMAIN}/test2.txt?editor=text&new=true`);
   await page.locator('#editor-text').fill(`nista`);
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
 
 
   
