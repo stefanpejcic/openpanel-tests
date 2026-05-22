@@ -3,8 +3,8 @@ import { totp } from 'otplib';
 
 let totpSecret: string;
 
-const PANEL_USERNAME = process.env.PANEL_USERNAME;
-const PANEL_PASSWORD = process.env.PANEL_PASSWORD;
+const USERNAME = process.env.PANEL_USERNAME;
+const PASSWORD = process.env.PANEL_PASSWORD;
 
 
 function generateCode(): string {
@@ -77,7 +77,7 @@ test('login with 2FA code', async ({ page }) => {
 test('disable 2FA', async ({ page }) => {
   await page.goto(`/account/2fa`);
   await page.click('button:has-text("Click to disable 2FA")');
-  await expect(page.locator('text=disabled')).toBeVisible();
+  await expect(page.locator('text=disabled').first()).toBeVisible();
 
   await page.goto(`/login`);
 
