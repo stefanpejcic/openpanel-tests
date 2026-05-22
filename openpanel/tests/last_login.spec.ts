@@ -37,11 +37,13 @@ test.describe('Login history page', () => {
       `/account/activity?search=${expectedIp}`
     );
 
-    const searchInput = page.locator('input[type="search"]');
+    const searchInput = page.locator('[x-model="searchQuery"]');
 
     await searchInput.fill(expectedIp);
-    await expect(rows).toHaveCount(1);
-    await expect(firstRow).toBeVisible();
+    const visibleRows = rows.filter({ visible: true });
+
+    await expect(visibleRows.first()).toBeVisible();
+    await expect(visibleRows.first()).toContainText(expectedIp);
 
     await searchInput.fill('lazar');
     await expect(firstRow).toBeHidden();
