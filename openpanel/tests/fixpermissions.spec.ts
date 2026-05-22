@@ -8,6 +8,12 @@ async function deleteSelected(page: any, skipTrash = false) {
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
 }
 
+async function selectItem(page: any, name: string, multiSelect = false) {
+  await page.locator('#filemanager_table div').filter({ hasText: name }).click(
+    multiSelect ? { modifiers: ['ControlOrMeta'] } : undefined
+  );
+}
+
 test('fix permissions', async ({ page }) => {
 
   // create test files
@@ -44,7 +50,7 @@ test('fix permissions', async ({ page }) => {
   await expect(page.locator('#c-oct')).toHaveValue('775');
 
   await page.goto(`/files`);
-  await page.locator('#filemanager_table div').filter({ hasText: 'test.txt' }).click();
+  await selectItem(page, 'test.txt');
   await page.getByRole('button', { name: ' Permissions' }).click();
   await expect(page.locator('#c-oct')).toHaveValue('644');
 
