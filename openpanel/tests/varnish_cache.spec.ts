@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test.txt';
+import { test, expect, type Page } from '@playwright/test';
 
 const DOMAIN = 'wp.tests.openpanel.org';
 
