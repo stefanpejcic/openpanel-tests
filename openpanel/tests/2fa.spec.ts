@@ -1,15 +1,18 @@
 import { test, expect, type Page } from '@playwright/test';
 import { totp } from 'otplib';
+import fs from 'fs';
 
 let totpSecret: string;
 
+const SECRET_FILE = '/tmp/totp_secret.txt';
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
 
-
 function generateCode(): string {
-  return totp.generate(totpSecret);
+  const secret = fs.readFileSync(SECRET_FILE, 'utf-8').trim();
+  return totp.generate(secret);
 }
+
 
 // ENABLE
 test('enable', async ({ page }) => {
@@ -23,8 +26,8 @@ test('enable', async ({ page }) => {
   const secretEl = page.locator('#initiallyhiddencode');
   await expect(secretEl).toBeVisible();
   totpSecret = (await secretEl.textContent())!.trim();
-  expect(totpSecret.length).toBeGreaterThan(10); // sanity check
-
+  expect(totpSecret.length).toBeGreaterThan(10);
+  fs.writeFileSync(SECRET_FILE, totpSecret);
   console.log('Captured TOTP secret:', totpSecret);
 
   await page.goto(`/account/2fa`);
@@ -45,7 +48,6 @@ test('enable', async ({ page }) => {
 
 test('login with incorrect 2FA code', async ({ page }) => {
   await page.goto(`/login`);
-
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
@@ -79,8 +81,9 @@ test('disable 2FA', async ({ page }) => {
   await page.click('button:has-text("Click to disable 2FA")');
   await expect(page.locator('text=disabled').first()).toBeVisible();
 
-  await page.goto(`/login`);
+  fs.unlinkSync(SECRET_FILE);
 
+  await page.goto(`/login`);
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in' }).click();
