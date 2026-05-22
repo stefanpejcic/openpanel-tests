@@ -126,6 +126,6 @@ const { test, expect } = require('@playwright/test');
 
       await page.waitForLoadState('networkidle');
       const isFavorite = await starBtn.getAttribute('data-is-favorite');
-      expect(isFavorite === null || isFavorite === false).toBe(true);
+      expect(isFavorite === null || isFavorite === "false").toBe(true);
 
   });
