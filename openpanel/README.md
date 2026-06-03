@@ -6,7 +6,7 @@
 2. On OpenPanel server run:
    
    ```bash
-   bash <(curl -sSL https://raw.githubusercontent.com/stefanpejcic/openpanel-tests/refs/heads/main/openpanel/prepare.sh) enterprise-2a5da40ecd2f60
+   bash <(curl -sSL https://raw.githubusercontent.com/stefanpejcic/openpanel-tests/refs/heads/main/openpanel/prepare.sh)
    ```
 
 ## Prepare Playwright tests:
