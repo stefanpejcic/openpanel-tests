@@ -1,9 +1,7 @@
 #!/bin/bash
 
-[ -z "$1" ] && { echo "Error: pass license key to the script!"; exit 1; }
-
 # defaults
-LICENSE_KEY="$1"
+LICENSE_KEY="enterprise-2a5da40ecd2f60" # ip restricted!
 PANEL_USERNAME="testinguser"
 PANEL_PASSWORD="testingpassword"
 PANEL_EMAIL="test@test.com"
