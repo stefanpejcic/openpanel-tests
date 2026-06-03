@@ -3,8 +3,9 @@
 ##  Prepare OpenPanel server:
 
 1. Add testing server IP on: https://my.openpanel.com/adminad/clientsservices.php?userid=2&id=694
-2. Install/update OpenPanel on the server: `bash <(curl -sSL https://openpanel.org)` | `opencli update --beta`
-3. On OpenPanel server run:
+2. On Coudflare change A record for *.tests.openpanel.org to your server IP
+3. Install/update OpenPanel on the server: `bash <(curl -sSL https://openpanel.org)` | `opencli update --beta`
+4. On OpenPanel server run:
    
    ```bash
    bash <(curl -sSL https://raw.githubusercontent.com/stefanpejcic/openpanel-tests/refs/heads/main/openpanel/prepare.sh) enterprise-2a5da40ecd2f60
