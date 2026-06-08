@@ -68,7 +68,6 @@ async function getAuthContext(playwright: typeof import('@playwright/test')): Pr
 // Tests
 // ---------------------------------------------------------------------------
 
-test.describe('OpenPanel API', () => {
 
   // Shared auth context reused across all tests in the suite
   let api: APIRequestContext;
@@ -450,4 +449,3 @@ test.describe('OpenPanel API', () => {
       await ctx.dispose();
     });
   });
-});
