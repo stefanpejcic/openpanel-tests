@@ -1,6 +1,6 @@
 // based on https://github.com/stefanpejcic/2083/blob/main/modules/api.py
 
-import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
+import { test, expect, request as pwRequest, APIRequestContext, APIResponse } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -11,65 +11,76 @@ const API_PASS    = process.env.PANEL_PASSWORD!;
 const TEST_DOMAIN = process.env.TEST_DOMAIN ?? 'wp.tests.openpanel.org';
 
 // ---------------------------------------------------------------------------
-// Logging wrapper
+// Logging — reads body once, caches it, wraps response so .json()/.text()
+// keep working after the log line has already consumed the stream.
 // ---------------------------------------------------------------------------
+async function logResponse(method: string, url: string, res: APIResponse): Promise<APIResponse> {
+  // Read the raw body exactly once
+  const bodyBuffer = await res.body();
+  const bodyText   = bodyBuffer.toString('utf-8');
+  const preview    = bodyText.length > 300 ? bodyText.slice(0, 300) + '…' : bodyText;
+  const icon       = res.status() < 400 ? '✓' : '✗';
+
+  console.log(`\n${icon} ${method.toUpperCase()} ${BASE_URL}${url}`);
+  console.log(`  → ${res.status()} ${res.statusText()}`);
+  console.log(`  ← ${preview}`);
+
+  // Return a lightweight wrapper so callers can still call .json() / .text()
+  return {
+    ...res,
+    text:   () => Promise.resolve(bodyText),
+    json:   () => Promise.resolve(JSON.parse(bodyText)),
+    body:   () => Promise.resolve(bodyBuffer),
+    ok:     () => res.ok(),
+    status: () => res.status(),
+    statusText: () => res.statusText(),
+    headers: () => res.headers(),
+    headersArray: () => res.headersArray(),
+    url:    () => res.url(),
+    dispose: () => res.dispose(),
+  } as unknown as APIResponse;
+}
+
 function logged(ctx: APIRequestContext): APIRequestContext {
+  const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
   return new Proxy(ctx, {
     get(target, prop: string) {
-      if (!['get','post','put','delete','patch'].includes(prop)) return (target as any)[prop];
+      if (!(methods as readonly string[]).includes(prop)) return (target as any)[prop];
       return async (url: string, options?: object) => {
         const res = await (target as any)[prop](url, options);
-        const bodyText = await res.text();
-        const preview = bodyText.length > 300 ? bodyText.slice(0, 300) + '…' : bodyText;
-        const icon = res.status() < 400 ? '✓' : '✗';
-        console.log(`\n${icon} ${prop.toUpperCase()} ${BASE_URL}${url}`);
-        console.log(`  → ${res.status()} ${res.statusText()}`);
-        console.log(`  ← ${preview}`);
-        return new Proxy(res, {
-          get(r, p: string) {
-            if (p === 'text') return () => Promise.resolve(bodyText);
-            if (p === 'json') return () => Promise.resolve(JSON.parse(bodyText));
-            if (p === 'body') return () => Promise.resolve(Buffer.from(bodyText));
-            return typeof (r as any)[p] === 'function'
-              ? (...args: unknown[]) => (r as any)[p](...args)
-              : (r as any)[p];
-          },
-        });
+        return logResponse(prop, url, res);
       };
     },
   });
 }
 
 // ---------------------------------------------------------------------------
-// Auth — get JWT once in beforeAll, share across all tests
+// Shared authenticated API context — token fetched once in beforeAll
 // ---------------------------------------------------------------------------
 let api: APIRequestContext;
 
 test.beforeAll(async () => {
   const anonCtx = await pwRequest.newContext({ baseURL: BASE_URL });
-  const res = await anonCtx.post('/api/login', {
-    data: { username: API_USER, password: API_PASS },
-  });
-  await anonCtx.dispose();
+  try {
+    const res = await anonCtx.post('/api/login', {
+      data: { username: API_USER, password: API_PASS },
+    });
+    expect(res.status(), 'POST /api/login must return 200').toBe(200);
+    const json = await res.json();
+    expect(json.token, 'login response must include a token').toBeTruthy();
 
-  expect(res.status(), 'POST /api/login must return 200').toBe(200);
-  const { token } = await res.json();
-  expect(token, 'login response must include a token').toBeTruthy();
-
-  api = logged(await pwRequest.newContext({
-    baseURL: BASE_URL,
-    extraHTTPHeaders: { Authorization: `Bearer ${token}` },
-  }));
+    api = logged(await pwRequest.newContext({
+      baseURL: BASE_URL,
+      extraHTTPHeaders: { Authorization: `Bearer ${json.token}` },
+    }));
+  } finally {
+    await anonCtx.dispose();
+  }
 });
 
 test.afterAll(async () => {
-  await api.dispose();
+  await api?.dispose();
 });
-
-// Helper for unauthenticated requests
-async function anonContext() {
-  return pwRequest.newContext({ baseURL: BASE_URL });
-}
 
 // ---------------------------------------------------------------------------
 // POST /api/login
@@ -77,40 +88,49 @@ async function anonContext() {
 test.describe('POST /api/login', () => {
 
   test('rejects wrong credentials with 401', async () => {
-    const ctx = await anonContext();
-    const res = await ctx.post('/api/login', {
-      data: { username: 'nobody', password: 'wrongpassword' },
-    });
-    expect(res.status()).toBe(401);
-    await ctx.dispose();
+    const ctx = await pwRequest.newContext({ baseURL: BASE_URL });
+    try {
+      const res = await ctx.post('/api/login', {
+        data: { username: 'nobody', password: 'wrongpassword' },
+      });
+      expect(res.status()).toBe(401);
+    } finally {
+      await ctx.dispose();
+    }
   });
 
   test('returns token shape for valid credentials', async () => {
-    const ctx = await anonContext();
-    const res = await ctx.post('/api/login', {
-      data: { username: API_USER, password: API_PASS },
-    });
-    // 200 = success | 401 with twofa_required = 2FA-enabled account
-    expect([200, 401]).toContain(res.status());
-    const json = await res.json();
-    if (res.status() === 200) {
-      expect(json).toHaveProperty('token');
-      expect(json).toHaveProperty('user_id');
-      expect(json).toHaveProperty('expires_in');
-      expect(typeof json.token).toBe('string');
-      expect(json.expires_in).toBeGreaterThan(0);
-    } else {
-      expect(json).toHaveProperty('twofa_required', true);
-      expect(json).toHaveProperty('user_id');
+    const ctx = await pwRequest.newContext({ baseURL: BASE_URL });
+    try {
+      const res = await ctx.post('/api/login', {
+        data: { username: API_USER, password: API_PASS },
+      });
+      // 200 = success | 401 with twofa_required = 2FA-enabled account
+      expect([200, 401]).toContain(res.status());
+      const json = await res.json();
+      if (res.status() === 200) {
+        expect(json).toHaveProperty('token');
+        expect(json).toHaveProperty('user_id');
+        expect(json).toHaveProperty('expires_in');
+        expect(typeof json.token).toBe('string');
+        expect(json.expires_in).toBeGreaterThan(0);
+      } else {
+        expect(json).toHaveProperty('twofa_required', true);
+        expect(json).toHaveProperty('user_id');
+      }
+    } finally {
+      await ctx.dispose();
     }
-    await ctx.dispose();
   });
 
   test('rejects empty body', async () => {
-    const ctx = await anonContext();
-    const res = await ctx.post('/api/login', { data: {} });
-    expect([400, 401]).toContain(res.status());
-    await ctx.dispose();
+    const ctx = await pwRequest.newContext({ baseURL: BASE_URL });
+    try {
+      const res = await ctx.post('/api/login', { data: {} });
+      expect([400, 401]).toContain(res.status());
+    } finally {
+      await ctx.dispose();
+    }
   });
 });
 
@@ -305,7 +325,7 @@ test.describe('GET /api/waf/:domain', () => {
   });
 
   test('strips subfolder from domain param', async () => {
-    // Flask route /api/waf/<domain> won't match extra segments — accept 404
+    // Flask route /api/waf/<domain> won't match extra path segments — accept 404
     const res = await api.get(`/api/waf/${TEST_DOMAIN}/some/path`);
     expect([200, 404]).toContain(res.status());
     if (res.status() === 200) {
@@ -396,7 +416,7 @@ test.describe('GET /api/account/activity', () => {
 test.describe('Auth guard', () => {
 
   test('unauthenticated requests are rejected on all protected routes', async () => {
-    const ctx = await anonContext();
+    const ctx = await pwRequest.newContext({ baseURL: BASE_URL });
     const routes = [
       '/api/endpoints',
       '/api/system/hosting/info',
@@ -408,13 +428,16 @@ test.describe('Auth guard', () => {
       '/api/resource_usage',
       '/api/account/activity',
     ];
-    for (const route of routes) {
-      const res = await ctx.get(route, { maxRedirects: 0 });
-      expect(
-        [401, 403, 302],
-        `${route} should reject unauthenticated requests (got ${res.status()})`
-      ).toContain(res.status());
+    try {
+      for (const route of routes) {
+        const res = await ctx.get(route, { maxRedirects: 0 });
+        expect(
+          [401, 403, 302],
+          `${route} should reject unauthenticated requests (got ${res.status()})`
+        ).toContain(res.status());
+      }
+    } finally {
+      await ctx.dispose();
     }
-    await ctx.dispose();
   });
 });
