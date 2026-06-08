@@ -1,64 +1,35 @@
-// sourced https://github.com/stefanpejcic/2083/blob/main/modules/api.py
+// based on https://github.com/stefanpejcic/2083/blob/main/modules/api.py
 
 import { test, expect, request as pwRequest, APIRequestContext } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
-const BASE_URL    = process.env.BASE_URL;
-const API_TOKEN   = process.env.API_TOKEN ?? '';
-const TOTP_SECRET = process.env.API_2FA_SECRET ?? '';
+const BASE_URL    = process.env.BASE_URL!;
+const API_USER    = process.env.PANEL_USERNAME!;
+const API_PASS    = process.env.PANEL_PASSWORD!;
 const TEST_DOMAIN = process.env.TEST_DOMAIN ?? 'wp.tests.openpanel.org';
-const AUTH_FILE   = path.join(__dirname, '../.auth/session.json');
 
 // ---------------------------------------------------------------------------
-// Read JWT saved by auth.setup.ts
+// Logging wrapper
 // ---------------------------------------------------------------------------
-function loadJwt(): string {
-  if (API_TOKEN) return API_TOKEN;
-  if (!fs.existsSync(AUTH_FILE)) {
-    throw new Error(`Auth file not found at ${AUTH_FILE}. Run the authenticate setup first.`);
-  }
-  const raw = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf-8'));
-  if (!raw?.jwt?.token) {
-    throw new Error(`No JWT in ${AUTH_FILE}. Re-run auth setup.`);
-  }
-  return raw.jwt.token;
-}
-
-// ---------------------------------------------------------------------------
-// Logging wrapper — prints method, path, status and trimmed body to console
-// ---------------------------------------------------------------------------
-type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch';
-
 function logged(ctx: APIRequestContext): APIRequestContext {
   return new Proxy(ctx, {
     get(target, prop: string) {
-      const methods: HttpMethod[] = ['get', 'post', 'put', 'delete', 'patch'];
-      if (!methods.includes(prop as HttpMethod)) return (target as any)[prop];
-
+      if (!['get','post','put','delete','patch'].includes(prop)) return (target as any)[prop];
       return async (url: string, options?: object) => {
-        const method = prop.toUpperCase();
-        const shortUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
         const res = await (target as any)[prop](url, options);
-
-        // Clone body for logging without consuming it
         const bodyText = await res.text();
         const preview = bodyText.length > 300 ? bodyText.slice(0, 300) + '…' : bodyText;
-        const statusIcon = res.status() < 400 ? '✓' : '✗';
-
-        console.log(`\n${statusIcon} ${method} ${shortUrl}`);
+        const icon = res.status() < 400 ? '✓' : '✗';
+        console.log(`\n${icon} ${prop.toUpperCase()} ${BASE_URL}${url}`);
         console.log(`  → ${res.status()} ${res.statusText()}`);
         console.log(`  ← ${preview}`);
-
-        // Re-wrap so .json() / .text() still work on the response
         return new Proxy(res, {
           get(r, p: string) {
-            if (p === 'text')  return () => Promise.resolve(bodyText);
-            if (p === 'json')  return () => Promise.resolve(JSON.parse(bodyText));
-            if (p === 'body')  return () => Promise.resolve(Buffer.from(bodyText));
+            if (p === 'text') return () => Promise.resolve(bodyText);
+            if (p === 'json') return () => Promise.resolve(JSON.parse(bodyText));
+            if (p === 'body') return () => Promise.resolve(Buffer.from(bodyText));
             return typeof (r as any)[p] === 'function'
               ? (...args: unknown[]) => (r as any)[p](...args)
               : (r as any)[p];
@@ -70,28 +41,33 @@ function logged(ctx: APIRequestContext): APIRequestContext {
 }
 
 // ---------------------------------------------------------------------------
-// Shared authenticated API context
+// Auth — get JWT once in beforeAll, share across all tests
 // ---------------------------------------------------------------------------
 let api: APIRequestContext;
 
-test.beforeAll(async ({ playwright }) => {
-  const token = loadJwt();
-  const raw = await playwright.request.newContext({
+test.beforeAll(async () => {
+  const anonCtx = await pwRequest.newContext({ baseURL: BASE_URL });
+  const res = await anonCtx.post('/api/login', {
+    data: { username: API_USER, password: API_PASS },
+  });
+  await anonCtx.dispose();
+
+  expect(res.status(), 'POST /api/login must return 200').toBe(200);
+  const { token } = await res.json();
+  expect(token, 'login response must include a token').toBeTruthy();
+
+  api = logged(await pwRequest.newContext({
     baseURL: BASE_URL,
     extraHTTPHeaders: { Authorization: `Bearer ${token}` },
-  });
-  api = logged(raw);
+  }));
 });
 
 test.afterAll(async () => {
   await api.dispose();
 });
 
-// ---------------------------------------------------------------------------
-// Helper: unauthenticated context (plain, no logging needed for auth guard)
-// ---------------------------------------------------------------------------
+// Helper for unauthenticated requests
 async function anonContext() {
-  // Use the module-level newContext — avoids the `request` fixture confusion
   return pwRequest.newContext({ baseURL: BASE_URL });
 }
 
@@ -101,7 +77,7 @@ async function anonContext() {
 test.describe('POST /api/login', () => {
 
   test('rejects wrong credentials with 401', async () => {
-    const ctx = logged(await anonContext());
+    const ctx = await anonContext();
     const res = await ctx.post('/api/login', {
       data: { username: 'nobody', password: 'wrongpassword' },
     });
@@ -110,11 +86,9 @@ test.describe('POST /api/login', () => {
   });
 
   test('returns token shape for valid credentials', async () => {
-    const USERNAME = process.env.PANEL_USERNAME!;
-    const PASSWORD = process.env.PANEL_PASSWORD!;
-    const ctx = logged(await anonContext());
+    const ctx = await anonContext();
     const res = await ctx.post('/api/login', {
-      data: { username: USERNAME, password: PASSWORD },
+      data: { username: API_USER, password: API_PASS },
     });
     // 200 = success | 401 with twofa_required = 2FA-enabled account
     expect([200, 401]).toContain(res.status());
@@ -133,7 +107,7 @@ test.describe('POST /api/login', () => {
   });
 
   test('rejects empty body', async () => {
-    const ctx = logged(await anonContext());
+    const ctx = await anonContext();
     const res = await ctx.post('/api/login', { data: {} });
     expect([400, 401]).toContain(res.status());
     await ctx.dispose();
@@ -176,15 +150,13 @@ test.describe('GET /api/ redirect', () => {
 
 // ---------------------------------------------------------------------------
 // GET /api/dashboard
-// NOTE: the endpoint has a known bug (assigns "" then calls .update()) so it
-// currently returns 500. Test is marked as expected-to-fail until fixed.
+// NOTE: known upstream bug — dashboard_data="" then .update() → always 500.
+// Remove 500 from the list once fixed.
 // ---------------------------------------------------------------------------
 test.describe('GET /api/dashboard', () => {
 
   test('returns dashboard metadata', async () => {
     const res = await api.get('/api/dashboard');
-    // Accept 200 (fixed) or 500 (known bug: `dashboard_data = ""`).
-    // Remove 500 from the list once the upstream bug is resolved.
     expect([200, 500]).toContain(res.status());
     if (res.status() === 200) {
       const json = await res.json();
@@ -311,8 +283,6 @@ test.describe('/api/favorites lifecycle', () => {
 
 // ---------------------------------------------------------------------------
 // GET /api/waf/:domain
-// NOTE: the subfolder-stripping test hits /api/waf/domain/some/path which
-// Flask may not route at all (404). Marked to accept 404 until confirmed.
 // ---------------------------------------------------------------------------
 test.describe('GET /api/waf/:domain', () => {
 
@@ -335,8 +305,7 @@ test.describe('GET /api/waf/:domain', () => {
   });
 
   test('strips subfolder from domain param', async () => {
-    // Flask route is /api/waf/<domain> — extra path segments cause a 404
-    // unless the app registers a catch-all. We accept 200 or 404 here.
+    // Flask route /api/waf/<domain> won't match extra segments — accept 404
     const res = await api.get(`/api/waf/${TEST_DOMAIN}/some/path`);
     expect([200, 404]).toContain(res.status());
     if (res.status() === 200) {
@@ -427,7 +396,6 @@ test.describe('GET /api/account/activity', () => {
 test.describe('Auth guard', () => {
 
   test('unauthenticated requests are rejected on all protected routes', async () => {
-    // Use module-level newContext — avoids `request` fixture TypeError
     const ctx = await anonContext();
     const routes = [
       '/api/endpoints',
