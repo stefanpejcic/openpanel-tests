@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/test';
 
 const domain = 'wp.tests.openpanel.org';
 
+const WP_ADMIN = {
+  url: `https://${domain}/wp-admin`,
+  username: 'admin',
+  password: 'b67sf97sfs3sedf45',
+};
+
 test.setTimeout(5 * 60 * 1000);
 
 
@@ -22,8 +28,8 @@ test('install wordpress', async ({ page }) => {
   await page.locator('select[name="domain_name"]').selectOption(domain);
   await page.fill('input[name="website_name"]', 'My Site');
   await page.fill('input[name="site_description"]', 'another site testing');
-  await page.fill('input[name="admin_username"]', 'admin');
-  await page.fill('input[name="admin_password"]', 'b67sf97sfs3sedf45');
+  await page.fill('input[name="admin_username"]', WP_ADMIN.username);
+  await page.fill('input[name="admin_password"]', WP_ADMIN.password);
   await page.locator('#installButton').click();
 
   await expect(page.locator('text=WordPress installation complete!')).toBeVisible({ timeout: 30000 });
@@ -32,12 +38,93 @@ test('install wordpress', async ({ page }) => {
   await page.goto('/wordpress');
   await expect(page.locator('body')).toContainText(domain, { timeout: 20000 });
   console.log('wordpress site appears in list');
-  
+
   await page.goto('http://wp.tests.openpanel.org');
   await expect(page.locator('body')).toContainText('Hello world!');
   console.log('wordpress install is working');
 });
 
+
+test.describe.serial('wp-admin tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(WP_ADMIN.url, { waitUntil: 'domcontentloaded' });
+    await page.fill('#user_login', WP_ADMIN.username);
+    await page.fill('#user_pass', WP_ADMIN.password);
+    await Promise.all([
+      page.waitForURL(/wp-admin/, { timeout: 30000 }),
+      page.click('#wp-submit'),
+    ]);
+    await expect(page.locator('#wpadminbar')).toBeVisible({ timeout: 30000 });
+  });
+
+  test('wp-admin - upgrade wordpress core', async ({ page }) => {
+    test.setTimeout(5 * 60 * 1000);
+
+    await page.goto(`${WP_ADMIN.url}/update-core.php`, { waitUntil: 'domcontentloaded' });
+
+    const upgradeButton = page.locator('input#upgrade[name="upgrade"]');
+    if (await upgradeButton.count()) {
+      await expect(upgradeButton).toBeVisible();
+      console.log('WordPress core update available, clicking update button...');
+      await Promise.all([
+        page.waitForURL(/update\.php|update-core\.php/, { timeout: 5 * 60 * 1000 }),
+        upgradeButton.click(),
+      ]);
+      await expect(page.locator('body')).toContainText(
+        /WordPress has been updated|Update Complete|Welcome to WordPress|Success/i,
+        { timeout: 5 * 60 * 1000 }
+      );
+      console.log('WordPress core update completed');
+    } else {
+      console.log('WordPress core already up to date');
+    }
+  });
+
+  test('wp-admin - install scrollchart plugin', async ({ page }) => {
+    test.setTimeout(3 * 60 * 1000);
+
+    await page.goto(`${WP_ADMIN.url}/plugin-install.php`, { waitUntil: 'domcontentloaded' });
+    await page.fill('#search-plugins', 'Scrollchart');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.plugin-card', { timeout: 30000 });
+
+    const installButton = page.locator('.plugin-card .install-now').first();
+    if (await installButton.count()) {
+      console.log('Installing Scrollchart plugin...');
+      await installButton.click();
+      await page.waitForTimeout(10000);
+    } else {
+      console.log('Plugin may already be installed.');
+    }
+
+    await page.goto(`${WP_ADMIN.url}/plugins.php`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+    await expect(page.locator('body')).toContainText('Scrollchart', { timeout: 30000 });
+    console.log('SUCCESS: Scrollchart found on Installed Plugins page');
+  });
+
+  test('wp-admin - install nexusslash theme', async ({ page }) => {
+    test.setTimeout(3 * 60 * 1000);
+
+    await page.goto(`${WP_ADMIN.url}/theme-install.php`, { waitUntil: 'domcontentloaded' });
+    await page.fill('.wp-filter-search', 'nexusslash');
+    await page.waitForTimeout(3000);
+
+    const installButton = page.locator('.theme .theme-install').first();
+    if (await installButton.count()) {
+      console.log('Installing Nexusslash theme...');
+      await installButton.click();
+      await page.waitForTimeout(10000);
+    } else {
+      console.log('Theme may already be installed.');
+    }
+
+    await page.goto(`${WP_ADMIN.url}/themes.php`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+    await expect(page.locator('body')).toContainText(/Nexusslash/i, { timeout: 30000 });
+    console.log('SUCCESS: Nexusslash found on Installed Themes page');
+  });
+});
 
 
 test('wordpress security hardening page', async ({ page }) => {
@@ -88,30 +175,29 @@ test('wordpress reload data', async ({ page }) => {
 });
 
 
-
 // TODO: cover wp-manager tabs: security, updates, debugging, backup, clone, remove
 
 test('wp manager data', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
   // WP version (e.g. 6.5.2)
-  const wpVersion = await page.locator('#wp-version').textContent();      
+  const wpVersion = await page.locator('#wp-version').textContent();
   expect(wpVersion).toMatch(/\b\d+\.\d+(\.\d+)?\b/);
 
   // PHP version (e.g. 8.1.12)
-  const phpVersion = await page.locator('#php-version').textContent();     
+  const phpVersion = await page.locator('#php-version').textContent();
   expect(phpVersion).toMatch(/\b\d+\.\d+(\.\d+)?\b/);
 
   // MySQL / MariaDB version (e.g. 10.6.12-MariaDB or 8.0.36)
-  const mysqlVersion = await page.locator('#mysql-version').textContent(); 
+  const mysqlVersion = await page.locator('#mysql-version').textContent();
   expect(mysqlVersion).toMatch(/\b(\d+\.\d+(\.\d+)?)([-\w]*)\b/i);
 
   // Created date
-  const createdDate = await page.locator('#created_date').textContent();   
+  const createdDate = await page.locator('#created_date').textContent();
   expect(createdDate?.trim().length).toBeGreaterThan(0);
 
   // files size (e.g. 83M, 1.2 GB, 512KB)
-  const filesSize = await page.locator('#filesSize').textContent();        
+  const filesSize = await page.locator('#filesSize').textContent();
   expect(filesSize).toMatch(/\b\d+(\.\d+)?\s?(K|M|G|T)?B?\b/i);
 
   // db size (e.g. 0.78 MB)
@@ -126,7 +212,7 @@ test('wp manager data', async ({ page }) => {
     '#database-name',
     '#wp_cache_type'
   ];
-  
+
   for (const selector of selectors) {
     const text = await page.locator(selector).textContent();
     expect(text?.trim().length).toBeGreaterThan(0);
@@ -134,7 +220,6 @@ test('wp manager data', async ({ page }) => {
 
   console.log('wp manager options are functional');
 });
-
 
 
 test('live preview', async ({ page }) => {
@@ -151,7 +236,6 @@ test('live preview', async ({ page }) => {
 });
 
 
-
 test('wp-admin autologin', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
@@ -165,7 +249,6 @@ test('wp-admin autologin', async ({ page }) => {
 
   console.log('wp-admin login is working');
 });
-
 
 
 test('general options', async ({ page }) => {
@@ -230,7 +313,6 @@ test('general options', async ({ page }) => {
 });
 
 
-
 test('maintenance mode', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
   await page.locator('#maintenance-tab').click();
@@ -286,15 +368,13 @@ test('maintenance mode', async ({ page }) => {
 });
 
 
-
 test('cache flush', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
   await page.locator('button[click="flushCache"]').click();
-  const message = await page.getByText(/Cache flushed successfully/).innerText();  
+  const message = await page.getByText(/Cache flushed successfully/).innerText();
   console.log('flush wp cache is working');
 });
-
 
 
 test('live visitors count', async ({ page }) => {
@@ -328,7 +408,6 @@ test('live visitors count', async ({ page }) => {
 });
 
 
-
 test('waf on/off', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
@@ -339,7 +418,7 @@ test('waf on/off', async ({ page }) => {
   await page.waitForTimeout(5000);
 
   const response = await page.request.get('https://wp.tests.openpanel.org');
-  
+
   if (isOn) {
     // WAF ON
     expect([403, 406, 409, 422]).toContain(response.status());
@@ -349,7 +428,6 @@ test('waf on/off', async ({ page }) => {
   }
   console.log('wp manager firewall on/off is working as expected!');
 });
-
 
 
 test('wp remove', async ({ page }) => {
