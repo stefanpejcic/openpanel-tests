@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
+import { authenticator } from 'otplib';
+
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
 
@@ -23,13 +25,11 @@ test('enable', async ({ page }) => {
   await expect(confirmBtn).toBeVisible();
   await confirmBtn.click();
   await expect(page.locator('text=enabled')).toBeVisible();
-
   // VERIFY dashboard shows 2FA enabled
   await page.goto(`/dashboard`);
   const dashboardTwofa = page.locator('#dashboard_twofa_content');
   await expect(dashboardTwofa).toBeVisible();
   await expect(dashboardTwofa.locator('b')).toHaveText('enabled');
-
   // TEST with incorrect
   await page.goto(`/login`);
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME!);
@@ -40,14 +40,14 @@ test('enable', async ({ page }) => {
   await page.click('button[type="submit"]');
   await expect(page.locator('.bg-red-50, .bg-red-500\\/10')).toBeVisible();
   await expect(page.locator('#twofa_code')).toBeVisible();
-
   // test with correct
   await page.goto(`/login`);
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME!);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD!);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.locator('#twofa_code')).toBeVisible();
-  await page.fill('#twofa_code', totpSecret);
+  const totpToken = authenticator.generate(totpSecret);
+  await page.fill('#twofa_code', totpToken);
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
 });
