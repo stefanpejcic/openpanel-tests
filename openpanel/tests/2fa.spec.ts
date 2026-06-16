@@ -1,7 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
-const { authenticator } = require('otplib');
+
+import * as OTPLib from 'otplib';
+
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
+
 // ENABLE
 test('enable 2FA', async ({ page }) => {
   await page.goto(`/account/2fa`);
@@ -44,7 +47,7 @@ test('enable 2FA', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD!);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.locator('#twofa_code')).toBeVisible();
-  const totpToken = authenticator.generate(totpSecret);
+  const totpToken = OTPLib.totp.generate(totpSecret);
   await page.fill('#twofa_code', totpToken);
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
