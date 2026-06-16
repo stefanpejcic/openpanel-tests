@@ -47,7 +47,7 @@ test('enable 2FA', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD!);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.locator('#twofa_code')).toBeVisible();
-  const totpToken = await generate(totpSecret);
+  const totpToken = await generate({ secret: totpSecret });
   await page.fill('#twofa_code', totpToken);
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
