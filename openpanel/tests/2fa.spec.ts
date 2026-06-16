@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
 
@@ -15,7 +14,6 @@ test('enable', async ({ page }) => {
   const totpSecret = (await secretEl.textContent())!.trim();
   expect(totpSecret.length).toBeGreaterThan(10);
   console.log('Captured TOTP secret:', totpSecret);
-
   await page.goto(`/account/2fa`);
   const confirmBtn = page.locator('button:has-text("Confirm")');
   const step2Tab = page.locator('#dashboard-styled-tab');
@@ -26,7 +24,13 @@ test('enable', async ({ page }) => {
   await confirmBtn.click();
   await expect(page.locator('text=enabled')).toBeVisible();
 
-  // TEST with incorect
+  // VERIFY dashboard shows 2FA enabled
+  await page.goto(`/dashboard`);
+  const dashboardTwofa = page.locator('#dashboard_twofa_content');
+  await expect(dashboardTwofa).toBeVisible();
+  await expect(dashboardTwofa.locator('b')).toHaveText('enabled');
+
+  // TEST with incorrect
   await page.goto(`/login`);
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME!);
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD!);
@@ -52,6 +56,12 @@ test('disable 2FA', async ({ page }) => {
   await page.goto(`/account/2fa`);
   await page.click('button:has-text("Click to disable 2FA")');
   await expect(page.locator('text=disabled').first()).toBeVisible();
+
+  // VERIFY dashboard shows 2FA disabled
+  await page.goto(`/dashboard`);
+  const dashboardTwofa = page.locator('#dashboard_twofa_content');
+  await expect(dashboardTwofa).toBeVisible();
+  await expect(dashboardTwofa.locator('b')).toHaveText('disabled');
 
   await page.goto(`/login`);
   await page.getByRole('textbox', { name: 'Username' }).fill(USERNAME!);
