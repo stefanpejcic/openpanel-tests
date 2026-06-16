@@ -5,7 +5,7 @@ const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
 
 // ENABLE
-test('enable', async ({ page }) => {
+test('enable 2FA', async ({ page }) => {
   await page.goto(`/account/2fa`);
   await expect(page.locator('#twofa_code')).not.toBeVisible();
   await expect(page.locator('text=disabled')).toBeVisible();
