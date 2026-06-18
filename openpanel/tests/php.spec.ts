@@ -301,15 +301,16 @@ test('edit php.ini files', async ({ page }) => {
   };
   
   await page.evaluate((settings) => {
-    const cm = document.querySelector('.CodeMirror').CodeMirror;
+    const cm = (document.querySelector('.CodeMirror') as any).CodeMirror;
     let content = cm.getValue();
   
     for (const [key, value] of Object.entries(settings)) {
-      const regex = new RegExp(`^(${key}\\s*=\\s*).*`, 'm');
+      // Match both active and commented-out directives
+      const regex = new RegExp(`^;?(${key.replace('.', '\\.')}\\s*=\\s*).*`, 'm');
       if (regex.test(content)) {
         content = content.replace(regex, `$1${value}`);
       } else {
-        // show error!
+        throw new Error(`Directive "${key}" not found in php.ini`);
       }
     }
     cm.setValue(content);
