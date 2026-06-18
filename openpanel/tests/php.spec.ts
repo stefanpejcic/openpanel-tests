@@ -286,9 +286,10 @@ test('edit php.ini files', async ({ page }) => {
   const randomVersion = values[Math.floor(Math.random() * values.length)];
   await dropdown.selectOption(randomVersion);
   await page.click('#submit_version');
+  await page.waitForURL(new RegExp(`/php/php${randomVersion}\\.ini/editor`));
 
-  const successRegex = new RegExp(`Edit PHP.INI file for version ${randomVersion}`, 'i');
-  await expect(page.getByText(successRegex)).toBeVisible(); 
+  const successRegex = new RegExp(`Edit PHP\\.INI file for version ${randomVersion}`, 'i');
+  await expect(page.getByRole('heading', { name: successRegex })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}.ini/editor\\?php_version=${randomVersion}`));
 
   const editorLocator = page.locator('.CodeMirror'); 
