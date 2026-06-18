@@ -273,10 +273,11 @@ test('edit php options', async ({ page }) => {
 test('edit php.ini files', async ({ page }) => {
   await page.goto('/php/php_ini_editor');  
   const dropdown = page.locator('#php_version');
-  const options = await dropdown.locator('option').allAttributes();
-  const values = options
-    .map(attr => attr.value)
-    .filter(val => val !== oldVersion && val !== "");
+  const values = await dropdown.locator('option').evaluateAll(options =>
+    options
+      .map(opt => opt.value)
+      .filter(val => val !== '')
+  );
 
   if (values.length === 0) {
     throw new Error('No PHP versions available to select.');
