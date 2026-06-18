@@ -77,9 +77,9 @@ test.describe('search filter', () => {
     const firstDomainText = (await rows.first().locator('td').first().textContent()) ?? '';
     const searchTerm = firstDomainText.trim().split('.')[0];
 
-    await page.getByPlaceholder(/search/i).fill(searchTerm);
+    await page.locator('input[x-model="searchQuery"]').fill(searchTerm);
 
-    await page.waitForTimeout(300); // 4 alpinejs
+    await page.waitForTimeout(300);
 
     const visibleRows = rows.filter({ hasNot: page.locator('[style*="display: none"]') });
     const visibleCount = await visibleRows.count();
@@ -94,13 +94,11 @@ test.describe('search filter', () => {
     const count = await counterLink.count();
     if (count === 0) return;
 
-    const versionText = (await counterLink.textContent()) ?? '';
     await counterLink.click();
 
     await page.waitForTimeout(300);
 
-    const searchInput = page.getByPlaceholder(/search/i);
-    const searchValue = await searchInput.inputValue();
+    const searchValue = await page.locator('input[x-model="searchQuery"]').inputValue();
     expect(searchValue).toMatch(/\d+\.\d+/);
   });
 
@@ -111,7 +109,7 @@ test.describe('search filter', () => {
     const totalRows = await rows.count();
     if (totalRows < 1) return;
 
-    const searchInput = page.getByPlaceholder(/search/i);
+    const searchInput = page.locator('input[x-model="searchQuery"]');
     await searchInput.fill('xyznonexistent999');
     await page.waitForTimeout(300);
 
