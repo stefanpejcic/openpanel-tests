@@ -305,10 +305,10 @@ test('edit php.ini files', async ({ page }) => {
     let content = cm.getValue();
   
     for (const [key, value] of Object.entries(settings)) {
-      // Match both active and commented-out directives
-      const regex = new RegExp(`^;?(${key.replace('.', '\\.')}\\s*=\\s*).*`, 'm');
+      const escapedKey = key.replace('.', '\\.');
+      const regex = new RegExp(`^;?(${escapedKey}\\s*=\\s*).*`, 'm');
       if (regex.test(content)) {
-        content = content.replace(regex, `$1${value}`);
+        content = content.replace(regex, `${key} = ${value}`);
       } else {
         throw new Error(`Directive "${key}" not found in php.ini`);
       }
