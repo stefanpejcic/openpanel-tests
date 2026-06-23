@@ -26,6 +26,9 @@ opencli license $LICENSE_KEY
 # ENABLE EMAILS
 opencli email-server install
 
+# DNS
+cd /root && docker compose up -d bind9
+
 # ENABLE FTP
 cd /root && docker --context=default compose up -d openadmin_ftp
 
