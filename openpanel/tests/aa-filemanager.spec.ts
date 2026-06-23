@@ -316,7 +316,6 @@ test('change file permissions', async ({ page }) => {
   await selectItem(page, TXT_FILE_BAK);
   await page.getByRole('button', { name: ' Permissions' }).click();
   await expect(page.getByPlaceholder('775')).toHaveValue('755');
-  await page.getByRole('button', { name: 'Cancel' }).click();
 
   console.log('File permissions changed successfully');
 });
