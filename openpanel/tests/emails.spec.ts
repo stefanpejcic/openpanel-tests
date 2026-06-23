@@ -355,17 +355,17 @@ test('webmail autologin and send/receive', async ({ page }) => {
   // --- Sent folder ---
   await popup.locator('#mailboxlist a[rel="sent"], #mailboxlist .sent a').first().click();
   await popup.waitForLoadState('networkidle');
-  await expect(popup.locator('#messagelist tr')).toContainText(subject, { timeout: 10_000 });
-
-  // --- Inbox (self-send may take a few seconds) ---
+  await expect(popup.locator('#messagelist tbody tr')).toContainText(subject, { timeout: 10_000 });
+  
+  // --- Inbox ---
   await popup.locator('#mailboxlist a[rel="inbox"], #mailboxlist .inbox a').first().click();
   await popup.waitForLoadState('networkidle');
-
+  
   await expect.poll(
     async () => {
       await popup.reload();
       await popup.waitForLoadState('networkidle');
-      return popup.locator('#messagelist tr').filter({ hasText: subject }).count();
+      return popup.locator('#messagelist tbody tr').filter({ hasText: subject }).count();
     },
     { timeout: 60_000, intervals: [5_000] },
   ).toBeGreaterThan(0);
