@@ -294,18 +294,87 @@ test('connect devices back button goes to /emails', async ({ page }) => {
 
 // ─── Webmail autologin ────────────────────────────────────────────────────────
 
-test('webmail autologin link opens popup', async ({ page }) => {
+test('webmail autologin and send/receive', async ({ page }) => {
   await page.goto('/emails');
   const webmailBtn = page.locator('a[data-email]').first();
   const hasBtn = await webmailBtn.isVisible().catch(() => false);
   if (!hasBtn) { test.skip(); return; }
 
+  const emailAddress = await webmailBtn.getAttribute('data-email');
+  expect(emailAddress).toBeTruthy();
+
+  // --- Open webmail popup ---
   const popupPromise = page.waitForEvent('popup');
   await webmailBtn.click();
   const popup = await popupPromise;
   await popup.waitForLoadState('load');
-  // Should land somewhere in webmail (roundcube, or a redirect)
   expect(popup.url()).toBeTruthy();
+
+  // --- Wait for Roundcube to be ready (compose button in toolbar) ---
+  await popup.waitForSelector('a.compose, button.compose, #compose-button', {
+    timeout: 15_000,
+  });
+
+  // --- Open compose window ---
+  await popup.click('a.compose, button.compose, #compose-button');
+  await popup.waitForSelector('#_to', { timeout: 10_000 });
+
+  // --- Fill in To ---
+  // Roundcube elastic uses a token-based recipient input; type + Enter to confirm token
+  await popup.click('#_to');
+  await popup.type('#_to', emailAddress, { delay: 50 });
+  await popup.keyboard.press('Enter');
+
+  // --- Fill subject ---
+  const subject = `Playwright self-send ${Date.now()}`;
+  await popup.fill('#compose-subject', subject);
+
+  // --- Fill body (plain text textarea; HTML editor uses TinyMCE iframe) ---
+  const bodyText = 'Automated Playwright send/receive test.';
+  const tinyFrame = popup.frameLocator('#composebody_ifr');
+  const hasHtmlEditor = await tinyFrame.locator('body').isVisible().catch(() => false);
+
+  if (hasHtmlEditor) {
+    await tinyFrame.locator('body').click();
+    await tinyFrame.locator('body').fill(bodyText);
+  } else {
+    await popup.fill('#composebody', bodyText);
+  }
+
+  // --- Send ---
+  await popup.click('button.btn-primary.send, input.send, .toolbar a.send');
+
+  // Roundcube shows a green status bar confirmation after successful send
+  await popup.waitForSelector(
+    '#messagestack .confirmation, .ui-alert-success, div.notice.confirmation',
+    { timeout: 15_000 },
+  );
+
+  // --- Check Sent folder ---
+  await popup.click('#mailboxlist a[rel="sent"], #mailboxlist li.sent a, a[href*="Sent"]');
+  await popup.waitForLoadState('networkidle');
+
+  await expect(popup.locator('#messagelist tr, .message-list .message')).toContainText(subject, {
+    timeout: 10_000,
+  });
+
+  // --- Check Inbox ---
+  await popup.click('#mailboxlist a[rel="inbox"], #mailboxlist li.inbox a, a[href*="INBOX"]');
+  await popup.waitForLoadState('networkidle');
+
+  // Self-send delivery may take a moment; poll with reload
+  await expect
+    .poll(
+      async () => {
+        await popup.reload();
+        await popup.waitForLoadState('networkidle');
+        const rows = popup.locator('#messagelist tr, .message-list .message');
+        return rows.filter({ hasText: subject }).count();
+      },
+      { timeout: 30_000, intervals: [3_000, 5_000, 5_000] },
+    )
+    .toBeGreaterThan(0);
+
   await popup.close();
 });
 
