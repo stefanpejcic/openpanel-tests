@@ -481,9 +481,10 @@ test('import emails back button links to /emails', async ({ page }) => {
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 test('export emails returns a CSV download', async ({ page }) => {
+  await page.goto('/emails');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.goto('/emails/export'),
+    page.evaluate(() => { window.location.href = '/emails/export'; }),
   ]);
   expect(download.suggestedFilename()).toMatch(/\.csv$/);
 });
