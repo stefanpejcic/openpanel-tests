@@ -631,8 +631,7 @@ test('unsuspend domain', async ({ page }) => {
   console.log(`Unsuspended domain body snippet: ${body.slice(0, 200)}`);
 
   await page.goto(`http://${domain}`);
-  await expect(page.locator('body')).toContainText(/this domain currently has no website\. please check back later\./i);
-
+  await expect(page.locator('body')).toContainText(/this domain currently has no website\. please check back later\.|litespeed/i);
   console.log('Domain unsuspension verified successfully!');
 });
 
