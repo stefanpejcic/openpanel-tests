@@ -444,12 +444,10 @@ test('email filter raw mode shows textarea', async ({ page }) => {
   await page.goto('/emails');
   const firstRow = page.locator('#email-accounts tbody tr').first();
   if (!await firstRow.isVisible().catch(() => false)) { test.skip(); return; }
-
   const email = (await firstRow.locator('td').first().textContent())?.trim();
   if (!email?.includes('@')) { test.skip(); return; }
-
   await page.goto(`/emails/filter/${email}/raw`);
-  const textarea = page.locator('textarea[name="new_content"]');
+  const textarea = page.locator('#raw_content');
   await expect(textarea).toBeVisible();
   await expect(page.getByRole('button', { name: /save file/i })).toBeVisible();
 });
