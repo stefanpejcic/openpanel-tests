@@ -28,27 +28,33 @@ test('set a different installed locale as default, then revert', async ({ page }
 
   const setDefaultButtons = page.getByRole('button', { name: 'Set as Default' });
   const count = await setDefaultButtons.count();
-  test.skip(count === 0, 'Only one (or zero) installed locale available, nothing to switch between');
+  test.skip(count === 0, 'Only one (or zero) installed locale available');
 
-  const currentDefaultRow = page.locator('#tour-locales-table tbody tr').filter({ hasText: 'Default' }).first();
-  const currentDefaultLocale = (await currentDefaultRow.locator('td').nth(1).innerText()).trim();
+  const rows = page.locator('#tour-locales-table tbody tr');
 
-  await setDefaultButtons.first().click();
-  await page.waitForLoadState();
+  const defaultRow = rows.filter({ hasText: 'Default' }).first();
+  const originalLocale = (await defaultRow.locator('td').nth(1).innerText()).trim();
 
-  // switch back to the original default
-  const restoreButton = page.locator('#tour-locales-table tbody tr')
-    .filter({ hasText: currentDefaultLocale })
+  const firstNonDefaultButton = setDefaultButtons.first();
+
+  await firstNonDefaultButton.click();
+
+  // wait for UI to reflect change instead of assuming immediate DOM stability
+  await expect(rows.filter({ hasText: 'Default' })).not.toHaveText(originalLocale);
+
+  // now find the new "Set as Default" button for the original row
+  const restoreButton = rows
+    .filter({ hasText: originalLocale })
     .getByRole('button', { name: 'Set as Default' });
+
   await expect(restoreButton).toBeVisible();
   await restoreButton.click();
-  await page.waitForLoadState();
 
   await expect(
-    page.locator('#tour-locales-table tbody tr').filter({ hasText: currentDefaultLocale }).getByText('Default')
+    rows.filter({ hasText: originalLocale }).getByText('Default')
   ).toBeVisible();
 
-  console.log(`switched default locale away from "${currentDefaultLocale}" and back`);
+  console.log(`switched default locale away from "${originalLocale}" and back`);
 });
 
 test('install button present for non-installed locales (not clicked)', async ({ page }) => {
