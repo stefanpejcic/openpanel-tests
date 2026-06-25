@@ -21,7 +21,9 @@ test('defaults page loads with webserver/database/varnish/php pickers', async ({
 test('webserver picker selects without submitting', async ({ page }) => {
   await page.goto('/settings/defaults');
 
-  const nginxBtn = page.getByRole('radio', { name: /nginx/i });
+  const webserverGroup = page.getByRole('radiogroup', { name: 'Webserver' });
+  const nginxBtn = webserverGroup.getByRole('radio', { name: /nginx/i });
+
   await nginxBtn.click();
   await expect(nginxBtn).toHaveAttribute('aria-checked', 'true');
 
