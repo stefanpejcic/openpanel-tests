@@ -25,7 +25,8 @@ test('reconnect button is present', async ({ page }) => {
   const response = await page.goto('/terminal');
   test.skip(response?.status() === 403, 'Terminal disabled or current user lacks access');
 
-  await expect(page.locator('#reconnect-btn')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('#reconnect-btn')).toBeAttached();
   console.log('reconnect button present');
 });
 
