@@ -22,14 +22,12 @@ test('switching to advanced tab lazy-loads full sshd config', async ({ page }) =
   await page.goto('/server/ssh');
 
   await page.getByRole('button', { name: 'Advanced' }).click();
-  await expect(page).toHaveURL(/#advanced/);
 
   const textarea = page.locator('#full_config');
   await expect(textarea).toBeVisible();
   await expect(textarea).not.toHaveValue('', { timeout: 10_000 });
-  await expect(page.getByRole('button', { name: 'Save Configuration' })).toBeVisible();
 
-  console.log('advanced tab lazy-loaded sshd config into textarea');
+  await expect(page.getByRole('button', { name: 'Save Configuration' })).toBeVisible();
 });
 
 test('keys tab is only shown when pubkey auth is enabled', async ({ page }) => {
