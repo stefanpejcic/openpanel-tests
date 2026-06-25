@@ -5,8 +5,8 @@ import { test, expect } from '@playwright/test';
 // on a real license; we don't have a real key to round-trip safely.
 
 test('license page loads with key field and actions', async ({ page }) => {
-  await page.goto('/settings/license');
-  await expect(page).toHaveURL(/settings\/license/);
+  await page.goto('/license');
+  await expect(page).toHaveURL(/license);
 
   await expect(page.locator('#license-key')).toBeVisible();
   await expect(page.locator('#save_license_btn')).toBeVisible();
@@ -16,7 +16,7 @@ test('license page loads with key field and actions', async ({ page }) => {
 });
 
 test('verify/downgrade links are gated on having a key set', async ({ page }) => {
-  await page.goto('/settings/license');
+  await page.goto('/license');
 
   const keyValue = await page.locator('#license-key').inputValue();
   const verifyLink = page.locator('a.btn-verify');
@@ -34,7 +34,7 @@ test('verify/downgrade links are gated on having a key set', async ({ page }) =>
 });
 
 test('generate support report link is present', async ({ page }) => {
-  await page.goto('/settings/license');
+  await page.goto('/license');
 
   await expect(page.locator('#tour-generate-report-btn')).toHaveAttribute('href', '/support/report');
   console.log('generate support report link present');
