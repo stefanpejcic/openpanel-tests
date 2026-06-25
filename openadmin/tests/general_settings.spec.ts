@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test('update proxy and test restart needed msg', async ({ page }) => {
-  await page.goto(`/settings\/general/`);
-  await expect(page).toHaveURL(/settings\/general/);
+  await page.goto(`/settings\/general`);
+  await expect(page).toHaveURL(/settings\/general);
   await page.getByRole('textbox', { name: 'openpanel' }).fill('newlink');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await Promise.all([
