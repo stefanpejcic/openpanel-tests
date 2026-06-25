@@ -17,7 +17,8 @@ test('search filters the services table', async ({ page }) => {
   const count = await rows.count();
   test.skip(count === 0, 'No services detected on this environment');
 
-  const firstName = (await rows.first().locator('td').nth(1).innerText()).trim();
+  const fullName = (await rows.first().locator('td').nth(1).innerText()).trim();
+  const firstName = fullName.split(/\s+/)[0];
   await page.locator('input[x-model="searchQuery"]').fill(firstName);
   await page.waitForTimeout(150);
 
