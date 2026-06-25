@@ -63,16 +63,23 @@ test('toggle a rule set enable/disable and revert', async ({ page }) => {
   test.skip(count === 0, 'No WAF rule sets detected on this environment');
 
   const row = rows.first();
-  const initialButtonText = (await row.getByRole('button').innerText()).trim();
 
-  await row.getByRole('button').click();
+  const ruleName = await row.locator('td').first().innerText();
+
+  const button = row.getByRole('button');
+  const initialButtonText = (await button.innerText()).trim();
+
+  await button.click();
   await expect(page.getByText(/Rules set (enabled|disabled)\. Restart Caddy to apply changes\./)).toBeVisible();
 
-  // toggle back to original state
-  const toggledRow = page.locator('#waf_sets tbody tr').first();
-  await expect(toggledRow.getByRole('button')).not.toHaveText(initialButtonText);
-  await toggledRow.getByRole('button').click();
+  const sameRow = page.locator('#waf_sets tbody tr').filter({ hasText: ruleName });
+
+  const sameButton = sameRow.getByRole('button');
+
+  await expect(sameButton).not.toHaveText(initialButtonText);
+
+  await sameButton.click();
   await expect(page.getByText(/Rules set (enabled|disabled)\. Restart Caddy to apply changes\./)).toBeVisible();
 
-  console.log(`toggled rule set "${initialButtonText}" and reverted`);
+  console.log(`toggled rule set "${ruleName}" and reverted`);
 });
