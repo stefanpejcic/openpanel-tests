@@ -15,16 +15,23 @@ test('search filters the notifications table', async ({ page }) => {
   await page.goto('/notifications');
 
   const rows = page.locator('#tour-notifications-table tbody tr');
-  const count = await rows.count();
-  test.skip(count === 0, 'No notifications recorded on this environment');
+  const initialCount = await rows.count();
 
-  const firstTitle = (await rows.first().locator('td').nth(2).innerText()).trim();
+  test.skip(initialCount === 0, 'No notifications recorded on this environment');
+
+  const firstTitle = (await rows.first().locator('td').nth(1).innerText()).trim();
   test.skip(!firstTitle, 'Notification title cell empty, cannot build a meaningful search');
 
-  await page.locator('#tour-notifications-search').fill(firstTitle);
-  await page.waitForTimeout(150);
+  const search = page.locator('#tour-notifications-search');
+  await search.fill(firstTitle);
 
-  await expect(rows.filter({ hasText: firstTitle })).toBeVisible();
+  const filteredRows = rows.filter({ hasText: firstTitle });
+
+  await expect(filteredRows).toHaveCount(1);
+  await expect(filteredRows.first()).toBeVisible();
+
+  await expect(rows).toHaveCount(1);
+
   console.log(`search filtered notifications table to "${firstTitle}"`);
 });
 
