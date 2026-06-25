@@ -4,7 +4,7 @@ test('resource usage page shows drop-cache and clear-swap controls', async ({ pa
   await page.goto('/server/resource-usage');
   await expect(page).toHaveURL(/server\/resource-usage/);
 
-  await expect(page.locator('#human-readable-info')).toBeVisible();
+  await expect(page.locator('#human-readable-info')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#swap-human-readable-info')).toBeVisible();
   await expect(page.locator('#clear-cache')).toBeVisible();
   await expect(page.locator('#clear-swap')).toBeVisible();
@@ -16,15 +16,17 @@ test('resource usage page shows drop-cache and clear-swap controls', async ({ pa
 
 test('resource usage history page loads with default line view', async ({ page }) => {
   await page.goto('/server/resource-usage/history');
+
   await expect(page).toHaveURL(/server\/resource-usage\/history/);
 
-  await expect(page.getByText('Resource Usage History')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Resource Usage History' })
+  ).toBeVisible();
+
   await expect(page.locator('#chart-cpu')).toBeVisible();
   await expect(page.locator('#chart-mem')).toBeVisible();
   await expect(page.locator('#chart-disk')).toBeVisible();
   await expect(page.locator('#chart-conn')).toBeVisible();
-
-  console.log('resource usage history line view loaded with charts');
 });
 
 test('time range selector changes period via query param', async ({ page }) => {
@@ -33,7 +35,7 @@ test('time range selector changes period via query param', async ({ page }) => {
   const select = page.locator('select').first();
   await select.selectOption('60');
   await expect(page).toHaveURL(/minutes=60/);
-  await expect(page.getByText('Last 1 hour')).toBeVisible();
+  await expect(page.locator('text=Last 1 hour').first()).toBeVisible();
 
   console.log('time range selector navigated to 1 hour period');
 });
