@@ -54,15 +54,19 @@ test('a module toggle switch responds to click without saving', async ({ page })
   const lockedCard = await cards.first().getAttribute('data-locked');
   test.skip(lockedCard !== null, 'First module is a locked plugin card with no toggle');
 
+  await expect(checkbox).toBeAttached();
+
   const initial = await checkbox.isChecked();
-  await checkbox.click({ force: true });
+
+  // toggle ON
+  await checkbox.check({ force: true });
   expect(await checkbox.isChecked()).toBe(!initial);
 
-  // click again to leave it as it was originally, since we never save the form
-  await checkbox.click({ force: true });
+  // toggle OFF (restore original state)
+  await checkbox.check({ force: true });
   expect(await checkbox.isChecked()).toBe(initial);
 
-  console.log('module toggle switch responded to clicks (not saved)');
+  console.log('module toggle switch responded to toggles (not saved)');
 });
 
 test('enable all / disable all bulk buttons affect toggle states', async ({ page }) => {
