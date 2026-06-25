@@ -5,7 +5,9 @@ test('waf settings page loads with status select and active/total badge', async 
   await expect(page).toHaveURL(/security\/waf/);
 
   await expect(page.locator('#status')).toBeVisible();
-  await expect(page.getByText(/Active: \d+ \/ \d+/)).toBeVisible();
+  const sets = page.locator('div:has(span:text("Active:"))');
+  await expect(sets.locator('span').nth(0)).toHaveText('Active:');
+  await expect(sets.locator('span').nth(1)).toHaveText(/\d+\s*\/\s*\d+/);
   await expect(page.locator('#tour-waf-manage-rules')).toBeVisible();
 
   console.log('waf settings page loaded');
