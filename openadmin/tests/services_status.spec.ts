@@ -28,26 +28,29 @@ test('search filters the services table', async ({ page }) => {
 });
 
 test('each service row exposes start/stop and restart actions', async ({ page }) => {
-  // NOTE: we verify the action buttons exist and are wired to the right service name,
-  // but never click them -- stopping/restarting live services (mysql, caddy, dns, etc.)
-  // on a shared test environment could break every other suite running against it.
   await page.goto('/services');
 
   const rows = page.locator('#exiting_users tbody tr');
   const count = await rows.count();
+
   test.skip(count === 0, 'No services detected on this environment');
 
   let foundAtLeastOne = false;
+
   for (let i = 0; i < count; i++) {
     const row = rows.nth(i);
+
     const realName = (await row.locator('td').nth(3).innerText()).trim();
     if (!realName) continue;
 
-    const startBtn = row.locator(`button[title="Start ${realName}"]`);
-    const stopBtn = row.locator(`button[title="Stop ${realName}"]`);
-    const restartBtn = row.locator(`button[title="Restart ${realName}"]`);
+    // Use accessible names instead of non-existent title attributes
+    const startBtn = row.getByRole('button', { name: new RegExp(`Start ${realName}`, 'i') });
+    const stopBtn = row.getByRole('button', { name: new RegExp(`Stop ${realName}`, 'i') });
+    const restartBtn = row.getByRole('button', { name: new RegExp(`Restart ${realName}`, 'i') });
 
-    const hasStartOrStop = (await startBtn.count()) > 0 || (await stopBtn.count()) > 0;
+    const hasStartOrStop =
+      (await startBtn.count()) > 0 || (await stopBtn.count()) > 0;
+
     if (hasStartOrStop) {
       await expect(restartBtn).toHaveCount(1);
       foundAtLeastOne = true;
@@ -57,7 +60,6 @@ test('each service row exposes start/stop and restart actions', async ({ page })
   expect(foundAtLeastOne).toBeTruthy();
   console.log('verified start/stop and restart action buttons are present for services');
 });
-
 test('monitored services link to notifications settings', async ({ page }) => {
   await page.goto('/services');
 
