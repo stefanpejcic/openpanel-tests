@@ -19,17 +19,29 @@ test('edit and save notification email, then revert', async ({ page }) => {
   const testValue = `test-${Date.now()}@example.com`;
 
   await input.fill(testValue);
-  await page.locator('button[type="submit"]').first().click();
-  await page.waitForLoadState();
-  await expect(page.locator('[name="email"]')).toHaveValue(testValue);
+
+  await Promise.all([
+    page.waitForResponse(res =>
+      res.url().includes('/settings/notifications') &&
+      res.request().method() !== 'GET'
+    ),
+    page.locator('button[type="submit"]').first().click(),
+  ]);
+
+  await expect(input).toHaveValue(testValue);
 
   // revert
-  await page.locator('[name="email"]').fill(original);
-  await page.locator('button[type="submit"]').first().click();
-  await page.waitForLoadState();
-  await expect(page.locator('[name="email"]')).toHaveValue(original);
+  await input.fill(original);
 
-  console.log('notification email edited, saved, and reverted');
+  await Promise.all([
+    page.waitForResponse(res =>
+      res.url().includes('/settings/notifications') &&
+      res.request().method() !== 'GET'
+    ),
+    page.locator('button[type="submit"]').first().click(),
+  ]);
+
+  await expect(input).toHaveValue(original);
 });
 
 test('attack-prevention thresholds appear only when attack toggle is enabled', async ({ page }) => {
