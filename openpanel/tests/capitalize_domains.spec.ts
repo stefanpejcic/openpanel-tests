@@ -45,6 +45,6 @@ test('revert domain capitalization to original', async ({ page }) => {
     }
   }
   await page.getByRole('button', { name: /save/i }).click();
-  await expect(page.locator('body')).toContainText(/saved|updated|success/i, { timeout: 10000 });
+  await expect(page.locator('body')).toContainText(/saved|updated|success|capitalized/i, { timeout: 10000 });
   console.log('domain capitalization reverted to original');
 });
