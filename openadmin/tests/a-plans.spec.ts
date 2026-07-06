@@ -79,13 +79,12 @@ test('delete hosting plan', async ({ page }) => {
 
   await navigateToUserPackages(page);
 
-  await page.getByRole('cell').filter({ hasText: 'Edit' }).click();
+  const row = page.getByRole('row').filter({ hasText: 'probni' }).first();
+  await row.getByRole('button').click();                      // opens the Edit/Delete menu in the last cell
   await page.getByRole('button', { name: 'Delete' }).click();
 
-  await expect(page.getByText('plan deleted successfully')).toBeVisible();
-  await expect(page.getByText('probni')).not.toBeVisible();
-
-  console.log('Plan "probni" deleted successfully');
+  await expect(page.getByText(/plan deleted successfully/i)).toBeVisible();
+  await expect(page.getByRole('row').filter({ hasText: 'probni' })).toHaveCount(0);
 });
 
 test('edit hosting plan and verify all fields', async ({ page }) => {
