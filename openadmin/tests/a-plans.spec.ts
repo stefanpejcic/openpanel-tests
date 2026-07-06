@@ -79,7 +79,7 @@ test('delete hosting plan', async ({ page }) => {
 
   await navigateToUserPackages(page);
 
-  await page.getByRole('cell').filter({ hasText: 'Edit Delete' }).click();
+  await page.getByRole('cell').filter({ hasText: 'Edit' }).click();
   await page.getByRole('button', { name: 'Delete' }).click();
 
   await expect(page.getByText('plan deleted successfully')).toBeVisible();
