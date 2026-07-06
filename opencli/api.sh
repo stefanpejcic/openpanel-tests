@@ -39,6 +39,8 @@ if [ -z "$ADMIN_PASS" ]; then
     echo
 fi
 
+# enable api first!
+opencli api on
 
 ################################################################################
 # Helpers
