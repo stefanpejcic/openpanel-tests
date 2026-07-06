@@ -17,19 +17,35 @@ const PLAN_DATA = {
   ftp_limit: '22',
 };
 
+const PLAN_DISPLAY = {
+  name: 'probni',
+  ram: '25 GB',
+  cpu: '15 Core',
+  disk_limit: '400 GB',
+  inodes_limit: '699.999',   // UI adds thousands separator
+  bandwidth: '28 mbits',
+  domains_limit: '44',
+  websites_limit: '55',
+  db_limit: '88',
+  email_limit: '99',
+  max_email_quota: '77G',
+  ftp_limit: '22',
+};
+
 async function fillPlanForm(page: any) {
   for (const [field, value] of Object.entries(PLAN_DATA)) {
     await page.locator(`input[name="${field}"]`).fill(value);
   }
 }
 
-async function verifyPlanRow(page: any, rowText: string) {
-  const row = page.locator('tr', { hasText: rowText });
-  for (const value of Object.values(PLAN_DATA)) {
-    await expect(page.locator('body')).toContainText(value);
-    //await expect(row.getByText(value)).toBeVisible();
+async function verifyPlanRow(page: Page, planName: string) {
+  const row = page.getByRole('row').filter({ hasText: planName });
+  await expect(row).toHaveCount(1);
+
+  for (const value of Object.values(PLAN_DISPLAY)) {
+    await expect(row).toContainText(value);   // scoped to the row, not body
   }
-  await expect(page.locator('body')).toContainText('mysql_only');
+  await expect(row).toContainText('mysql_only');
 }
 
 async function navigateToUserPackages(page: any) {
