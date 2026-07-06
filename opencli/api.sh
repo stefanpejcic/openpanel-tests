@@ -41,6 +41,8 @@ fi
 
 # enable api first!
 opencli api on
+cd /root && docker compose up -d bind9
+#opencli email-server install
 
 ################################################################################
 # Helpers
