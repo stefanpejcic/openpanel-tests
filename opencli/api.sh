@@ -5,8 +5,6 @@
 #
 # Usage:
 #   ./api_test.sh                          # safe (read-only) tests only
-#   RUN_WRITE_TESTS=1 ./api_test.sh        # also run create/edit tests
-#   DESTRUCTIVE_TESTS=1 ./api_test.sh      # also run destructive tests (MUST run
 #                                          #   as root ON the server itself!)
 #   REBOOT_TEST=1 ./api_test.sh            # actually reboot the server at the end
 #   ONLY="/api/users" ./api_test.sh        # run only routes matching a pattern
@@ -19,12 +17,10 @@
 BASE_URL="${BASE_URL:-$(opencli admin | grep -oE 'https://[^ ]+' | head -n1)}"
 ADMIN_USER="${ADMIN_USER:-}"
 ADMIN_PASS="${ADMIN_PASS:-}"
-RUN_WRITE_TESTS="${RUN_WRITE_TESTS:-0}"
-DESTRUCTIVE_TESTS="${DESTRUCTIVE_TESTS:-0}"
 REBOOT_TEST="${REBOOT_TEST:-0}"
 ONLY="${ONLY:-}"
 
-# Test fixtures (used only when RUN_WRITE_TESTS=1)
+# Test fixtures
 TEST_USER="apitest_$(date +%s)"
 TEST_DOMAIN="apitest-$(date +%s).com"
 TEST_PLAN="Standard plan"
@@ -237,64 +233,53 @@ fi
 
 ################################################################################
 # 3. Write tests — full lifecycle with a throwaway user/domain
-#    Only runs with RUN_WRITE_TESTS=1
 ################################################################################
-if [ "$RUN_WRITE_TESTS" == "1" ]; then
-
-
 # PREPARATIONS
-    #echo "== Preparing server.. =="
-    #opencli email-server installl && opencli email-server start
-    # todo: bind and ftp
+#echo "== Preparing server.. =="
+#opencli email-server installl && opencli email-server start
+# todo: bind and ftp
 
-    echo "== Write tests (user: $TEST_USER, domain: $TEST_DOMAIN) =="
+echo "== Write tests (user: $TEST_USER, domain: $TEST_DOMAIN) =="
 
-    # User lifecycle
-    test_api POST "/api/users" "200,201" \
-        "{\"email\":\"$TEST_USER@example.com\",\"username\":\"$TEST_USER\",\"password\":\"Test_$(date +%s)!\",\"plan_name\":\"$TEST_PLAN\"}"
+# User lifecycle
+test_api POST "/api/users" "200,201" \
+    "{\"email\":\"$TEST_USER@example.com\",\"username\":\"$TEST_USER\",\"password\":\"Test_$(date +%s)!\",\"plan_name\":\"$TEST_PLAN\"}"
 
-    # Domain lifecycle
-    test_api POST "/api/domains/new" "200,201" \
-        "{\"username\":\"$TEST_USER\",\"domain\":\"$TEST_DOMAIN\",\"docroot\":\"/var/www/html/$TEST_DOMAIN\"}"
-    test_api GET  "/api/domains/docroot/$TEST_DOMAIN"       200
-    test_api GET  "/api/domains/$TEST_DOMAIN/dns"           200
-    test_api GET  "/api/domains/$TEST_DOMAIN/caddy"         200
-    test_api GET  "/api/domains/$TEST_DOMAIN/vhost/$TEST_USER" 200
-    test_api GET  "/api/domains/$TEST_DOMAIN/ssl"           200
-    test_api GET  "/api/domains/$TEST_DOMAIN/log"           "200,404"
-    test_api POST "/api/domains/suspend/$TEST_DOMAIN"       200
-    test_api POST "/api/domains/unsuspend/$TEST_DOMAIN"     200
-    test_api POST "/api/domains/delete/$TEST_DOMAIN"        200
+# Domain lifecycle
+test_api POST "/api/domains/new" "200,201" \
+    "{\"username\":\"$TEST_USER\",\"domain\":\"$TEST_DOMAIN\",\"docroot\":\"/var/www/html/$TEST_DOMAIN\"}"
+test_api GET  "/api/domains/docroot/$TEST_DOMAIN"       200
+test_api GET  "/api/domains/$TEST_DOMAIN/dns"           200
+test_api GET  "/api/domains/$TEST_DOMAIN/caddy"         200
+test_api GET  "/api/domains/$TEST_DOMAIN/vhost/$TEST_USER" 200
+test_api GET  "/api/domains/$TEST_DOMAIN/ssl"           200
+test_api GET  "/api/domains/$TEST_DOMAIN/log"           "200,404"
+test_api POST "/api/domains/suspend/$TEST_DOMAIN"       200
+test_api POST "/api/domains/unsuspend/$TEST_DOMAIN"     200
+test_api POST "/api/domains/delete/$TEST_DOMAIN"        200
 
-    # Containers for the test user
-    test_api GET  "/api/users/$TEST_USER/containers"        200
+# Containers for the test user
+test_api GET  "/api/users/$TEST_USER/containers"        200
 
-    # Plan lifecycle
-    test_api POST "/api/plans" "200,201" \
-        '{"name":"apitest_plan","description":"test","email_limit":"1","ftp_limit":"1","domains_limit":"1","websites_limit":"1","disk_limit":"1000","inodes_limit":"10000","db_limit":"1","cpu":"1","ram":"1","bandwidth":"10","feature_set":"default"}'
-    # NOTE: fetch id of apitest_plan and DELETE it manually, or add jq parsing here
+# Plan lifecycle
+test_api POST "/api/plans" "200,201" \
+    '{"name":"apitest_plan","description":"test","email_limit":"1","ftp_limit":"1","domains_limit":"1","websites_limit":"1","disk_limit":"1000","inodes_limit":"10000","db_limit":"1","cpu":"1","ram":"1","bandwidth":"10","feature_set":"default"}'
+# NOTE: fetch id of apitest_plan and DELETE it manually, or add jq parsing here
 
-    # Cleanup: delete the test user (adjust to your actual user-delete route)
-    test_api DELETE "/api/users" "200,204,404,405" "{\"username\":\"$TEST_USER\"}"
-    echo
-else
-    skip "POST" "/api/users, /api/domains/*, /api/plans ..." "set RUN_WRITE_TESTS=1 to enable"
-    echo
-fi
+# Cleanup: delete the test user (adjust to your actual user-delete route)
+test_api DELETE "/api/users" "200,204,404,405" "{\"username\":\"$TEST_USER\"}"
+echo
 
 ################################################################################
 # 4. Destructive tests — verified against the OS, then reverted.
-#    Only runs with DESTRUCTIVE_TESTS=1, and MUST run as root on the server
-#    itself (needs /etc/shadow, /proc/meminfo, opencli).
 ################################################################################
-if [ "$DESTRUCTIVE_TESTS" == "1" ]; then
-    echo "== Destructive tests =="
 
-    if [ "$(id -u)" != "0" ] || ! command -v opencli >/dev/null 2>&1; then
-        echo -e "${RED}Destructive tests require root on the OpenPanel server itself (opencli + /etc/shadow access) — skipping section.${NC}"
-        skip "ALL" "destructive tests" "not root / not on server"
-    else
+echo "== Destructive tests =="
 
+if [ "$(id -u)" != "0" ] || ! command -v opencli >/dev/null 2>&1; then
+    echo -e "${RED}Destructive tests require root on the OpenPanel server itself (opencli + /etc/shadow access) — skipping section.${NC}"
+    skip "ALL" "destructive tests" "not root / not on server"
+else
     # ------------------------------------------------------------------
     # 4.1 /api/server/root-password — change, verify hash changed, revert
     # ------------------------------------------------------------------
@@ -347,7 +332,7 @@ if [ "$DESTRUCTIVE_TESTS" == "1" ]; then
     # 4.3 /api/settings/updates/now — safe no-op when no update available
     # ------------------------------------------------------------------
     test_api POST "/api/settings/updates/now" "200,201,202"
-
+    
     # ------------------------------------------------------------------
     # 4.4 /api/server/processes/<pid>/kill — spawn dummy, kill via API,
     #     verify it is actually gone on the OS
@@ -396,12 +381,9 @@ if [ "$DESTRUCTIVE_TESTS" == "1" ]; then
         fi
     fi
 
-    fi # root check
-    echo
-else
-    skip "POST" "root-password, memory/drop-*, disable-admin ..." "set DESTRUCTIVE_TESTS=1 to enable"
-    echo
-fi
+fi # root check
+echo
+
 
 ################################################################################
 # 5. Reboot — only with explicit REBOOT_TEST=1, always last.
