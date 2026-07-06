@@ -93,19 +93,18 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
 
   await navigateToUserPackages(page);
 
-  await page.locator('[id="1"]').click();
+  const row = page.getByRole('row').filter({ hasText: 'Developer Plus' });
+  await row.getByRole('button').click();                       // open row actions menu
   await page.getByRole('link', { name: 'Edit' }).click();
 
   await fillPlanForm(page);
   await page.getByRole('combobox').selectOption('mysql_only');
   await page.getByRole('button', { name: 'Save changes' }).click();
 
-  await expect(page.getByText('successfully updated plan id')).toBeVisible();
+  await expect(page.getByText(/successfully updated plan id/i)).toBeVisible();
 
   await navigateToUserPackages(page);
-  await verifyPlanRow(page, 'probni');
-
-  console.log('Plan "Standard plan" edited successfully with all fields verified in table');
+  await verifyPlanRow(page, 'probni');   // form renamed it to 'probni'
 });
 
 
