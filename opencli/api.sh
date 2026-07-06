@@ -6,6 +6,12 @@
 # Usage:
 #   ./api_test.sh                          # safe (read-only) tests only
 #   RUN_WRITE_TESTS=1 ./api_test.sh        # also run create/edit tests
+#   DESTRUCTIVE_TESTS=1 ./api_test.sh      # also run destructive tests (MUST run
+#                                          #   as root ON the server itself!)
+#   REBOOT_TEST=1 ./api_test.sh            # actually reboot the server at the end
+#   ONLY="/api/users" ./api_test.sh        # run only routes matching a pattern
+#   ONLY="settings" ./api_test.sh          # substring/glob match works too
+#   ONLY="GET /api/domains" ./api_test.sh  # optionally prefix with method
 #
 # Config via env vars or edit below.
 ################################################################################
@@ -14,6 +20,9 @@ BASE_URL="${BASE_URL:-$(opencli admin | grep -oE 'https://[^ ]+' | head -n1)}"
 ADMIN_USER="${ADMIN_USER:-}"
 ADMIN_PASS="${ADMIN_PASS:-}"
 RUN_WRITE_TESTS="${RUN_WRITE_TESTS:-0}"
+DESTRUCTIVE_TESTS="${DESTRUCTIVE_TESTS:-0}"
+REBOOT_TEST="${REBOOT_TEST:-0}"
+ONLY="${ONLY:-}"
 
 # Test fixtures (used only when RUN_WRITE_TESTS=1)
 TEST_USER="apitest_$(date +%s)"
@@ -35,9 +44,44 @@ fi
 # Helpers
 ################################################################################
 
+# matches_only <method> <path>
+# Returns 0 (run the test) when ONLY is empty or the route matches it.
+# ONLY can be:
+#   - a substring of the path:        ONLY="/api/users"  ONLY="settings"
+#   - a glob pattern:                 ONLY="/api/domains/*"
+#   - method + pattern:               ONLY="POST /api/users"
+matches_only() {
+    local method="$1" path="$2"
+    [ -z "$ONLY" ] && return 0
+
+    local want_method="" pattern="$ONLY"
+    # If ONLY starts with an HTTP method, split it off
+    case "$ONLY" in
+        GET\ *|POST\ *|PUT\ *|PATCH\ *|DELETE\ *)
+            want_method="${ONLY%% *}"
+            pattern="${ONLY#* }"
+            ;;
+    esac
+
+    if [ -n "$want_method" ] && [ "$want_method" != "$method" ]; then
+        return 1
+    fi
+
+    # Match as glob, or as plain substring
+    [[ "$path" == $pattern ]] && return 0
+    [[ "$path" == *"$pattern"* ]] && return 0
+    return 1
+}
+
 # test_api <method> <path> <expected_status(es)> [json_body]
 test_api() {
     local method="$1" path="$2" expected="$3" body="$4"
+
+    if ! matches_only "$method" "$path"; then
+        SKIP=$((SKIP+1))
+        return 0
+    fi
+
     local args=(-s -o /tmp/api_test_body.json -w "%{http_code}" -X "$method"
                 -H "Authorization: Bearer $TOKEN"
                 --max-time 30
@@ -63,6 +107,29 @@ skip() {
     SKIP=$((SKIP+1))
 }
 
+# manual_pass/manual_fail <method> <path> <detail>
+# For tests where PASS/FAIL is decided by checking the OS, not the HTTP code.
+manual_pass() {
+    printf "${GREEN}PASS${NC} [%s] %-55s (%s)\n" "$1" "$2" "$3"
+    PASS=$((PASS+1))
+}
+manual_fail() {
+    printf "${RED}FAIL${NC} [%s] %-55s (%s)\n" "$1" "$2" "$3"
+    FAIL=$((FAIL+1))
+    FAILED_ROUTES+=("[$1] $2 - $3")
+}
+
+# raw API call, returns http code, body in /tmp/api_test_body.json
+api_call() {
+    local method="$1" path="$2" body="$3"
+    local args=(-s -o /tmp/api_test_body.json -w "%{http_code}" -X "$method"
+                -H "Authorization: Bearer $TOKEN"
+                --max-time 30
+                "$BASE_URL$path")
+    [ -n "$body" ] && args+=(-H "Content-Type: application/json" -d "$body")
+    curl "${args[@]}"
+}
+
 ################################################################################
 # 0. Auth
 ################################################################################
@@ -80,6 +147,7 @@ if [ -z "$TOKEN" ]; then
     exit 1
 fi
 echo "Token obtained (${#TOKEN} chars)"
+[ -n "$ONLY" ] && echo -e "${YELLOW}Filter active:${NC} only running routes matching '$ONLY'"
 echo
 
 ################################################################################
@@ -149,17 +217,19 @@ echo
 ################################################################################
 # 2. Auth negative test (no token should be rejected)
 ################################################################################
-echo "== Auth checks =="
-NOAUTH=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/whoami")
-if [[ "$NOAUTH" == "401" || "$NOAUTH" == "403" ]]; then
-    printf "${GREEN}PASS${NC} [GET] %-55s -> %s (rejected without token)\n" "/api/whoami (no auth)" "$NOAUTH"
-    PASS=$((PASS+1))
-else
-    printf "${RED}FAIL${NC} [GET] %-55s -> %s (should be 401/403!)\n" "/api/whoami (no auth)" "$NOAUTH"
-    FAIL=$((FAIL+1))
-    FAILED_ROUTES+=("[GET] /api/whoami without token -> $NOAUTH")
+if matches_only GET "/api/whoami"; then
+    echo "== Auth checks =="
+    NOAUTH=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/whoami")
+    if [[ "$NOAUTH" == "401" || "$NOAUTH" == "403" ]]; then
+        printf "${GREEN}PASS${NC} [GET] %-55s -> %s (rejected without token)\n" "/api/whoami (no auth)" "$NOAUTH"
+        PASS=$((PASS+1))
+    else
+        printf "${RED}FAIL${NC} [GET] %-55s -> %s (should be 401/403!)\n" "/api/whoami (no auth)" "$NOAUTH"
+        FAIL=$((FAIL+1))
+        FAILED_ROUTES+=("[GET] /api/whoami without token -> $NOAUTH")
+    fi
+    echo
 fi
-echo
 
 ################################################################################
 # 3. Write tests — full lifecycle with a throwaway user/domain
@@ -209,11 +279,141 @@ else
 fi
 
 ################################################################################
-# Deliberately never tested (destructive):
-#   /api/server/reboot, /api/server/root-password,
-#   /api/security/disable-admin, /api/server/memory/drop-*,
-#   /api/settings/updates/now, /api/server/processes/<pid>/kill
+# 4. Destructive tests — verified against the OS, then reverted.
+#    Only runs with DESTRUCTIVE_TESTS=1, and MUST run as root on the server
+#    itself (needs /etc/shadow, /proc/meminfo, opencli).
 ################################################################################
+if [ "$DESTRUCTIVE_TESTS" == "1" ]; then
+    echo "== Destructive tests =="
+
+    if [ "$(id -u)" != "0" ] || ! command -v opencli >/dev/null 2>&1; then
+        echo -e "${RED}Destructive tests require root on the OpenPanel server itself (opencli + /etc/shadow access) — skipping section.${NC}"
+        skip "ALL" "destructive tests" "not root / not on server"
+    else
+
+    # ------------------------------------------------------------------
+    # 4.1 /api/server/root-password — change, verify hash changed, revert
+    # ------------------------------------------------------------------
+    if matches_only POST "/api/server/root-password"; then
+        ORIG_HASH=$(grep '^root:' /etc/shadow | cut -d: -f2)
+        NEW_ROOT_PW="Apitest_$(date +%s)!x"
+        CODE=$(api_call POST "/api/server/root-password" "{\"password\":\"$NEW_ROOT_PW\"}")
+        NEW_HASH=$(grep '^root:' /etc/shadow | cut -d: -f2)
+        if [[ "$CODE" == "200" && "$NEW_HASH" != "$ORIG_HASH" ]]; then
+            manual_pass POST "/api/server/root-password" "hash changed in /etc/shadow"
+        else
+            manual_fail POST "/api/server/root-password" "code=$CODE hash_changed=$([ "$NEW_HASH" != "$ORIG_HASH" ] && echo yes || echo no)"
+        fi
+        # Revert: put the original hash back (we never knew the plaintext)
+        usermod -p "$ORIG_HASH" root
+        RESTORED_HASH=$(grep '^root:' /etc/shadow | cut -d: -f2)
+        if [ "$RESTORED_HASH" == "$ORIG_HASH" ]; then
+            echo "     root password hash restored to original"
+        else
+            echo -e "${RED}     WARNING: could not restore original root hash — fix manually!${NC}"
+        fi
+    fi
+
+    # ------------------------------------------------------------------
+    # 4.2 /api/server/memory/drop-* — compare cache before vs after
+    # ------------------------------------------------------------------
+    for DROP in drop-caches drop-pagecache drop-inodes; do
+        if matches_only POST "/api/server/memory/$DROP"; then
+            # warm the page cache a little so there is something to drop
+            find /usr/lib -type f -print0 2>/dev/null | head -z -n 500 | xargs -0 cat > /dev/null 2>&1
+            CACHE_BEFORE=$(awk '/^Cached:/ {print $2}' /proc/meminfo)
+            CODE=$(api_call POST "/api/server/memory/$DROP")
+            sleep 1
+            CACHE_AFTER=$(awk '/^Cached:/ {print $2}' /proc/meminfo)
+            if [[ "$CODE" == "200" || "$CODE" == "404" ]]; then
+                if [ "$CODE" == "404" ]; then
+                    skip POST "/api/server/memory/$DROP" "route not present"
+                elif [ "$CACHE_AFTER" -lt "$CACHE_BEFORE" ]; then
+                    manual_pass POST "/api/server/memory/$DROP" "Cached: ${CACHE_BEFORE}kB -> ${CACHE_AFTER}kB"
+                else
+                    manual_fail POST "/api/server/memory/$DROP" "cache did not shrink (${CACHE_BEFORE}kB -> ${CACHE_AFTER}kB)"
+                fi
+            else
+                manual_fail POST "/api/server/memory/$DROP" "code=$CODE"
+            fi
+        fi
+    done
+
+    # ------------------------------------------------------------------
+    # 4.3 /api/settings/updates/now — safe no-op when no update available
+    # ------------------------------------------------------------------
+    test_api POST "/api/settings/updates/now" "200,201,202"
+
+    # ------------------------------------------------------------------
+    # 4.4 /api/server/processes/<pid>/kill — spawn dummy, kill via API,
+    #     verify it is actually gone on the OS
+    # ------------------------------------------------------------------
+    if matches_only POST "/api/server/processes/<pid>/kill"; then
+        sleep 300 &
+        DUMMY_PID=$!
+        disown "$DUMMY_PID" 2>/dev/null
+        CODE=$(api_call POST "/api/server/processes/$DUMMY_PID/kill")
+        sleep 2
+        if kill -0 "$DUMMY_PID" 2>/dev/null; then
+            manual_fail POST "/api/server/processes/$DUMMY_PID/kill" "code=$CODE but PID $DUMMY_PID still alive"
+            kill -9 "$DUMMY_PID" 2>/dev/null   # clean up ourselves
+        else
+            if [ "$CODE" == "200" ]; then
+                manual_pass POST "/api/server/processes/$DUMMY_PID/kill" "PID $DUMMY_PID confirmed dead"
+            else
+                manual_fail POST "/api/server/processes/$DUMMY_PID/kill" "PID gone but code=$CODE"
+            fi
+        fi
+    fi
+
+    # ------------------------------------------------------------------
+    # 4.5 /api/security/disable-admin — panel must stop responding,
+    #     then restore with `opencli admin on` and confirm it is back.
+    #     Runs LAST in this section because it takes the API down.
+    # ------------------------------------------------------------------
+    if matches_only POST "/api/security/disable-admin"; then
+        CODE=$(api_call POST "/api/security/disable-admin")
+        sleep 3
+        DOWN_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/" || echo "000")
+        opencli admin on >/dev/null 2>&1
+        # give the panel time to come back
+        UP_CODE="000"
+        for i in $(seq 1 15); do
+            sleep 2
+            UP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$BASE_URL/api/" || echo "000")
+            [ "$UP_CODE" != "000" ] && break
+        done
+        if [[ "$DOWN_CODE" == "000" || "$DOWN_CODE" == "502" || "$DOWN_CODE" == "503" ]] && [ "$UP_CODE" != "000" ]; then
+            manual_pass POST "/api/security/disable-admin" "went down ($DOWN_CODE), restored via opencli admin on ($UP_CODE)"
+        elif [ "$UP_CODE" == "000" ]; then
+            manual_fail POST "/api/security/disable-admin" "PANEL STILL DOWN — run 'opencli admin on' manually!"
+        else
+            manual_fail POST "/api/security/disable-admin" "code=$CODE, panel still answered while disabled ($DOWN_CODE)"
+        fi
+    fi
+
+    fi # root check
+    echo
+else
+    skip "POST" "root-password, memory/drop-*, disable-admin ..." "set DESTRUCTIVE_TESTS=1 to enable"
+    echo
+fi
+
+################################################################################
+# 5. Reboot — only with explicit REBOOT_TEST=1, always last.
+#    We just fire it; the script (and the server) will not survive to verify.
+################################################################################
+if [ "$REBOOT_TEST" == "1" ]; then
+    echo "== Reboot test =="
+    echo -e "${YELLOW}Firing /api/server/reboot in 5 seconds — Ctrl+C to abort!${NC}"
+    sleep 5
+    CODE=$(api_call POST "/api/server/reboot")
+    echo "POST /api/server/reboot -> $CODE (server should be going down now)"
+    [ "$CODE" == "200" ] && PASS=$((PASS+1)) || { FAIL=$((FAIL+1)); FAILED_ROUTES+=("[POST] /api/server/reboot -> $CODE"); }
+else
+    skip "POST" "/api/server/reboot" "set REBOOT_TEST=1 to enable"
+fi
+echo
 
 ################################################################################
 # Summary
