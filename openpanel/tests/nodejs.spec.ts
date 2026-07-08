@@ -52,19 +52,19 @@ test.describe('Node.js PM2 autoinstaller', () => {
   });
 
   test('2. install PM2 app', async ({ page }) => {
-    await page.goto('/pm2/install#node');
-  
+    await page.goto('/pm2/install#nodejs');
+
     await page.locator('#service_name').fill(APP_NAME);
-    await page.getByRole('spinbutton', { name: /Port/ }).fill(PORT);
-  
-    // explicitly pick app type via the new radio group
-    await page.getByRole('radio', { name: 'NodeJS' }).click();
-  
-    await page.getByLabel(/Domain/).selectOption({ label: DOMAIN });
-    await page.getByRole('textbox', { name: /Startup file/i }).fill(STARTUP_FILE);
-    await page.getByLabel(/Version/).selectOption(NODE_VERSION);
-  
-    await page.getByRole('button', { name: 'Start Installation' }).click();
+    await page.locator('#port').fill(PORT);
+
+    await page.locator('#domain_id').selectOption({ label: DOMAIN });
+
+    await page.locator('#startup_file').fill(STARTUP_FILE);
+
+    await page.locator('#version').selectOption(NODE_VERSION);
+
+    await page.locator('#installButton').click();
+
     await expect(page.getByText(/setup completed/i)).toBeVisible({ timeout: 60000 });
   });
 
