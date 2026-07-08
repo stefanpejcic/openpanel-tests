@@ -28,7 +28,7 @@ test('list databases', async ({ page }) => {
 
 test('create database', async ({ page }) => {
   await navigateToPostgreSQLPage(page);
-  await page.getByRole('link', { name: 'Create your first database' }).click();
+  await page.getByRole('link', { name: 'New Database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_psql');
   await page.getByRole('button', { name: 'Create Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully created/i);
