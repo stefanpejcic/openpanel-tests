@@ -37,11 +37,16 @@ test.describe('Python PM2 autoinstaller', () => {
 
   test('2. install PM2 app', async ({ page }) => {
     await page.goto('/pm2/install#python');
+    
     await page.locator('#service_name').fill(APP_NAME);
-    await page.getByRole('spinbutton', { name: 'Port:' }).fill(PORT);
-    await page.getByLabel('Domain:').selectOption({ label: DOMAIN });
+    await page.getByRole('spinbutton', { name: /Port/ }).fill(PORT);
+    
+    await page.getByRole('radio', { name: 'Python' }).click();
+    
+    await page.getByLabel(/Domain/).selectOption({ label: DOMAIN });
     await page.getByRole('textbox', { name: /Startup file/i }).fill(STARTUP_FILE);
-    await page.getByLabel('Version:').selectOption(PYTHON_VERSION);
+    await page.getByLabel(/Version/).selectOption(PYTHON_VERSION);
+    
     await page.getByRole('button', { name: 'Start Installation' }).click();
     await expect(page.getByText(/setup completed/i)).toBeVisible({ timeout: 60000 });
   });
