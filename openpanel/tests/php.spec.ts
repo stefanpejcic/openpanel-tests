@@ -161,11 +161,14 @@ test.describe('version change', () => {
         return;
       }
 
-      const select = targetRow.locator('select[name="new_php_version"]');
-
       const currentVersion =
         (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
-
+      
+      if (currentVersion === version) {
+        test.skip(true, `domain already on php ${version}`);
+      }
+      
+      const select = targetRow.locator('select[name="new_php_version"]');
       await select.selectOption(version);
 
       await Promise.all([
