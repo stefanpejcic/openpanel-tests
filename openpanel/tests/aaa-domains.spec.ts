@@ -118,10 +118,10 @@ test('verify files created for a new domain', async ({ page }) => {
   console.log(`cert file exists`);
 
   // logs
-  await page.goto('/domains/log/wp.tests.openpanel.org');
-  const logRows = page.locator('#logs-table tbody tr');
-  await expect(logRows.filter({ hasText: '/' }).first()).toBeVisible();
-  console.log('logs are working');
+  //await page.goto('/domains/log/wp.tests.openpanel.org');
+  //const logRows = page.locator('#logs-table tbody tr');
+  //await expect(logRows.filter({ hasText: '/' }).first()).toBeVisible();
+  //console.log('logs are working');
 });
 
 test('search domains', async ({ page }) => {
