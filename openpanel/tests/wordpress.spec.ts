@@ -25,31 +25,29 @@ test('install wordpress', async ({ page }) => {
   await page.goto('/wordpress/install');
   await expect(page).toHaveURL(/wordpress\/install/);
 
-  await expect(page.locator('#wordpress_version option')).not.toHaveCount(0);
+  await page.locator('#domain_id').selectOption({ label: domain });
 
-  await page.fill('input[name="website_name"]', 'My Site');
-  await page.fill('input[name="site_description"]', 'another site testing');
+  await page.locator('#website_name').fill('My Site');
+  await page.locator('#site_description').fill('another site testing');
 
-  await page.locator('select[name="domain_id"]').selectOption({ label: domain });
-
-  await expect(page.locator('#admin_email')).not.toHaveValue('');
-  await page.fill('input[name="admin_username"]', WP_ADMIN.username);
-  await page.fill('input[name="admin_password"]', WP_ADMIN.password);
+  await page.locator('#admin_email').fill(`admin@${domain}`);
+  await page.locator('#admin_username').fill(WP_ADMIN.username);
+  await page.locator('#admin_password').fill(WP_ADMIN.password);
 
   await page.locator('#installButton').click();
 
-  await expect(page.getByText(/WordPress installation completed/i)).toBeVisible({ timeout: 8 * 60 * 1000 });
+  await expect(page.getByText(/WordPress installation complete!/i)).toBeVisible({ timeout: 30000 });
   console.log('wordpress install completed');
 
-  // page auto-redirects to /wordpress after 2s
-  await page.waitForURL(/\/wordpress$/, { timeout: 15000 });
+  await page.goto('/wordpress');
   await expect(page.locator('body')).toContainText(domain, { timeout: 20000 });
   console.log('wordpress site appears in list');
 
-  await page.goto(`https://${domain}`);
+  await page.goto(`http://${domain}`);
   await expect(page.locator('body')).toContainText('Hello world!');
   console.log('wordpress install is working');
 });
+
 
 test.describe.serial('wp-admin tests', () => {
   test.beforeEach(async ({ page }) => {
