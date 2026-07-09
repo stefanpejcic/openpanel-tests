@@ -211,8 +211,17 @@ test('grant NO privileges', async ({ page }) => {
 
   await page.getByRole('link', { name: 'stefan_user' }).click();
   
-  await page.getByRole('checkbox', { name: 'ALTER', exact: true }).uncheck();
-  await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).uncheck();
+  const privilegeCheckboxes = page.locator('input[name="privileges"]');
+
+  for (let i = 0; i < await privilegeCheckboxes.count(); i++) {
+    const checkbox = privilegeCheckboxes.nth(i);
+  
+    if (await checkbox.isChecked()) {
+      await checkbox.uncheck({ force: true });
+    }
+  
+    await expect(checkbox).not.toBeChecked();
+  }
 
   await page.getByRole('button', { name: 'Make Changes' }).click();
 
@@ -290,17 +299,25 @@ test('revoke privileges', async ({ page }) => {
 
 
 test('database wizard', async ({ page }) => {
-  await page.goto(`/mysql/wizard`);
-  await expect(page).toHaveURL(/.*mysql\/wizard/);  
-  await page.getByRole('textbox', { name: 'database_name' }).fill('proba');
-  await page.getByRole('textbox', { name: 'db_user User' }).fill('novi_user');
-  await page.getByRole('textbox', { name: 'password' }).fill('stefan456g7dsd');
-  await page.locator('#createAndAssign').click();
-  await expect(page.getByText('Process completed!')).toBeVisible();
+  await page.goto('/mysql/wizard');
+  await expect(page).toHaveURL(/.*mysql\/wizard/);
 
-  await page.getByRole('link', { name: 'Back to Databases' }).click();
-  await expect(page).toHaveURL(/.*mysql/);  
+  await page.locator('#dbname').fill('proba');
+  await page.locator('#username').fill('novi_user');
+  await page.locator('#password').fill('stefan456g7dsd');
+
+  await page.locator('#createAndAssign').click();
+
+  await expect(page.locator('body')).toContainText(/setup complete/i, {
+    timeout: 30000,
+  });
+
+  await page.getByRole('link', { name: /view databases/i }).click();
+  await expect(page).toHaveURL(/.*mysql/);
+
   const row = page.locator('#databases-table tr', { hasText: 'proba' });
+
+  await expect(row).toBeVisible();
   await expect(row).toContainText(/proba/i);
   await expect(row).toContainText(/novi_user/i);
 
