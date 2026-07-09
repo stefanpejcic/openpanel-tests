@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import * as otplib from 'otplib';
-const { authenticator } = require('otplib');
+import { generate } from 'otplib';
 
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
@@ -27,7 +26,7 @@ test('enable 2FA', async ({ page }) => {
     name: 'Enter the 6-digit code from your app to confirm',
   });
   await expect(otpInput).toBeVisible();
-  await otpInput.fill(authenticator.generate(totpSecret));
+  await otpInput.fill(await generate({ secret: totpSecret }));
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('2FA is currently enabled')).toBeVisible();
   // VERIFY dashboard shows 2FA enabled
@@ -51,7 +50,7 @@ test('enable 2FA', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password' }).fill(PASSWORD!);
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
   await expect(page.locator('#twofa_code')).toBeVisible();
-  const totpToken = otplib.authenticator.generate(totpSecret);
+  const totpToken = await generate({ secret: totpSecret });
   await page.fill('#twofa_code', totpToken);
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL(/.*dashboard/);
