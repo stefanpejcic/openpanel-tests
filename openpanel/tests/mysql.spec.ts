@@ -256,10 +256,10 @@ test('revoke privileges', async ({ page }) => {
 test('database wizard', async ({ page }) => {
   await page.goto(`/mysql/wizard`);
   await expect(page).toHaveURL(/.*mysql\/wizard/);  
-  await page.getByRole('textbox', { name: 'Database Name' }).fill('proba');
-  await page.getByRole('textbox', { name: 'Database User' }).fill('novi_user');
-  await page.getByRole('textbox', { name: 'Password' }).fill('stefan456g7dsd');
-  await page.getByRole('button', { name: 'Create DB, User, and Grant' }).click();
+  await page.getByRole('textbox', { name: 'database_name' }).fill('proba');
+  await page.getByRole('textbox', { name: 'db_user User' }).fill('novi_user');
+  await page.getByRole('textbox', { name: 'password' }).fill('stefan456g7dsd');
+  await page.locator('#createAndAssign').click();
   await expect(page.getByText('Process completed!')).toBeVisible();
 
   await page.getByRole('link', { name: 'Back to Databases' }).click();
