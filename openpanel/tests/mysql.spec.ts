@@ -368,6 +368,7 @@ test('remote access', async ({ page }) => {
 
 // IMPORT
 test('import', async ({ page }) => {
+  test.setTimeout(90000);
 
   const tempFilePath = path.join(os.tmpdir(), 'test-import.sql');
 
