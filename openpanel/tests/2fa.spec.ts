@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import * as otplib from 'otplib';
+const { authenticator } = require('otplib');
 
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
