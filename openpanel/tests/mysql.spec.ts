@@ -184,26 +184,41 @@ test('grant CREATE ROUTE privilege', async ({ page }) => {
 
 
 test('grant NO privileges', async ({ page }) => {
-  await page.goto(`/mysql/users`);
-  await page.getByRole('link', { name: 'Assign User to Database' }).click();
+  await page.goto('/mysql/users');
+
+  await Promise.all([
+    page.waitForResponse(resp =>
+      resp.url().includes('/mysql/info') && resp.status() === 200
+    ),
+    page.getByRole('link', { name: 'Assign User to Database' }).click(),
+  ]);
+
   await expect(page).toHaveURL(/.*mysql\/assign/);
 
-  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
-
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
-  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
-  await page.waitForResponse(resp => resp.url().includes('/mysql/privileges/') && resp.status() === 200);
+  await Promise.all([
+    page.waitForResponse(resp =>
+      resp.url().includes('/mysql/privileges/') && resp.status() === 200
+    ),
+    page.locator('select[name="database_name"]').selectOption('stefan_baza'),
+  ]);
 
-  // REMOVE 'CREATE ROUTE' - expect error!
   await page.getByRole('link', { name: 'Back to Databases' }).click();
   await expect(page).toHaveURL(/.*mysql/);
+
   await expect(page.locator('body')).toContainText(/stefan_user/i);
+
   await page.getByRole('link', { name: 'stefan_user' }).click();
+  
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).uncheck();
   await page.getByRole('checkbox', { name: 'CREATE ROUTINE' }).uncheck();
+
   await page.getByRole('button', { name: 'Make Changes' }).click();
-  await expect(page.locator('body')).toContainText(/at least one privilege must be selected/i);
+
+  await expect(page.locator('body')).toContainText(
+    /at least one privilege must be selected/i
+  );
 
   console.log('granting no privileges does show error');
 });
@@ -211,25 +226,37 @@ test('grant NO privileges', async ({ page }) => {
 
 
 test('grant ALL PRIVILEGES', async ({ page }) => {
-  await page.goto(`/mysql/users`);
-  await page.getByRole('link', { name: 'Assign User to Database' }).click();
+  await page.goto('/mysql/users');
+
+  await Promise.all([
+    page.waitForResponse(resp =>
+      resp.url().includes('/mysql/info') && resp.status() === 200
+    ),
+    page.getByRole('link', { name: 'Assign User to Database' }).click(),
+  ]);
+
   await expect(page).toHaveURL(/.*mysql\/assign/);
 
-  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
-
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
-  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
-  await page.waitForResponse(resp => resp.url().includes('/mysql/privileges/') && resp.status() === 200);
+  await Promise.all([
+    page.waitForResponse(resp =>
+      resp.url().includes('/mysql/privileges/') && resp.status() === 200
+    ),
+    page.locator('select[name="database_name"]').selectOption('stefan_baza'),
+  ]);
 
-  // GRANT 'ALL PRIVILEGES'
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).check();
   await page.getByRole('checkbox', { name: 'ALL PRIVILEGES' }).check();
-  await page.getByRole('button', { name: 'Make Changes' }).click();
-  await expect(page.locator('body')).toContainText(/Privileges granted successfully for user\s+'.+?'\s+on database\s+'.+?'/i);
 
-  await page.goto(`/mysql/users`);
-  await expect(page.locator('#databases-table')).toContainText('stefan_user');
+  await page.getByRole('button', { name: 'Make Changes' }).click();
+
+  await expect(page.locator('body')).toContainText(
+    /Privileges granted successfully for user\s+'.+?'\s+on database\s+'.+?'/i
+  );
+
+  await page.goto('/mysql/users');
+  await expect(page.locator('#users-table')).toContainText('stefan_user');
 
   console.log('assign user to database is working');
 });
@@ -237,17 +264,26 @@ test('grant ALL PRIVILEGES', async ({ page }) => {
 
 
 test('revoke privileges', async ({ page }) => {
-  await page.goto(`/mysql/users`);
-  await page.getByRole('link', { name: 'Remove User from DB' }).click();
-  await expect(page).toHaveURL(/.*mysql\/remove/);
+  await page.goto('/mysql/users');
 
-  await page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200);
+  await Promise.all([
+    page.waitForResponse(resp =>
+      resp.url().includes('/mysql/info') && resp.status() === 200
+    ),
+    page.getByRole('link', { name: 'Remove User from DB' }).click(),
+  ]);
+
+  await expect(page).toHaveURL(/.*mysql\/remove/);
 
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
   await page.getByRole('button', { name: 'Remove User from Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully revoked all privileges for user/i);
+
+  await expect(page.locator('body')).toContainText(
+    /successfully revoked all privileges for user/i
+  );
+
   await expect(page.locator('#databases-table')).not.toContainText('stefan_user');
 });
 
