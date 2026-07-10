@@ -25,7 +25,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 
 # read admin logins
-ENV_FILE="../openadmin/.env"
+ENV_FILE="$SCRIPT_DIR../openadmin/.env"
 
 if [ -f "$ENV_FILE" ]; then
     set -a
