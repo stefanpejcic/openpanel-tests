@@ -59,6 +59,7 @@ declare -A OS_MAP=(
 
 declare -A TEST_RESULTS
 declare -A TEST_TIMESTAMPS
+declare -A TEST_INSTALL_TIME
 
 #############################################################
 # LOGGING SETUP
@@ -101,6 +102,21 @@ send_discord() {
   local resp
   resp=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"content\": \"$1\"}" "$DISCORD_WEBHOOK")
   log "DISCORD: sent (http $resp): $1"
+}
+
+# format_duration <seconds> -- prints "1h2m3s" / "2m3s" / "3s" depending on magnitude
+format_duration() {
+  local total_seconds="$1"
+  local h=$((total_seconds / 3600))
+  local m=$(((total_seconds % 3600) / 60))
+  local s=$((total_seconds % 60))
+  if [[ $h -gt 0 ]]; then
+    printf '%dh%dm%ds' "$h" "$m" "$s"
+  elif [[ $m -gt 0 ]]; then
+    printf '%dm%ds' "$m" "$s"
+  else
+    printf '%ds' "$s"
+  fi
 }
 
 reinstall_os() {
@@ -166,7 +182,11 @@ print(base64.b64decode(d['content']).decode('utf-8'), end='')
 
   local results_json="{"
   for os in "${!TEST_RESULTS[@]}"; do
-    results_json+="\"$os\": {\"status\": \"${TEST_RESULTS[$os]}\", \"ts\": \"${TEST_TIMESTAMPS[$os]}\"},"
+    local install_time_json="null"
+    if [[ "${TEST_RESULTS[$os]}" == "pass" && -n "${TEST_INSTALL_TIME[$os]:-}" ]]; then
+      install_time_json="\"${TEST_INSTALL_TIME[$os]}\""
+    fi
+    results_json+="\"$os\": {\"status\": \"${TEST_RESULTS[$os]}\", \"ts\": \"${TEST_TIMESTAMPS[$os]}\", \"install_time\": $install_time_json},"
   done
   results_json="${results_json%,}}"
 
@@ -205,6 +225,8 @@ def update_row(line):
     badge = '✅ Pass' if data['status'] == 'pass' else '❌ Fail'
     cells[2] = data['ts']
     cells[3] = badge
+    if data.get('install_time'):
+        cells[4] = data['install_time']
     return '| ' + ' | '.join(cells) + ' |'
 
 def replace_section(m):
@@ -398,7 +420,15 @@ run_test_cycle() {
   reinstall_os "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
   sleep 60
   wait_for_ssh "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
+
+  local install_start install_end
+  install_start=$(date +%s)
   install_openpanel "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
+  install_end=$(date +%s)
+  TEST_INSTALL_TIME["$os"]=$(format_duration $((install_end - install_start)))
+  os_log "$os" "Install time: ${TEST_INSTALL_TIME[$os]}"
+  send_discord "⏱️ [$os] Install time: ${TEST_INSTALL_TIME[$os]}"
+
   run_openadmin_playwright_tests "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
 
   TEST_RESULTS["$os"]="pass"
@@ -418,6 +448,8 @@ else
   OS_LIST=("${!OS_MAP[@]}")
 fi
 
+SUITE_START_TS=$(date +%s)
+
 log "========================================="
 log "VPS OS TEST SUITE STARTED"
 log "Testing ${#OS_LIST[@]} operating systems"
@@ -436,11 +468,22 @@ for os in "${OS_LIST[@]}"; do
 done
 
 log "========================================="
+
+TOTAL_DURATION=$(format_duration $(( $(date +%s) - SUITE_START_TS )))
+
+log "Install times per OS:"
+for os in "${OS_LIST[@]}"; do
+  if [[ -n "${TEST_INSTALL_TIME[$os]:-}" ]]; then
+    log "  [$os] ${TEST_INSTALL_TIME[$os]}"
+  fi
+done
+log "Total suite runtime: $TOTAL_DURATION"
+
 if [[ ${#FAILED[@]} -gt 0 ]]; then
   log "COMPLETED WITH FAILURES: ${FAILED[*]}"
-  send_discord "Test suite done — failures: ${FAILED[*]} (logs: $RUN_DIR)"
+  send_discord "Test suite done in $TOTAL_DURATION — failures: ${FAILED[*]} (logs: $RUN_DIR)"
 else
   log "ALL TESTS COMPLETED SUCCESSFULLY"
-  send_discord "All OS tests passed (logs: $RUN_DIR)"
+  send_discord "All OS tests passed in $TOTAL_DURATION (logs: $RUN_DIR)"
 fi
 log "========================================="
