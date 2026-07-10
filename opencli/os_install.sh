@@ -290,7 +290,7 @@ install_openpanel() {
       return 1
     fi
 
-    os_log "$os" "SSH connection dropped — likely reboot triggered. Waiting 90s before retrying..."
+    os_log "$os" "SSH connection dropped — likely reboot triggered. Waiting 60s before retrying..."
     send_discord "[$os] Reboot detected during install, waiting for SSH to come back..."
     sleep 60
 
