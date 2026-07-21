@@ -25,12 +25,11 @@ sed -i "s/^enabled_modules=.*/enabled_modules=$(paste -sd, /etc/openpanel/openpa
 opencli config update password_reset yes
 
 
-
 # ENABLE USER PANEL
 if podman container exists openpanel; then
-  podman start openpanel >/dev/null 2>&1 || cd /root && flock /run/lock/openpanel-compose.lock podman-compose up -d --force-recreate openpanel
+  podman start openpanel >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate openpanel
 else
-  cd /root && flock /run/lock/openpanel-compose.lock podman-compose up -d openpanel
+  cd /root && podman-compose up -d openpanel
 fi
 
 # ADD LICENSE LICENSE
