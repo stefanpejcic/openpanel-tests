@@ -21,12 +21,6 @@ done
 # ENABLE ALL MODULES
 sed -i "s/^enabled_modules=.*/enabled_modules=$(paste -sd, /etc/openpanel/openpanel/features/default.txt)/" /etc/openpanel/openpanel/conf/openpanel.config
 
-# INSTALL ALL LOCALES
-opencli locale $(curl -s "https://api.github.com/repos/stefanpejcic/openpanel-translations/contents" | jq -r '.[] | select(.type=="dir") | .name' | tr '\n' ' ')
-
-# ADD LICENSE LICENSE
-opencli license $LICENSE_KEY
-
 # ALLOW PASSWORD RESET
 opencli config update password_reset yes
 
@@ -39,6 +33,13 @@ if podman container exists openpanel; then
 else
   cd /root && flock /run/lock/openpanel-compose.lock podman-compose up -d openpanel
 fi
+
+
+# INSTALL ALL LOCALES
+opencli locale $(curl -s "https://api.github.com/repos/stefanpejcic/openpanel-translations/contents" | jq -r '.[] | select(.type=="dir") | .name' | tr '\n' ' ')
+
+# ADD LICENSE LICENSE
+opencli license $LICENSE_KEY
 
 # DNS
 cd /root && podman-compose up -d bind9
