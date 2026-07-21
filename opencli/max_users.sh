@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # NOTE
-# By default mysql/mariadb and apache/nginx/openlitespeed are started for users: https://github.com/stefanpejcic/openpanel-configuration/blob/main/docker/compose/1.0/autostart.services
-# but for this test we also enable other services per user to stimulate real usage:
+# https://github.com/stefanpejcic/openpanel-configuration/blob/main/docker/compose/1.0/autostart.services
+# for this test we enable services per user to stimulate real usage:
 # default php version, cron, memcached
 FILE=/etc/openpanel/docker/compose/1.0/autostart.services
 ENV=/etc/openpanel/docker/compose/1.0/.env
