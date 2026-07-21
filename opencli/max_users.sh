@@ -7,7 +7,7 @@ PLAN="Developer plus"
 MIN_DISK_MB=1024   # stop when < 1GB free on /
 MIN_RAM_MB=100     # stop when < 100MB free RAM
 
-rand_user() { echo "test_$(tr -dc 'a-z0-9' </dev/urandom | head -c8)"; }
+rand_user() { echo "test$(tr -dc 'a-z0-9' </dev/urandom | head -c8)"; }
 
 disk_free_mb() { df -BM --output=avail / | awk 'NR==2{gsub("M","");print $1}'; }
 ram_free_mb() { free -m | awk '/^Mem:/{print $7}'; }   # $7 = available
