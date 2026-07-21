@@ -41,8 +41,6 @@ opencli email-server install
 # INSTALL ALL LOCALES
 opencli locale $(curl -s "https://api.github.com/repos/stefanpejcic/openpanel-translations/contents" | jq -r '.[] | select(.type=="dir") | .name' | tr '\n' ' ')
 
-
-
 # DNS
 cd /root && podman-compose up -d bind9
 
