@@ -24,8 +24,7 @@ sed -i "s/^enabled_modules=.*/enabled_modules=$(paste -sd, /etc/openpanel/openpa
 # ALLOW PASSWORD RESET
 opencli config update password_reset yes
 
-# ENABLE EMAILS
-opencli email-server install
+
 
 # ENABLE USER PANEL
 if podman container exists openpanel; then
@@ -34,12 +33,16 @@ else
   cd /root && flock /run/lock/openpanel-compose.lock podman-compose up -d openpanel
 fi
 
+# ADD LICENSE LICENSE
+opencli license $LICENSE_KEY
+
+# ENABLE EMAILS
+opencli email-server install
 
 # INSTALL ALL LOCALES
 opencli locale $(curl -s "https://api.github.com/repos/stefanpejcic/openpanel-translations/contents" | jq -r '.[] | select(.type=="dir") | .name' | tr '\n' ' ')
 
-# ADD LICENSE LICENSE
-opencli license $LICENSE_KEY
+
 
 # DNS
 cd /root && podman-compose up -d bind9
