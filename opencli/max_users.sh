@@ -20,8 +20,11 @@ echo
 
 
 # defaults
+LICENSE_KEY="enterprise-2a5da40ecd2f60" # ip restricted!
+opencli config update key $LICENSE_KEY
+
 PANEL_PASSWORD="testingpassword"
-PLAN="Developer plus"
+PLAN="Standard plan"
 # stop thresholds
 MIN_DISK_MB=1024   # stop when < 1GB free on /
 MIN_RAM_MB=512     # stop when < 512MB available RAM
@@ -38,6 +41,8 @@ CREATED=()
 START=$(date +%s)
 i=0
 
+cd /home
+
 while :; do
     DF=$(disk_free_mb); RF=$(ram_free_mb)
     if (( DF < MIN_DISK_MB )); then echo ">>> STOP: disk ${DF}MB < ${MIN_DISK_MB}MB"; break; fi
@@ -48,7 +53,7 @@ while :; do
     while opencli user-list 2>/dev/null | grep -qw "$U"; do U=$(rand_user); done
 
     T0=$(date +%s)
-    opencli user-add "$U" "$PANEL_PASSWORD" "$U@test.com" "$PLAN" >/tmp/ua.log 2>&1
+    opencli user-add "$U" "$PANEL_PASSWORD" "$U@test.com" "$PLAN" --debug >/tmp/ua.log 2>&1
     T1=$(date +%s)
     DUR=$((T1-T0))
 
@@ -61,9 +66,14 @@ while :; do
             (( running > 0 )) && sleep 2 && break
             sleep 1
         done
-        # wait for load to drop below a threshold
-        while (( $(awk '{print int($1)}' /proc/loadavg) > $(nproc) )); do sleep 2; done
-        echo "[$i] created $U in ${DUR}s | disk_free=${DF}MB ram_free=${RF}MB load=$(cut -d' ' -f1 /proc/loadavg)"
+        # wait for load to fall below 2x nproc; check every 30s, give up after 5min
+        THRESH=$(( $(nproc) * 2 ))
+        waited=0
+        while (( $(awk '{print int($1)}' /proc/loadavg) > THRESH )); do
+            (( waited >= 300 )) && { echo "  load high (>${THRESH}) after 5min, continuing anyway"; break; }
+            sleep 30
+            waited=$((waited+30))
+        done
     fi
 done
 
