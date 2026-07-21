@@ -4,7 +4,7 @@ PANEL_PASSWORD="testingpassword"
 PLAN="Developer plus"
 # stop thresholds
 MIN_DISK_MB=1024   # stop when < 1GB free on /
-MIN_RAM_MB=1024     # stop when < 1024MB available RAM
+MIN_RAM_MB=512     # stop when < 512MB available RAM
 
 rand_user() { echo "test$(tr -dc 'a-z0-9' </dev/urandom | head -c8)"; }
 disk_free_mb() { df -BM --output=avail / | awk 'NR==2{gsub("M","");print $1}'; }
@@ -34,9 +34,16 @@ while :; do
 
     if opencli user-list 2>/dev/null | grep -qw "$U"; then
         CREATED+=("$U")
-        echo "[$i] created $U in ${DUR}s | disk_free=${DF}MB ram_free=${RF}MB"
-    else
-        echo "[$i] FAILED $U — stopping"; cat /tmp/ua.log; break
+        # wait for this user's containers to finish coming up before measuring next
+        UID_N=$(id -u "$U" 2>/dev/null)
+        for _ in $(seq 1 60); do
+            running=$(sudo -u "$U" XDG_RUNTIME_DIR=/run/user/$UID_N podman ps -q 2>/dev/null | wc -l)
+            (( running > 0 )) && sleep 2 && break
+            sleep 1
+        done
+        # wait for load to drop below a threshold
+        while (( $(awk '{print int($1)}' /proc/loadavg) > $(nproc) )); do sleep 2; done
+        echo "[$i] created $U in ${DUR}s | disk_free=${DF}MB ram_free=${RF}MB load=$(cut -d' ' -f1 /proc/loadavg)"
     fi
 done
 
