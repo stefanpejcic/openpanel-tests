@@ -33,6 +33,9 @@ opencli config update password_reset yes
 # ENABLE EMAILS
 opencli email-server install
 
+# ENABLE USER PANEL
+cd /root && podman-compose up -d openpanel
+
 # DNS
 cd /root && podman-compose up -d bind9
 
