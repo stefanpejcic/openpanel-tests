@@ -1,4 +1,24 @@
 #!/bin/bash
+
+# NOTE
+# By default mysql/mariadb and apache/nginx/openlitespeed are started for users: https://github.com/stefanpejcic/openpanel-configuration/blob/main/docker/compose/1.0/autostart.services
+# but for this test we also enable other services per user to stimulate real usage:
+# default php version, cron, memcached
+FILE=/etc/openpanel/docker/compose/1.0/autostart.services
+ENV=/etc/openpanel/docker/compose/1.0/.env
+PHPV=$(grep -E '^DEFAULT_PHP_VERSION=' "$ENV" | cut -d= -f2- | tr -d '\r"'"'")
+PHP_SVC="php-fpm-${PHPV}"
+
+sed -i '/^varnish$/d' "$FILE"
+grep -qxF "$PHP_SVC"  "$FILE" || echo "$PHP_SVC"  >> "$FILE"
+grep -qxF 'cron'      "$FILE" || echo 'cron'      >> "$FILE"
+grep -qxF 'memcached' "$FILE" || echo 'memcached' >> "$FILE"
+
+echo "Services that will auto-start per user:"
+cat "$FILE"
+echo
+
+
 # defaults
 PANEL_PASSWORD="testingpassword"
 PLAN="Developer plus"
@@ -10,7 +30,7 @@ rand_user() { echo "test$(tr -dc 'a-z0-9' </dev/urandom | head -c8)"; }
 disk_free_mb() { df -BM --output=avail / | awk 'NR==2{gsub("M","");print $1}'; }
 ram_free_mb()  { free -m | awk '/^Mem:/{print $7}'; }   # $7 = available
 
-echo "=== START ==="
+echo "=== START CREATING USERS ==="
 START_DISK=$(disk_free_mb)
 echo "disk_free_mb=$START_DISK ram_free_mb=$(ram_free_mb)"
 
