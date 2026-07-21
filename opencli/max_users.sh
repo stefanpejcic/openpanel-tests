@@ -4,7 +4,7 @@ PANEL_PASSWORD="testingpassword"
 PLAN="Developer plus"
 # stop thresholds
 MIN_DISK_MB=1024   # stop when < 1GB free on /
-MIN_RAM_MB=100     # stop when < 100MB available RAM
+MIN_RAM_MB=1024     # stop when < 1024MB available RAM
 
 rand_user() { echo "test$(tr -dc 'a-z0-9' </dev/urandom | head -c8)"; }
 disk_free_mb() { df -BM --output=avail / | awk 'NR==2{gsub("M","");print $1}'; }
