@@ -2,18 +2,17 @@
 # defaults
 PANEL_PASSWORD="testingpassword"
 PLAN="Developer plus"
-
 # stop thresholds
 MIN_DISK_MB=1024   # stop when < 1GB free on /
-MIN_RAM_MB=100     # stop when < 100MB free RAM
+MIN_RAM_MB=100     # stop when < 100MB available RAM
 
 rand_user() { echo "test$(tr -dc 'a-z0-9' </dev/urandom | head -c8)"; }
-
 disk_free_mb() { df -BM --output=avail / | awk 'NR==2{gsub("M","");print $1}'; }
-ram_free_mb() { free -m | awk '/^Mem:/{print $7}'; }   # $7 = available
+ram_free_mb()  { free -m | awk '/^Mem:/{print $7}'; }   # $7 = available
 
 echo "=== START ==="
-echo "disk_free_mb=$(disk_free_mb) ram_free_mb=$(ram_free_mb)"
+START_DISK=$(disk_free_mb)
+echo "disk_free_mb=$START_DISK ram_free_mb=$(ram_free_mb)"
 
 CREATED=()
 START=$(date +%s)
@@ -28,20 +27,32 @@ while :; do
     U=$(rand_user)
     while opencli user-list 2>/dev/null | grep -qw "$U"; do U=$(rand_user); done
 
-    if opencli user-add "$U" "$PANEL_PASSWORD" "$U@test.com" "$PLAN" >/dev/null 2>&1; then
+    T0=$(date +%s)
+    opencli user-add "$U" "$PANEL_PASSWORD" "$U@test.com" "$PLAN" >/tmp/ua.log 2>&1
+    T1=$(date +%s)
+    DUR=$((T1-T0))
+
+    if opencli user-list 2>/dev/null | grep -qw "$U"; then
         CREATED+=("$U")
-        echo "[$i] created $U | disk_free=${DF}MB ram_free=${RF}MB"
+        echo "[$i] created $U in ${DUR}s | disk_free=${DF}MB ram_free=${RF}MB"
     else
-        echo "[$i] FAILED $U — stopping"; break
+        echo "[$i] FAILED $U — stopping"; cat /tmp/ua.log; break
     fi
 done
 
 END=$(date +%s)
 N=${#CREATED[@]}
+END_DISK=$(disk_free_mb)
+USED=$(( START_DISK - END_DISK ))
+TOTAL=$((END-START))
+
 echo "=== DONE ==="
-echo "users_created=$N  time=$((END-START))s"
-echo "disk_free_mb=$(disk_free_mb) ram_free_mb=$(ram_free_mb)"
-(( N > 0 )) && echo "avg_disk_per_user_mb=$(( ( $(disk_free_mb) ) ))" # see note
+echo "users_created=$N  total_time=${TOTAL}s"
+echo "disk_free_mb=$END_DISK ram_free_mb=$(ram_free_mb)"
+if (( N > 0 )); then
+    echo "total_disk_used_mb=$USED avg_disk_per_user_mb=$(( USED / N ))"
+    echo "avg_time_per_user=$(( TOTAL / N ))s"
+fi
 
 printf '%s\n' "${CREATED[@]}" > /root/created_test_users.txt
 echo "saved list -> /root/created_test_users.txt"
