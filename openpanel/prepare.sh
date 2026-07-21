@@ -34,13 +34,13 @@ opencli config update password_reset yes
 opencli email-server install
 
 # DNS
-cd /root && docker compose up -d bind9
+cd /root && podman-compose up -d bind9
 
 # ENABLE FTP
-cd /root && docker --context=default compose up -d openadmin_ftp
+cd /root && podman-compose up -d openadmin_ftp
 
 # RESTART USER-PANEL TO APPLY ALL CHANGES!
-docker --context=default restart openpanel
+podman restart openpanel
 
 # CREATE USER FOR TESTS
 opencli user-add "$PANEL_USERNAME" "$PANEL_PASSWORD" "$PANEL_EMAIL" 'Developer plus'
