@@ -34,7 +34,11 @@ opencli config update password_reset yes
 opencli email-server install
 
 # ENABLE USER PANEL
-cd /root && podman-compose up -d openpanel
+if podman container exists openpanel; then
+  podman start openpanel >/dev/null 2>&1 || cd /root && flock /run/lock/openpanel-compose.lock podman-compose up -d --force-recreate openpanel
+else
+  cd /root && flock /run/lock/openpanel-compose.lock podman-compose up -d openpanel
+fi
 
 # DNS
 cd /root && podman-compose up -d bind9
