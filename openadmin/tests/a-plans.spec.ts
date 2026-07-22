@@ -62,13 +62,17 @@ async function fillPlanEditForm(page: any) {
 }
 
 async function verifyPlanRow(page: Page, planName: string) {
-  const row = page.getByRole('row').filter({ hasText: planName });
+  const row = page.locator('tr.user-row').filter({
+    has: page.locator('td', { hasText: new RegExp(`^\\s*${planName}\\s*$`) }),
+  });
   await expect(row).toHaveCount(1);
 
-  for (const value of Object.values(PLAN_DISPLAY)) {
-    await expect(row).toContainText(value);   // scoped to the row, not body
+  for (const [field, value] of Object.entries(PLAN_DISPLAY)) {
+    await test.step(`cell ${field} = ${value}`, async () => {
+      await expect(row.locator(`td[data-field="${field}"]`)).toHaveText(value);
+    });
   }
-  await expect(row).toContainText('mysql_only');
+  await expect(row.getByRole('link', { name: 'mysql_only' })).toBeVisible();
 }
 
 async function navigateToUserPackages(page: any) {
