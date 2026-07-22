@@ -59,7 +59,7 @@ test.describe('Python autoinstaller', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText(PYTHON_VERSION)).toBeVisible();
   
-    await row.getByRole('link', { name: 'Manage' }).click();
+    await row.getByRole('link', { name: 'Manage', exact: true }).click();
     await expect(page).toHaveURL(`/website?domain=${DOMAIN}`);
   });
 
