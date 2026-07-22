@@ -54,10 +54,13 @@ test.describe('Python autoinstaller', () => {
 
   test('3. verify app appears on /sites', async ({ page }) => {
     await page.goto('/sites');
-    const row = page.locator('tr', { hasText: DOMAIN });
+
+    const row = page.getByRole('row').filter({ hasText: DOMAIN });
     await expect(row).toBeVisible();
     await expect(row.getByText(PYTHON_VERSION)).toBeVisible();
-    await row.getByText(DOMAIN, { exact: true }).click();
+  
+    await row.getByRole('link', { name: 'Manage' }).click();
+    await expect(page).toHaveURL(`/website?domain=${DOMAIN}`);
   });
 
   test('4. verify app is responding', async ({ page }) => {
