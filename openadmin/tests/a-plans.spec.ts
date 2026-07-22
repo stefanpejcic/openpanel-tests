@@ -67,7 +67,8 @@ async function verifyPlanRow(page: Page, planName: string) {
   });
   await expect(row).toHaveCount(1);
 
-  for (const [field, value] of Object.entries(PLAN_DISPLAY)) {
+  const expected = { ...PLAN_DISPLAY, name: planName };  // name comes from the arg
+  for (const [field, value] of Object.entries(expected)) {
     await test.step(`cell ${field} = ${value}`, async () => {
       await expect(row.locator(`td[data-field="${field}"]`)).toHaveText(value);
     });
