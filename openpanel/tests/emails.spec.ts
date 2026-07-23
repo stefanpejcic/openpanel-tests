@@ -71,26 +71,6 @@ test('emails accounts page loads and shows table', async ({ page }) => {
   expect(hasTable || isEmpty).toBe(true);
 });
 
-test('emails accounts search filters rows', async ({ page }) => {
-  await page.goto('/emails');
-
-  const rows = page.locator('#email-accounts tbody tr[x-show]');
-  if (await rows.count() === 0) { test.skip(); return; }
-
-  const search = page
-    .getByRole('region', { name: 'Emails Header' })
-    .getByRole('searchbox', { name: 'Search' });
-
-  await search.fill('zzz_nomatch_xyz');
-  await expect(rows).toHaveCount(await rows.count()); // rows stay in DOM, x-show hides them
-  for (const row of await rows.all()) {
-    await expect(row).toBeHidden();
-  }
-
-  await search.fill('');
-  await expect(rows.first()).toBeVisible();
-});
-
 test('emails accounts new-email button links to /emails/new', async ({ page }) => {
   await page.goto('/emails');
   const newBtn = page.locator('a[href="/emails/new"]').first();
@@ -153,6 +133,28 @@ test('create emails and verify dashboard count', async ({ page }) => {
     await expect.poll(() => getEmailCount(page), { timeout: 10000 }).toBe(expected);
   }
 });
+
+
+test('emails accounts search filters rows', async ({ page }) => {
+  await page.goto('/emails');
+
+  const rows = page.locator('#email-accounts tbody tr[x-show]');
+  if (await rows.count() === 0) { test.skip(); return; }
+
+  const search = page
+    .getByRole('region', { name: 'Emails Header' })
+    .getByRole('searchbox', { name: 'Search' });
+
+  await search.fill('zzz_nomatch_xyz');
+  await expect(rows).toHaveCount(await rows.count()); // rows stay in DOM, x-show hides them
+  for (const row of await rows.all()) {
+    await expect(row).toBeHidden();
+  }
+
+  await search.fill('');
+  await expect(rows.first()).toBeVisible();
+});
+
 
 // ─── Edit / single account ───────────────────────────────────────────────────
 
