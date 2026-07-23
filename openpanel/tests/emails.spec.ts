@@ -842,7 +842,10 @@ test('default address — set and clear catch-all', async ({ page }) => {
     /*
      * On the HTML shown, clearing is done by saving an empty destination.
      */
-    await destinationInput.fill('');
+    await destinationInput.click();
+    await destinationInput.press('ControlOrMeta+A');
+    await destinationInput.press('Delete');
+    await expect(destinationInput).toHaveValue('');
     await saveButton.click();
   }
 
