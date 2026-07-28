@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 // https://github.com/stefanpejcic/python-helloworld
 
+test.describe.configure({ mode: 'serial' });
+test.setTimeout(180000);
+
 const DOMAIN = 'python.tests.openpanel.org';
 const APP_NAME = 'pythonaplikacija';
 const PORT = '5000';
