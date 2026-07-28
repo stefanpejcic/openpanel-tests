@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 // https://github.com/stefanpejcic/nodejs-helloworld
 
+test.describe.configure({ mode: 'serial' });
+test.setTimeout(180000);
+
 const DOMAIN = 'nodejs.tests.openpanel.org';
 const APP_NAME = 'nodeaplikacija';
 const PORT = '3000';
