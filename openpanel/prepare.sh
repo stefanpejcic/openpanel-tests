@@ -70,6 +70,8 @@ else
   cd /root && podman-compose up -d openadmin_ftp
 fi
 
+csf -r
+
 # RESTART USER-PANEL TO APPLY ALL CHANGES!
 podman restart openpanel
 
