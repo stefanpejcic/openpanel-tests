@@ -381,6 +381,8 @@ run_openadmin_playwright_tests() {
     sleep "$RETRY_INTERVAL"
   done
 
+  sleep 60 # TODO
+
   os_log "$os" "Running Playwright tests: aa-users.spec.ts 'create user' + 'test autologin'..."
 
   local pw_out
