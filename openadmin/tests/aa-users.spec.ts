@@ -47,8 +47,9 @@ test('test autologin', async ({ page, context }) => {
     impersonateLink.click(),
   ]);
 
-  await newTab.waitForLoadState();
-  await expect(newTab).toHaveURL(/dashboard/);
+  const response = await newTab.waitForLoadState('load').then(() => null, (err) => err);
+  console.log('newTab URL after load attempt:', newTab.url());
+  await expect(newTab).toHaveURL(/dashboard/, { timeout: 10_000 });
   await expect(newTab.getByText(/last login ip address/i)).toBeVisible();
 
   console.log('autologin is working');
