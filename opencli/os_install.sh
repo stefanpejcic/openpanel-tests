@@ -295,6 +295,8 @@ install_openpanel() {
 
   os_log "$os" "Starting OpenPanel installation on $ip (attempt $attempt/$max_attempts)..."
 
+  os_log "$os" "Using admin credentials: user=$TEST_ADMIN_USER pass=$TEST_ADMIN_PASS"
+
   local install_out
   install_out=$(yes | /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "bash <(/usr/bin/curl -sSL https://openpanel.org) --skip-firewall --skip-dns-server --skip-requirements --skip-panel-check --username=$TEST_ADMIN_USER --password=$TEST_ADMIN_PASS" 2>&1)
   local exit_code=$?
@@ -331,15 +333,7 @@ install_openpanel() {
 
   os_log "$os" "OpenPanel installation finished on $ip"
 
-  local docker_login_out
-  docker_login_out=$(/usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "/usr/bin/docker login --username openpanel --password $DOCKER_HUB_TOKEN" 2>&1)
-  local docker_login_rc=$?
-  {
-    echo "----- DOCKER LOGIN OUTPUT -----"
-    echo "$docker_login_out"
-    echo "----- DOCKER LOGIN EXIT CODE: $docker_login_rc -----"
-  } >> "$RUN_DIR/${os}.log"
-  os_log "$os" "docker login exit code: $docker_login_rc"
+  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "touch /etc/openpanel/openadmin/config/quick_start.dismissed" 2>&1
 
   return 0
 }
@@ -359,17 +353,17 @@ run_openadmin_playwright_tests() {
   local ADMIN_URL=""
 
   while true; do
-    status=$(/usr/bin/curl -k -s -o /dev/null -w "%{http_code}" "https://${ip}:2087/login")
-    if [[ "$status" != "000" ]]; then
-      ADMIN_URL="https://${ip}:2087"
-      os_log "$os" "OpenAdmin available over HTTPS: $ADMIN_URL (http $status)"
-      break
-    fi
-
     status=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" "http://${ip}:2087/login")
     if [[ "$status" != "000" ]]; then
       ADMIN_URL="http://${ip}:2087"
       os_log "$os" "OpenAdmin available over HTTP: $ADMIN_URL (http $status)"
+      break
+    fi
+
+    status=$(/usr/bin/curl -k -s -o /dev/null -w "%{http_code}" "https://${ip}:2087/login")
+    if [[ "$status" != "000" ]]; then
+      ADMIN_URL="https://${ip}:2087"
+      os_log "$os" "OpenAdmin available over HTTPS: $ADMIN_URL (http $status)"
       break
     fi
 
@@ -400,9 +394,11 @@ run_openadmin_playwright_tests() {
   os_log "$os" "Playwright exit code: $pw_rc"
 
   if [[ $pw_rc -ne 0 ]]; then
-    os_log "$os" "ERROR: Playwright openadmin tests failed on $ip"
-    send_discord "❌ [$os] Playwright openadmin tests (create user / autologin) failed on $ip"
-    return 1
+      os_log "$os" "ERROR: Playwright openadmin tests failed on $ip"
+      local pw_tail
+      pw_tail=$(echo "$pw_out" | tail -40)
+      send_discord "❌ [$os] Playwright tests failed on $ip:\n\`\`\`$(echo "$pw_tail" | sed 's/"/\\"/g' | sed "s/'/\\\\'/g" | head -c 1500)\`\`\`"
+      return 1
   fi
 
   os_log "$os" "SUCCESS: openadmin create-user + autologin tests passed on $ip"
