@@ -356,6 +356,7 @@ run_openadmin_playwright_tests() {
     status=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" "http://${ip}:2087/login")
     if [[ "$status" != "000" ]]; then
       ADMIN_URL="http://${ip}:2087"
+      PANEL_URL="http://${ip}:2083"
       os_log "$os" "OpenAdmin available over HTTP: $ADMIN_URL (http $status)"
       break
     fi
@@ -363,6 +364,7 @@ run_openadmin_playwright_tests() {
     status=$(/usr/bin/curl -k -s -o /dev/null -w "%{http_code}" "https://${ip}:2087/login")
     if [[ "$status" != "000" ]]; then
       ADMIN_URL="https://${ip}:2087"
+      PANEL_URL="https://${ip}:2083"
       os_log "$os" "OpenAdmin available over HTTPS: $ADMIN_URL (http $status)"
       break
     fi
@@ -401,7 +403,7 @@ run_openadmin_playwright_tests() {
       return 1
   fi
 
-  pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$ADMIN_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
+  pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$PANEL_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
     npx playwright test -c ../openpanel/playwright.config.ts --project=setup --project=tests ../openpanel/tests/dashboard.spec.ts --grep "access dashboard" --reporter=line 2>&1)
   pw_rc=$?
   {
