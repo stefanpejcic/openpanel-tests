@@ -133,21 +133,25 @@ test('wp-admin - install nexusslash theme', async ({ page }) => {
   await expect(nexusslashTheme).toBeVisible({ timeout: 60000 });
   await expect(nexusslashTheme.locator('.theme-name')).toHaveText(/NexusSlash/i);
 
-  const installButton = nexusslashTheme.locator('a.theme-install[data-slug="nexusslash"]');
+  const installButton = nexusslashTheme.locator(
+    'a.theme-install[data-slug="nexusslash"]'
+  );
 
   if (await installButton.count()) {
     console.log('Installing NexusSlash theme...');
 
-    await Promise.all([
-      page.waitForURL(/update\.php\?action=install-theme|theme-install\.php|themes\.php/, {
-        timeout: 60000,
-      }).catch(() => null),
-      installButton.click(),
-    ]);
+    await installButton.click();
 
-    await expect(page.locator('body')).toContainText(/installed successfully|activate|live preview|NexusSlash/i, {
-      timeout: 60000,
+    // Wait for the Install button to become Activate
+    const activateButton = nexusslashTheme.locator(
+      'a.activate, a.theme-activate, .button.activate'
+    );
+
+    await expect(activateButton).toBeVisible({
+      timeout: 20000,
     });
+
+    console.log('NexusSlash installation completed.');
   } else {
     console.log('NexusSlash theme may already be installed.');
   }
@@ -162,8 +166,6 @@ test('wp-admin - install nexusslash theme', async ({ page }) => {
 
   console.log('SUCCESS: NexusSlash found on Installed Themes page');
 });
-});
-
 
 
 test('wordpress security hardening page', async ({ page }) => {
