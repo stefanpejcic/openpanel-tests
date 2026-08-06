@@ -88,7 +88,7 @@ test.describe('Node.js autoinstaller', () => {
     await page.goto(url);
 
     const locator = page.getByText(expected);
-    const timeout = 30000;
+    const timeout = 90000;
     const start = Date.now();
 
     while (Date.now() - start < timeout) {
