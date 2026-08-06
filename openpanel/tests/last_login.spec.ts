@@ -8,7 +8,6 @@ function isIpBased(BASE_URL: string | undefined): boolean {
 }
 
 test('table, clipboard, activity link, search filter and dashboard IP', async ({ page, context, baseURL }) => {
-  test.skip(isIpBased(baseURL), 'clipboard access requires a domain-based (HTTPS) URL, not an IP');
 
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
