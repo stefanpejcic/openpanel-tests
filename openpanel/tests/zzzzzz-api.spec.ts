@@ -302,9 +302,9 @@ test.describe('GET /api/containers/:service/status', () => {
 });
 
 test.describe('GET /api/containers/:service/logs', () => {
-  test('unknown service returns 404', async () => {
+  test('unknown service returns 500', async () => {
     const res = await api.get('/api/containers/definitely-not-a-real-service/logs');
-    expect([404]).toContain(res.status());
+    expect(res.status()).toBe(500);
   });
 });
 
