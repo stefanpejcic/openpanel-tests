@@ -166,7 +166,7 @@ test('wp-admin - install nexusslash theme', async ({ page }) => {
 
   console.log('SUCCESS: NexusSlash found on Installed Themes page');
 });
-
+});
 
 test('wordpress security hardening page', async ({ page }) => {
   await page.goto(`/wordpress/secure/${domain}`);
