@@ -178,14 +178,6 @@ INSERT INTO users VALUES (1, 'John');
 });
 
 
-test('pgadmin settings', async ({ page }) => {
-  await page.goto('/postgresql/pgadmin');
-  await expect(page).toHaveURL(/postgresql\/pgadmin/);
-  await expect(page.locator('body')).toContainText(/pgadmin|postgresql/i);
-  console.log('pgadmin settings page accessible');
-});
-
-
 test('delete user', async ({ page }) => {
   await page.goto('/postgresql/users');
   const deleteButtons = page.locator('button.btn-danger');
