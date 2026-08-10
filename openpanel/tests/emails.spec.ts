@@ -305,7 +305,7 @@ test('webmail autologin and send/receive', async ({ page }) => {
   test.setTimeout(90_000);
 
   await page.goto('/emails');
-  const webmailBtn = page.locator('a[href*="/webmail/"]').first();
+  const webmailBtn = page.locator('table a[href*="/webmail/"]').first();
   const hasBtn = await webmailBtn.isVisible().catch(() => false);
   if (!hasBtn) { test.skip(); return; }
 
