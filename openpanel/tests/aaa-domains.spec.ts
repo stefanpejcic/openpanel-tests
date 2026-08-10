@@ -511,7 +511,7 @@ test('dynamic dns record', async ({ page, context }) => {
   await expect(updateUrlCode).toBeVisible();
   await expect(updateUrlCode).toContainText('/dynamic-dns/update?token=');
   // Save without changes (just confirm the form submits cleanly)
-  await editForm.locator('button[type="button"]', { hasText: 'Save' }).click();
+  await editForm.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('tbody tr', { hasText: subdomain })).toBeVisible();
 
 
