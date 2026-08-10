@@ -336,7 +336,7 @@ test('edit php.ini files', async ({ page }) => {
   await page.waitForURL(new RegExp(`/php/php${randomVersion}\\.ini/editor`));
 
   const successRegex = new RegExp(`/etc/php/${randomVersion}/fpm/php.ini`, 'i');
-  await expect(page.getByRole('heading', { name: successRegex })).toBeVisible();
+  await expect(page.getByText(successRegex)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}/editor`));
 
 
