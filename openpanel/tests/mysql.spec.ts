@@ -148,7 +148,7 @@ test('create user', async ({ page }) => {
 test('change password', async ({ page }) => {
   await page.goto(`/mysql/users`);
 
-  await page.getByRole('link', { name: ' Change Password' }).click();
+  await page.getByRole('link', { name: ' Change Password' }).click();
   await expect(page).toHaveURL(/.*mysql\/password/);  
   await page.locator('#generatePassword').click();
   await page.getByRole('button', { name: 'Change Password' }).click();
@@ -322,6 +322,78 @@ test('database wizard', async ({ page }) => {
   await expect(row).toContainText(/novi_user/i);
 
   console.log('mysql database wizard is working');
+});
+
+
+// remote access
+// NOTE: moved to run right after 'database wizard', while novi_user is still
+// freshly assigned to 'proba' with privileges. Running this test later (after
+// revoke/delete tests) caused it to fail because the user was no longer
+// assigned to a database by the time it executed.
+test('remote access', async ({ page }) => {
+  await page.goto('/mysql/remote-mysql');
+
+  const statusText = page.locator('dd p.text-lg.font-semibold');
+  await expect(statusText).toHaveText('Disabled');
+
+  const redBars = page.locator('dd .bg-red-500').first();
+  await expect(redBars).toBeVisible();
+
+  const localServerText = await page.locator('#local_server').textContent();
+  expect(localServerText?.toLowerCase()).toMatch(/mysql|mariadb/);
+
+  await expect(page.locator('#local_port')).toHaveText('3306');
+
+  const remoteServerText = await page.locator('#remote_server').textContent();
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  expect(remoteServerText?.trim()).toMatch(ipv4Regex);
+
+  const parts = remoteServerText!.trim().split('.').map(Number);
+  expect(parts[0]).not.toBe(127);
+  expect(parts[0]).not.toBe(10);
+  expect(!(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)).toBe(true);
+  expect(!(parts[0] === 192 && parts[1] === 168)).toBe(true);
+
+  const remotePortText = await page.locator('#remote_port').textContent();
+  const remotePortNum = parseInt(remotePortText ?? '0', 10);
+  expect(remotePortNum).toBeGreaterThanOrEqual(32768);
+  expect(remotePortNum).toBeLessThanOrEqual(65535);
+
+  // 1. ON
+  const enableBtn = page.locator('dd button', { hasText: 'Click to Enable' });
+  await enableBtn.click();
+  await expect(page.locator('text=Remote MySQL access is now enabled')).toBeVisible();
+  await expect(statusText).toHaveText('Enabled');
+  const greenBars = page.locator('dd .bg-emerald-500').first();
+  await expect(greenBars).toBeVisible();
+  console.log('remote access is enabled');
+
+  // 2. TEST
+  await page.waitForTimeout(10000); // allow container to restart
+  const response = await page.request.post('https://api.openpanel.com/remote-mysql/', {
+    form: {
+      host: remoteServerText?.trim(),
+      port: remotePortText?.trim(),
+      username: 'novi_user',
+      password: 'stefan456g7dsd',
+      database: 'proba',
+    }
+  });
+
+  const text = await response.text();
+  expect(text).toMatch(/Connection successful/i);
+  console.log('connectin established from a remote server');
+
+  // 3. OFF
+  await page.goto('/mysql/remote-mysql');
+  const disableBtn = page.locator('dd button', { hasText: 'Click to Disable' });
+  await disableBtn.click();
+  await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
+  await expect(statusText).toHaveText('Disabled');
+  await expect(redBars).toBeVisible();
+  console.log('remote access is disabled');
+    // Wait for MySQL container to finish restarting before next test
+  await page.waitForTimeout(10000);//TODO smisliti pametnije resenje
 });
 
 
@@ -535,73 +607,6 @@ test('export', async ({ page }) => {
   console.log('✓ export files found in /files:', sqlFile, gzFile);
 });
 
-// remote access 
-test('remote access', async ({ page }) => {
-  await page.goto('/mysql/remote-mysql');
-
-  const statusText = page.locator('dd p.text-lg.font-semibold');
-  await expect(statusText).toHaveText('Disabled');
-
-  const redBars = page.locator('dd .bg-red-500').first();
-  await expect(redBars).toBeVisible();
-
-  const localServerText = await page.locator('#local_server').textContent();
-  expect(localServerText?.toLowerCase()).toMatch(/mysql|mariadb/);
-
-  await expect(page.locator('#local_port')).toHaveText('3306');
-
-  const remoteServerText = await page.locator('#remote_server').textContent();
-  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-  expect(remoteServerText?.trim()).toMatch(ipv4Regex);
-
-  const parts = remoteServerText!.trim().split('.').map(Number);
-  expect(parts[0]).not.toBe(127);
-  expect(parts[0]).not.toBe(10);
-  expect(!(parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)).toBe(true);
-  expect(!(parts[0] === 192 && parts[1] === 168)).toBe(true);
-
-  const remotePortText = await page.locator('#remote_port').textContent();
-  const remotePortNum = parseInt(remotePortText ?? '0', 10);
-  expect(remotePortNum).toBeGreaterThanOrEqual(32768);
-  expect(remotePortNum).toBeLessThanOrEqual(65535);
-
-  // 1. ON
-  const enableBtn = page.locator('dd button', { hasText: 'Click to Enable' });
-  await enableBtn.click();
-  await expect(page.locator('text=Remote MySQL access is now enabled')).toBeVisible();
-  await expect(statusText).toHaveText('Enabled');
-  const greenBars = page.locator('dd .bg-emerald-500').first();
-  await expect(greenBars).toBeVisible();
-  console.log('remote access is enabled');
-
-  // 2. TEST
-  await page.waitForTimeout(10000); // allow container to restart
-  const response = await page.request.post('https://api.openpanel.com/remote-mysql/', {
-    form: {
-      host: remoteServerText?.trim(),
-      port: remotePortText?.trim(),
-      username: 'novi_user',
-      password: 'stefan456g7dsd',
-      database: 'proba',
-    }
-  });
-
-  const text = await response.text();
-  expect(text).toMatch(/Connection successful/i);
-  console.log('connectin established from a remote server');
-
-  // 3. OFF
-  await page.goto('/mysql/remote-mysql');
-  const disableBtn = page.locator('dd button', { hasText: 'Click to Disable' });
-  await disableBtn.click();
-  await expect(page.locator('text=Remote MySQL access is now disabled')).toBeVisible();
-  await expect(statusText).toHaveText('Disabled');
-  await expect(redBars).toBeVisible();
-  console.log('remote access is disabled');
-    // Wait for MySQL container to finish restarting before next test
-  await page.waitForTimeout(10000);//TODO smisliti pametnije resenje
-});
-
 
 test('delete user', async ({ page }) => {
   await page.goto(`/mysql/users`);
@@ -654,4 +659,3 @@ test('delete database', async ({ page }) => {
 
   console.log('database deleted + validated');
 });
-
