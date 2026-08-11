@@ -327,11 +327,6 @@ test('database wizard', async ({ page }) => {
 });
 
 
-// remote access
-// NOTE: moved to run right after 'database wizard', while novi_user is still
-// freshly assigned to 'proba' with privileges. Running this test later (after
-// revoke/delete tests) caused it to fail because the user was no longer
-// assigned to a database by the time it executed.
 test('remote access', async ({ page }) => {
   await page.goto('/mysql/remote-mysql');
 
