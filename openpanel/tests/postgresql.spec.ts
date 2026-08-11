@@ -31,7 +31,7 @@ test('create database', async ({ page }) => {
   await page.getByRole('link', { name: 'New Database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_psql');
   await page.getByRole('button', { name: 'Create Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 }) ;
+  await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 });
   await expectDatabaseInTable(page, 'stefan_psql');
   console.log('postgresql database created');
 });
