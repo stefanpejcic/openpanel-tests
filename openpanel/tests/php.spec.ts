@@ -337,7 +337,7 @@ test('edit php.ini files', async ({ page }) => {
 
   const successRegex = new RegExp(`/etc/php/${randomVersion}/fpm/php.ini`, 'i');
   await expect(page.getByText(successRegex)).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}/editor`));
+  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}\\.ini/editor`));
 
 
   const editorLocator = page.locator('.CodeMirror'); 
