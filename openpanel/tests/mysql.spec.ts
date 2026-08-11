@@ -210,6 +210,8 @@ test('grant NO privileges', async ({ page }) => {
   await expect(page.locator('body')).toContainText(/stefan_user/i);
 
   await page.getByRole('link', { name: 'stefan_user' }).click();
+
+  await expect(page.locator('select[name="db_user"]')).toHaveValue('stefan_user');
   
   const privilegeCheckboxes = page.locator('input[name="privileges"]');
 
