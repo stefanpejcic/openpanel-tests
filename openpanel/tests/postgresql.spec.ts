@@ -104,8 +104,7 @@ test('database wizard', async ({ page }) => {
   await page.locator('input[name="db_user"]').fill('psql_novi_user');
   await page.locator('#password').fill('stefan456g7dsd');
   await page.getByRole('button', { name: 'Create DB, User, and Grant Privileges' }).click();
-  await expect(page.getByText('Process completed!')).toBeVisible();
-  await page.getByRole('link', { name: 'Back to Databases' }).click();
+  await expect(page.getByText('Successfully created database')).toBeVisible();
   await expect(page).toHaveURL(/postgresql/);
   const row = page.locator('#databases-table tr', { hasText: 'psql_proba' });
   await expect(row).toContainText(/psql_proba/i);
