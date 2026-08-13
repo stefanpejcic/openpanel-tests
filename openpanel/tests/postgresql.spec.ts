@@ -169,7 +169,10 @@ INSERT INTO users VALUES (1, 'John');
 
   await page.goto('/postgresql/import/stefan_psql');
   await expect(page).toHaveURL(/postgresql\/import\/stefan_psql/);
-  await page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200);
+  const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
+      page.getByRole('link', { name: 'Import' }).click(),
+    ]);
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
   await page.getByRole('button', { name: 'Upload & Import' }).click();
