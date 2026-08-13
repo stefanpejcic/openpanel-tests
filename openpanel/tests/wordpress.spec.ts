@@ -199,10 +199,11 @@ test('wp-cli check update preferences check', async ({ page }) => {
 });
 
 
-test('wordpress backup', async ({ page }) => {
+test('test wordpress backup', async ({ page }) => {
   test.setTimeout(3 * 60 * 1000);
-  await page.goto(`/wordpress/backup/run/${domain}`);
+  await page.goto(`/wordpress/backup/run/${domain}?docroot=/var/www/html/wp.tests.openpanel.org&backup_database=true&backup_files=true`);
   await expect(page.locator('body')).toContainText(/backup.*complete|successfully.*backup|done/i, { timeout: 2 * 60 * 1000 });
+  //todo: check in files
   console.log('wordpress backup completed');
 });
 
