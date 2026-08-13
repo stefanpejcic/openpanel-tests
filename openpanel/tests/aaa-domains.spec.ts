@@ -291,7 +291,7 @@ test('add dns record', async ({ page }) => {
   await expect(newRow.locator('td').nth(3)).toContainText(recordValue);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -322,7 +322,7 @@ test('edit dns record', async ({ page }) => {
   await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(1);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -352,7 +352,7 @@ test('delete dns record', async ({ page }) => {
   await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(0);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -401,7 +401,7 @@ test('edit zone file', async ({ page }) => {
   await expect(newRow.locator('td').nth(3)).toContainText(`added via zone editor`);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -442,7 +442,7 @@ test('reset dns zone', async ({ page }) => {
   const successMsg = page.getByText('DNS zone restarted successfully.');
   await expect(successMsg).toBeVisible();
   await expect(newRow).not.toBeVisible();
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -517,7 +517,7 @@ test('dynamic dns record', async ({ page, context }) => {
 
   // 7. validate publicly using dig (optional, only if IP resolved)
   if (updatedIp) {
-    await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10`);
+    await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
     const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
     await expect(resultsArea).toBeVisible({ timeout: 10000 });
     await page.waitForFunction(
