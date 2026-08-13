@@ -90,7 +90,11 @@ test('website builder site appears in sites list', async ({ page }) => {
 
 test('website builder edit page loads', async ({ page }) => {
   await page.goto('/website-builder/edit?domain=website-builder.tests.openpanel.org');
-  await expect(page.locator('body')).toContainText(/edit|builder|domain|grapejs/i, { timeout: 15000 });
+
+  await expect(page).toHaveURL(/website-builder\/edit\?domain=website-builder\.tests\.openpanel\.org/);
+  await expect(page.locator('.gjs-cv-canvas iframe')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.gjs-pn-panels')).toBeVisible();
+
   console.log('website builder edit page accessible');
 });
 
