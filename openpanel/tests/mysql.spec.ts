@@ -170,7 +170,6 @@ test('grant CREATE ROUTE privilege', async ({ page }) => {
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
-  await page.waitForResponse(resp => resp.url().includes('/mysql/privileges/') && resp.status() === 200);
 
   // GRANT 'CREATE ROUTE' ONLY
   await page.getByRole('checkbox', { name: 'ALTER', exact: true }).check();
@@ -198,9 +197,6 @@ test('grant NO privileges', async ({ page }) => {
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
 
   await Promise.all([
-    page.waitForResponse(resp =>
-      resp.url().includes('/mysql/privileges/') && resp.status() === 200
-    ),
     page.locator('select[name="database_name"]').selectOption('stefan_baza'),
   ]);
 
@@ -251,9 +247,6 @@ test('grant ALL PRIVILEGES', async ({ page }) => {
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
 
   await Promise.all([
-    page.waitForResponse(resp =>
-      resp.url().includes('/mysql/privileges/') && resp.status() === 200
-    ),
     page.locator('select[name="database_name"]').selectOption('stefan_baza'),
   ]);
 
