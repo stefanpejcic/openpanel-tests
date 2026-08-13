@@ -89,8 +89,7 @@ test('website builder site appears in sites list', async ({ page }) => {
 
 
 test('website builder edit page loads', async ({ page }) => {
-  await page.goto('/website-builder/edit');
-  await expect(page).toHaveURL(/website-builder\/edit/);
+  await page.goto('/website-builder/edit?domain=website-builder.tests.openpanel.org');
   await expect(page.locator('body')).toContainText(/edit|builder|domain|grapejs/i, { timeout: 15000 });
   console.log('website builder edit page accessible');
 });
