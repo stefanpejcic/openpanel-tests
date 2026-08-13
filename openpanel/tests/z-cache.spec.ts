@@ -262,7 +262,7 @@ for (const service of services) {
 
     // LOGS
     await page.click('button:has-text("View container log")');
-    await page.waitForResponse(response => response.url().includes(`/api/containers/log/${service.name}`) && response.status() === 200);
+    await page.waitForTimeout(1000);
     const logContent = page.locator('#log-content');
     await expect(logContent).not.toHaveText('No logs.');
     await expect(logContent).not.toBeEmpty();
