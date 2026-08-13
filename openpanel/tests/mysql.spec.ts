@@ -432,20 +432,20 @@ INSERT INTO users VALUES (1, 'John');
 
   fs.writeFileSync(tempFilePath, sqlContent);
 
-  await page.goto(`/mysql/import/stefan_baza`);
+  await page.goto(`/mysql/import/proba`);
   
   await expect(async () => {
     const options = await page.locator('select[name="database_name"] option').count();
     expect(options).toBeGreaterThan(1);
   }).toPass({ timeout: 5000 });
 
-  await expect(page).toHaveURL(/.*mysql\/import\/stefan_baza/);
+  await expect(page).toHaveURL(/.*mysql\/import\/proba/);
 
-  await page.locator('select[name="database_name"]').selectOption('stefan_baza');
+  await page.locator('select[name="database_name"]').selectOption('proba');
   await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
 
   await page.getByRole('button', { name: /Upload & Import/i }).click();
-  await expect(page.locator('body')).toContainText(/Successfully imported from test-import.sql file to database: stefan_baza/i);
+  await expect(page.locator('body')).toContainText(/Successfully imported from test-import.sql file to database: proba/i);
 
   await navigateToMySQLPage(page);
 
@@ -454,7 +454,7 @@ INSERT INTO users VALUES (1, 'John');
   await expect(page.locator('#size-column-header')).toBeVisible();
   await page.locator('#display-size').selectOption('mb');
   
-  const row = page.locator('#databases-table tr', { hasText: 'stefan_baza' });
+  const row = page.locator('#databases-table tr', { hasText: 'proba' });
   const sizeCell = row.locator('td.db_size_cell');
   const sizeText = await sizeCell.textContent();
   const sizeValue = Number(sizeText?.trim());
@@ -467,7 +467,7 @@ INSERT INTO users VALUES (1, 'John');
 test('export', async ({ page }) => {
   test.setTimeout(90000);
 
-  const dbName = 'stefan_baza';
+  const dbName = 'proba';
 
   await navigateToMySQLPage(page);
 
@@ -528,7 +528,7 @@ test('export', async ({ page }) => {
     exportBox.getByRole('button', { name: /^Export$/ }).click(),
   ]);
 
-  expect(download1.suggestedFilename()).toMatch(/stefan_baza.*\.sql$/);
+  expect(download1.suggestedFilename()).toMatch(/proba.*\.sql$/);
 
   // 2. .sql.gz to browser
   exportBox = await openExportDropdown();
@@ -541,7 +541,7 @@ test('export', async ({ page }) => {
     exportBox.getByRole('button', { name: /^Export$/ }).click(),
   ]);
 
-  expect(download2.suggestedFilename()).toMatch(/stefan_baza.*\.sql\.gz$/);
+  expect(download2.suggestedFilename()).toMatch(/proba.*\.sql\.gz$/);
 
   // 3. .sql to files
   exportBox = await openExportDropdown();
@@ -591,11 +591,11 @@ test('export', async ({ page }) => {
   const fileNames = filesData.files_info.map((f: any) => f.name);
 
   const sqlFile = fileNames.find((n: string) =>
-    n.match(/stefan_baza.*\.sql$/) && !n.endsWith('.gz')
+    n.match(/proba.*\.sql$/) && !n.endsWith('.gz')
   );
 
   const gzFile = fileNames.find((n: string) =>
-    n.match(/stefan_baza.*\.sql\.gz$/)
+    n.match(/proba.*\.sql\.gz$/)
   );
 
   expect(sqlFile).toBeTruthy();
