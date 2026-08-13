@@ -47,7 +47,7 @@ test('website builder', async ({ page }) => {
   await page.goto('/sites');
   const table = page.locator('tbody.divide-y.divide-gray-200.dark\\:divide-gray-800');
   await expect(table).toBeVisible();
-  await expect(page.locator('tr#site-row-website-builder.tests.openpanel.org')).toBeVisible();
+  await expect(page.locator('tr[id="site-row-website-builder.tests.openpanel.org"]')).toBeVisible();
   console.log('website install is working');
   await expect(page.locator('a[href="/website-builder/edit?domain=website-builder.tests.openpanel.org"]')).toBeVisible();
   console.log('website edit is working');
@@ -59,7 +59,7 @@ test('website builder', async ({ page }) => {
   await page.locator('button#confirm-delete-site').click();
   await expect(page.locator('text=Website deleted successfully!')).toBeVisible({ timeout: 30000 });
   await page.goto('/sites');
-  await expect(page.locator('tr#site-row-website-builder.tests.openpanel.org')).not.toBeVisible();
+  await expect(page.locator('tr[id="site-row-website-builder.tests.openpanel.org"]')).not.toBeVisible();
   console.log('website uninstall is working');
 
   // 5. install again and test detach
