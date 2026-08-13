@@ -435,14 +435,13 @@ INSERT INTO users VALUES (1, 'John');
   await page.goto(`/mysql/import/stefan_baza`);
   const [response] = await Promise.all([
     page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200),
-    page.getByRole('link', { name: 'Upload & Import' }).click(),
   ]);
   await expect(page).toHaveURL(/.*mysql\/import\/stefan_baza/);
 
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
   await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
 
-  await page.getByRole('button', { name: 'Upload & Import' }).click();
+  await page.getByRole('button', { name: /Upload & Import/i }).click();
   await expect(page.locator('body')).toContainText(/Successfully imported from test-import.sql file to database: stefan_baza/i);
 
   await navigateToMySQLPage(page);
