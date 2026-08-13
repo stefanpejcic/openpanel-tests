@@ -415,8 +415,9 @@ test('maintenance mode', async ({ page }) => {
 test('cache flush', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
-  await page.locator('button[click="flushCache"]').click();
-  const message = await page.getByText(/Cache flushed successfully/).innerText();
+  await page.getByRole('button', { name: 'Purge WP Cache' }).click();
+  await expect(page.getByText(/Cache flushed successfully/)).toBeVisible({ timeout: 10000 });
+
   console.log('flush wp cache is working');
 });
 
