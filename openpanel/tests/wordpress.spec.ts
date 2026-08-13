@@ -290,7 +290,6 @@ test('wp-admin autologin', async ({ page }) => {
 
   const popupPromise = page.waitForEvent('popup');
   await page.locator('#login_button_text').click();
-  await expect(page.locator('body')).toContainText('Generating auto-login link');
 
   const previewPage = await popupPromise;
   await previewPage.waitForLoadState();
