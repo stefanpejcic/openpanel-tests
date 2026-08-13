@@ -532,6 +532,7 @@ test('dynamic dns record', async ({ page, context }) => {
 
   
   // 8. delete the entry
+  await page.goto(`/domains/dynamic-dns`);
   const rowAfterEdit = page.locator('tbody tr', { hasText: subdomain });
   const deleteBtn = rowAfterEdit.locator('button[title="Delete"]');
   await deleteBtn.click();
