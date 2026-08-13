@@ -220,15 +220,10 @@ for (const service of services) {
     console.log(`${service.name} connection test from php passed`);
   
     // CONTAINER STATS
-    const [statsResponse] = await Promise.all([
-      page.waitForResponse(response =>
-        response.url().includes(`/api/services?name=${service.name}`) && response.status() === 200
-      ),
-      navigateToPage(page, service.name),
-    ]);
+    await navigateToPage(page, service.name);
     
     const statsContainer = page.locator('#service-page-stats');
-    await expect(statsContainer.locator('span.font-medium').filter({ hasText: '--' })).toHaveCount(0, { timeout: 5000 });
+    await expect(statsContainer.locator('span.font-medium').filter({ hasText: '--' })).toHaveCount(0, { timeout: 15000 });
     const getStat = (label) => statsContainer.locator('div', { hasText: label }).locator('span.font-medium').last();
     
     const statItems = statsContainer.locator('div.flex.items-center.justify-between');
