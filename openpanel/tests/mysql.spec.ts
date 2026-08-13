@@ -433,9 +433,13 @@ INSERT INTO users VALUES (1, 'John');
   fs.writeFileSync(tempFilePath, sqlContent);
 
   await page.goto(`/mysql/import/stefan_baza`);
-  const [response] = await Promise.all([
-    page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200),
+
+  await Promise.all([
+    page.waitForResponse(resp =>
+      resp.url().includes('/mysql/info') && resp.status() === 200
+    ),
   ]);
+
   await expect(page).toHaveURL(/.*mysql\/import\/stefan_baza/);
 
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
