@@ -275,7 +275,7 @@ test('live preview', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
   const popupPromise = page.waitForEvent('popup');
-  await page.locator('button[onclick="sendDataToPreview(event)"]').click();
+  await page.getByRole('link', { name: 'Live Preview' }).click();
 
   const previewPage = await popupPromise;
   await previewPage.waitForLoadState();
