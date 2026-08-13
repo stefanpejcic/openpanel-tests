@@ -67,8 +67,9 @@ test('website builder', async ({ page }) => {
   await page.locator('#domain_id').selectOption('website-builder.tests.openpanel.org');
   await page.locator('#installButton').click();
   await expect(page.locator('text=Website creation completed!')).toBeVisible({ timeout: 60000 });
-  await expect(page).toHaveURL(/\/website-builder\/edit\?domain=website-builder\.tests\.openpanel\.org\/.+/);
+  await expect(page).toHaveURL(url => url.pathname === '/website-builder/edit' && url.searchParams.get('domain') === domain);
 
+  
   await page.goto('/website?domain=website-builder.tests.openpanel.org');
   await page.locator('a#remove-tab').click();
   await page.locator('button#detach-site').click();
