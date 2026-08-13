@@ -435,7 +435,7 @@ INSERT INTO users VALUES (1, 'John');
   await page.goto(`/mysql/import/stefan_baza`);
   const [response] = await Promise.all([
     page.waitForResponse(resp => resp.url().includes('/mysql/info') && resp.status() === 200),
-    page.getByRole('link', { name: 'Import' }).click(),
+    page.getByRole('link', { name: 'Upload & Import' }).click(),
   ]);
   await expect(page).toHaveURL(/.*mysql\/import\/stefan_baza/);
 
