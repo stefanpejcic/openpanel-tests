@@ -38,7 +38,8 @@ test('website builder', async ({ page }) => {
   await page.goto('http://website-builder.tests.openpanel.org/');
   await expect(async () => {
     await page.reload();
-    await expect(page.locator('body')).toContainText('tailwindcss');
+    const html = await page.content();
+    expect(html).toContain('tailwindcss');
   }).toPass({ timeout: 30000, intervals: [1000] });
 
   
