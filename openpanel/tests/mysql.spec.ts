@@ -588,12 +588,12 @@ test('export', async ({ page }) => {
   expect(filesResponse).not.toBeNull();
 
   const filesData = await filesResponse!.json();
-  const fileNames = filesData.files_info.map((f: any) => f.name);
-
+  const fileNames = filesData.files_info.map((f: any) => f.Name);
+  
   const sqlFile = fileNames.find((n: string) =>
     n.match(/proba.*\.sql$/) && !n.endsWith('.gz')
   );
-
+  
   const gzFile = fileNames.find((n: string) =>
     n.match(/proba.*\.sql\.gz$/)
   );
