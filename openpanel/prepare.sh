@@ -57,6 +57,9 @@ opencli email-server install
 opencli locale $(curl -s "https://api.github.com/repos/stefanpejcic/openpanel-translations/contents" | jq -r '.[] | select(.type=="dir") | .name' | tr '\n' ' ')
 
 # DNS
+opencli config update ns1 ns1.openpanel.org
+opencli config update ns2 ns2.openpanel.org
+
 if podman container exists openpanel_dns; then
   podman start openpanel_dns >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate bind9
 else
