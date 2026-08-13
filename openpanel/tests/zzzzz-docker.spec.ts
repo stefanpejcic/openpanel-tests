@@ -354,7 +354,7 @@ test('logs page - ?container= param pre-selects and loads', async ({ page }) => 
 
 test('terminal page without container shows service picker', async ({ page }) => {
   await page.goto('/containers/terminal');
-  await expect(page.locator('h1')).toContainText('Docker Terminal');
+  await expect(page.locator('h1')).toContainText('Container Terminal');
   await expect(page.locator('select#service-select')).toBeVisible();
 });
 
@@ -369,7 +369,7 @@ test('terminal page - selecting service redirects', async ({ page }) => {
     const value = await options.first().getAttribute('value');
     await select.selectOption(value);
     await page.waitForURL(`**/containers/terminal/${value}`, { timeout: 5000 });
-    await expect(page.locator('h1')).toContainText('Docker Terminal');
+    await expect(page.locator('h1')).toContainText('Container Terminal');
     await expect(page.locator('#terminal')).toBeVisible();
     await expect(page.locator('select#shell')).toBeVisible();
   } else {
