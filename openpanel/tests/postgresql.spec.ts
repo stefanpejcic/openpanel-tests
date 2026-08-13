@@ -75,7 +75,10 @@ test('assign user to database', async ({ page }) => {
   await page.goto('/postgresql/users');
   await page.getByRole('link', { name: 'Assign User to Database' }).click();
   await expect(page).toHaveURL(/postgresql\/assign/);
-  await page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200);
+  const [response] = await Promise.all([
+    page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
+    page.getByRole('link', { name: 'Assign User to Database' }).click(),
+  ]);
   await page.locator('select[name="db_user"]').selectOption('stefan_psql_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.getByRole('button', { name: 'Assign' }).click();
@@ -88,13 +91,17 @@ test('revoke user from database', async ({ page }) => {
   await page.goto('/postgresql/users');
   await page.getByRole('link', { name: 'Remove User from DB' }).click();
   await expect(page).toHaveURL(/postgresql\/remove/);
-  await page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200);
+  const [response] = await Promise.all([
+    page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
+    page.getByRole('link', { name: 'Remove User from DB' }).click(),
+  ]);
   await page.locator('select[name="db_user"]').selectOption('stefan_psql_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.getByRole('button', { name: 'Remove User from Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully revoked|removed/i);
   console.log('postgresql user revoked from database');
 });
+
 
 
 test('database wizard', async ({ page }) => {
