@@ -380,7 +380,7 @@ test('terminal page - selecting service redirects', async ({ page }) => {
 test('terminal', async ({ page }) => {
   test.setTimeout(90_000);
 
-  await page.goto('/containers/terminal/php-fpm-8.0');
+  await page.goto('/containers/terminal/php-fpm-8.5');
   await page.locator('.xterm-rows > div').first().click();
   await page.locator('.xterm-rows > div').first().click({ button: 'right' });
   await page.getByRole('textbox', { name: 'Terminal input' }).fill('php -v');
@@ -393,7 +393,7 @@ test('terminal', async ({ page }) => {
 });
 
 test('terminal - reconnect button appears after disconnect', async ({ page }) => {
-  await page.goto('/containers/terminal/php-fpm-8.0');
+  await page.goto('/containers/terminal/php-fpm-8.5');
   await page.waitForTimeout(2000);
 
   // Status dot and text should be present
