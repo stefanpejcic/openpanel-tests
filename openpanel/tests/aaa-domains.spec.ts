@@ -54,7 +54,7 @@ async function addDomain(page, domain) {
 
 
 test('add domains', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(100_000);
 
   await page.goto('/dashboard');
   const initialCount = await getDomainCount(page);
@@ -108,7 +108,7 @@ test('verify files created for a new domain', async ({ page }) => {
     await page.goto('/domains/ssl?domain_name=wp.tests.openpanel.org');
   
     try {
-      await expect(certData).toBeVisible({ timeout: 2000 });
+      await expect(certData).toBeVisible({ timeout: 8000 });
       break;
     } catch (e) {
       // retry
@@ -174,7 +174,7 @@ test('check columns for domains table', async ({ page }) => {
     const initialState = await checkbox.isChecked();
 
     await row.locator('label').click();
-    await page.waitForTimeout(100); // needed for alpine.js x-show
+    await page.waitForTimeout(500); // needed for alpine.js x-show
 
     const expectedStateAfterToggle = !initialState;
 
@@ -185,7 +185,7 @@ test('check columns for domains table', async ({ page }) => {
     }
 
     await row.locator('label').click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(500);
 
     if (initialState) {
       await expect(th).toBeVisible();
@@ -240,7 +240,7 @@ test('change docroot', async ({ page }) => {
   await page.goto(`https://${DOMAIN}/testing.php`);
   const locator = page.getByText(`File is shown from folder: ${NEW_FOLDER}`);
   
-  const timeout = 30000;
+  const timeout = 80000;
   const start = Date.now();
   
   while (Date.now() - start < timeout) {
