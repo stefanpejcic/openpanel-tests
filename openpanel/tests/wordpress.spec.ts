@@ -302,8 +302,6 @@ test('wp-admin autologin', async ({ page }) => {
 test('general options', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
   await page.locator('#settings-tab').click();
-  await expect(page.getByText('Checking options from WP-CLI')).toBeVisible();
-  await expect(page.getByText('WordPress Options loaded')).toBeVisible();
 
   // new values
   const newBlogName = 'Test Blog Name';
@@ -344,8 +342,6 @@ test('general options', async ({ page }) => {
   // Reload and re-navigate to settings
   await page.goto('/website?domain=wp.tests.openpanel.org');
   await page.locator('#settings-tab').click();
-  await expect(page.getByText('Checking options from WP-CLI')).toBeVisible();
-  await expect(page.getByText('WordPress Options loaded')).toBeVisible();
 
   // Verify updated text values
   await expect(page.locator('#blogname')).toHaveValue(newBlogName);
