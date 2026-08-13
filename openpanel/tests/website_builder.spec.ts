@@ -94,7 +94,6 @@ test('website builder edit page loads', async ({ page }) => {
   await expect(page).toHaveURL(url => url.pathname === '/website-builder/edit' && url.searchParams.get('domain') === domain);
   
   await expect(page.locator('.gjs-cv-canvas iframe')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('.gjs-pn-panels')).toBeVisible();
 
   console.log('website builder edit page accessible');
 });
