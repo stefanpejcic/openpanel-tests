@@ -186,7 +186,9 @@ test('add new service - invalid name shows error', async ({ page }) => {
   await page.goto('/containers/new');
 
   await page.locator('input#image').fill('nginx:latest');
-  await page.locator('input#service_name').fill('ab'); // too short
+  const field = page.locator('input#service_name');
+  await field.clear();
+  await field.fill('ab'); //too short
   await page.locator('input#cpu').fill('0.5');
   await page.locator('input#ram').fill('1G');
   await page.locator('button[type="submit"]').click();
@@ -194,6 +196,15 @@ test('add new service - invalid name shows error', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   // Should stay on the form page (not redirect to /containers)
   expect(page.url()).toContain('/containers/new');
+
+  //create real test container that will be deleted in another task
+  await page.locator('input#image').fill('nginx:latest');
+  
+  await field.clear();
+  await field.fill('testapp'); //to short
+  await page.locator('input#cpu').fill('0.5');
+  await page.locator('input#ram').fill('1G');
+  await page.locator('button[type="submit"]').click();
 });
 
 test('add new service - image blur suggests service name', async ({ page }) => {
@@ -255,7 +266,7 @@ test('delete confirm page loads for a custom service', async ({ page }) => {
     await expect(page.locator('text=Are you sure')).toBeVisible();
 
     // Cancel button should go back to containers
-    const cancelLink = page.locator('a[href="/containers"]');
+    const cancelLink = page.getByRole('link', { name: 'Cancel', exact: true });
     await expect(cancelLink).toBeVisible();
     await cancelLink.click();
     await page.waitForLoadState('networkidle');
