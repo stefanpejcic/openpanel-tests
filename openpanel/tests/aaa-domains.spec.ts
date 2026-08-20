@@ -9,6 +9,14 @@ const DOMAINS = [
   'website-builder.tests.openpanel.org',
   'files.tests.openpanel.org',
   'redirect.tests.openpanel.org',
+  'drupal.tests.openpanel.org',
+  'joomla.tests.openpanel.org',
+  'opencart.tests.openpanel.org',
+  'nextcloud.tests.openpanel.org',
+  'prestashop.tests.openpanel.org',
+  'moodle.tests.openpanel.org',
+  'mediawiki.tests.openpanel.org',
+  'matomo.tests.openpanel.org',
   'to-be-removed.com',
 ];
 
