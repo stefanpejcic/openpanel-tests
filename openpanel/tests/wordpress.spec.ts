@@ -471,13 +471,13 @@ test('waf on/off', async ({ page }) => {
 test('wp remove', async ({ page }) => {
 
   // 5. test remove
-  await page.goto('/website?domain=website-builder.tests.openpanel.org');
+  await page.goto('/website?domain=wp.tests.openpanel.org');
   await page.locator('a#remove-tab').click();
   await page.locator('button#delete-site').click();
   await page.locator('button#confirm-delete-site').click();
   await expect(page.locator('text=Website deleted successfully!')).toBeVisible({ timeout: 30000 });
   await page.goto('/sites');
-  await expect(page.locator('tr#site-row-website-builder.tests.openpanel.org')).not.toBeVisible();
+  await expect(page.locator('tr#site-row-wp.tests.openpanel.org')).not.toBeVisible();
   console.log('website uninstall is working');
 
   // 6. install again and test detach
