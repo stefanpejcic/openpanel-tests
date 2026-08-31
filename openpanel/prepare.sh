@@ -47,7 +47,14 @@ else
   cd /root && podman-compose up -d openpanel
 fi
 
-# ADD LICENSE LICENSE
+# ENABLE PHPMYADMIN
+if podman container exists phpmyadmin; then
+  podman start phpmyadmin >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate phpmyadmin
+else
+  cd /root && podman-compose up -d phpmyadmin
+fi
+
+# ADD LICENSE KEY
 opencli license $LICENSE_KEY
 
 # ENABLE EMAILS
