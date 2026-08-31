@@ -5,9 +5,9 @@ const DOMAIN = 'wp.tests.openpanel.org';
 test('enable varnish', async ({ page }) => {
   await page.goto('/cache/varnish');
   const status = page.locator('#service-page-status');
-  await expect(status).toHaveText('Stopped');
+  await expect(status).toHaveText('Disabled');
   await page.getByRole('button', { name: 'Click to Enable' }).click();
-  await expect(status).not.toHaveText('Stopped');
+  await expect(status).not.toHaveText('Disabled');
 });
 
 test('should show domains table and enable Varnish', async ({ page }) => {
