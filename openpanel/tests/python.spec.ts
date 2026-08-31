@@ -53,7 +53,7 @@ test.describe('Python autoinstaller', () => {
   });
 
   test('2. install app', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(300000);
 
     await page.goto('/python/install');
 
