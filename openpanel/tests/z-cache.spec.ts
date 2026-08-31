@@ -159,7 +159,17 @@ if ($res === false) {
 for (const service of services) {
   test(service.name, async ({ page }) => {
     test.setTimeout(60_000); // 60s so we also do the healthcheck
-  
+
+    // PRE-CLEANUP: ensure service is disabled before starting
+    await navigateToPage(page, service.name);
+    const initialStatus = await page.locator('#service-page-status').textContent();
+    if (initialStatus?.trim() === 'Running') {
+      const disableBtnPre = page.locator('button', { hasText: 'Click to Disable' });
+      await disableBtnPre.click();
+      await expect(page.locator('text=is now disabled')).toBeVisible();
+      await expect(page.locator('#service-page-status')).toHaveText('Disabled');
+    }
+    
     await navigateToPage(page, service.name);
 
     // CHECK
