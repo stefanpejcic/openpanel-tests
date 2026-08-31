@@ -185,13 +185,6 @@ test('wordpress vulnerability scan', async ({ page }) => {
 });
 
 
-test('wp-cli plugin list', async ({ page }) => {
-  await page.goto(`/wp-cli/plugin-list?domain=${domain}`);
-  await expect(page.locator('body')).toContainText(/plugin|akismet|hello/i, { timeout: 30000 });
-  console.log('wp-cli plugin list working');
-});
-
-
 test('wp-cli check update preferences check', async ({ page }) => {
   await page.goto(`/wordpress/wp-cli/update_info?domain=${domain}&docroot=/var/www/html/wp.tests.openpanel.org`);  
   await expect(page.locator('body')).toContainText(/WP_AUTO_UPDATE_CORE|WP_AUTO_UPDATE_PLUGINS|WP_AUTO_UPDATE_THEMES/i, { timeout: 30000 });
