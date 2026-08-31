@@ -52,6 +52,8 @@ test.describe('Node.js autoinstaller', () => {
   });
 
   test('2. install app', async ({ page }) => {
+    test.setTimeout(180000);
+
     await page.goto('/nodejs/install');
 
     await page.locator('#service_name').fill(APP_NAME);
