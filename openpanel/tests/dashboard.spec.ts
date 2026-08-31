@@ -120,17 +120,26 @@ test('search results', async ({ page }) => {
 test('icons mode toggle', async ({ page }) => {
   await navigateToDashboardPage(page);
 
-  const iconViewBtn = page.locator('button[title="Top"]');
-  const listViewBtn = page.locator('button[title="Start"]');
+  await page.locator('#user-btn-info').click();
+
+  const iconsPosition = page.locator('#tour-icons-position');
+  await expect(iconsPosition).toBeVisible();
+
+  const iconViewBtn = iconsPosition.locator('button[title="Top"]');
+  const listViewBtn = iconsPosition.locator('button[title="Start"]');
 
   await listViewBtn.click();
+
   const listValue = await page.evaluate(() => localStorage.getItem('dashboard_icon_view'));
+
   expect(listValue).toBe('list');
   await expect(listViewBtn).toHaveClass(/bg-slate-700/);
   await expect(iconViewBtn).not.toHaveClass(/bg-slate-700/);
 
   await iconViewBtn.click();
+
   const iconValue = await page.evaluate(() => localStorage.getItem('dashboard_icon_view'));
+
   expect(iconValue).toBe('icon');
   await expect(iconViewBtn).toHaveClass(/bg-slate-700/);
   await expect(listViewBtn).not.toHaveClass(/bg-slate-700/);
