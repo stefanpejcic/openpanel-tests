@@ -83,7 +83,7 @@ test('website builder', async ({ page }) => {
 });
 
 test('website builder site appears in sites list', async ({ page }) => {
-  await page.goto('/website-builder/install');
+  await page.goto('/sites');
   await expect(page.locator('body')).toContainText(domain, { timeout: 10000 });
   console.log('website builder site in list');
 });
