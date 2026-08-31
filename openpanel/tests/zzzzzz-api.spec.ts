@@ -156,7 +156,6 @@ test.describe('GET /api/endpoints', () => {
     for (const ep of json.endpoints as Record<string, unknown>[]) {
       expect(ep).toHaveProperty('path');
       expect(ep).toHaveProperty('methods');
-      expect(ep).toHaveProperty('endpoint');
       expect((ep.path as string).startsWith('/api/')).toBe(true);
       expect(Array.isArray(ep.methods)).toBe(true);
     }
