@@ -293,58 +293,134 @@ test('wp-admin autologin', async ({ page }) => {
 
 
 test('general options', async ({ page }) => {
-  await page.goto('/website?domain=wp.tests.openpanel.org');
-  await page.locator('#settings-tab').click();
+  const domain = 'wp.tests.openpanel.org';
+  const websiteUrl = `/website?domain=${domain}`;
 
-  // new values
   const newBlogName = 'Test Blog Name';
   const newBlogDescription = 'Test Blog Description';
   const newAdminEmail = 'test@example.com';
 
-  // Edit text inputs
-  await page.locator('#blogname').clear();
-  await page.locator('#blogname').fill(newBlogName);
+  const expectedSuccessToast = 'General options edited successfully';
 
-  await page.locator('#blogdescription').clear();
-  await page.locator('#blogdescription').fill(newBlogDescription);
+  // Open website settings
+  await page.goto(websiteUrl);
+  await page.locator('#settings-tab').click();
 
-  await page.locator('#admin_email').clear();
-  await page.locator('#admin_email').fill(newAdminEmail);
+  // General settings locators
+  const blogName = page.locator('#blogname');
+  const blogDescription = page.locator('#blogdescription');
+  const adminEmail = page.locator('#admin_email');
 
-  // get current, then click to change
   const usersCanRegister = page.locator('#users_can_register');
-  const usersCanRegisterChecked = await usersCanRegister.isChecked();
-  await usersCanRegister.click();
-  const expectedUsersCanRegister = !usersCanRegisterChecked;
-
   const blogPublic = page.locator('#blog_public');
-  const blogPublicChecked = await blogPublic.isChecked();
-  await blogPublic.click();
-  const expectedBlogPublic = !blogPublicChecked;
-
   const defaultPingStatus = page.locator('#default_ping_status');
-  const defaultPingStatusChecked = await defaultPingStatus.isChecked();
+
+  // Wait until settings are loaded
+  await expect(blogName).toBeVisible();
+  await expect(blogDescription).toBeVisible();
+  await expect(adminEmail).toBeVisible();
+
+  // Update text values
+  await blogName.fill(newBlogName);
+  await blogDescription.fill(newBlogDescription);
+  await adminEmail.fill(newAdminEmail);
+
+  // Toggle checkboxes and remember expected states
+  const expectedUsersCanRegister = !(await usersCanRegister.isChecked());
+  const expectedBlogPublic = !(await blogPublic.isChecked());
+  const expectedDefaultPingStatus = !(await defaultPingStatus.isChecked());
+
+  await usersCanRegister.click();
+  await blogPublic.click();
   await defaultPingStatus.click();
-  const expectedDefaultPingStatus = !defaultPingStatusChecked;
+
+  // Verify checkbox state changed before saving
+  await expect(usersCanRegister).toBeChecked({
+    checked: expectedUsersCanRegister,
+  });
+
+  await expect(blogPublic).toBeChecked({
+    checked: expectedBlogPublic,
+  });
+
+  await expect(defaultPingStatus).toBeChecked({
+    checked: expectedDefaultPingStatus,
+  });
+
+  // Start waiting for backend response BEFORE clicking Save
+  const saveResponsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/wordpress/wp-cli/update_site_information') &&
+      response.request().method() === 'GET',
+    { timeout: 30_000 }
+  );
 
   // Save
   await page.locator('#saveGeneralBtn').click();
-  await expect(page.getByText('Saving general settings')).toBeVisible();
-  await expect(page.getByText('General options edited successfully')).toBeVisible();
 
-  // Reload and re-navigate to settings
-  await page.goto('/website?domain=wp.tests.openpanel.org');
+  // Verify loading toast appears
+  const loadingToast = page.getByText(
+    'Saving general settings... Please wait.',
+    { exact: true }
+  );
+
+  await expect(loadingToast).toBeVisible({
+    timeout: 5_000,
+  });
+
+  // Wait for backend operation
+  const saveResponse = await saveResponsePromise;
+
+  expect(
+    saveResponse.ok(),
+    `Save request failed with HTTP ${saveResponse.status()}`
+  ).toBeTruthy();
+
+  const saveResult = await saveResponse.json();
+
+  expect(saveResult.error).toBeFalsy();
+
+  // Verify backend returned exactly the expected success message
+  expect(saveResult.message).toBe(expectedSuccessToast);
+
+  // Verify the SUCCESS TOAST itself appears with the exact expected text
+  const successToast = page.getByText(expectedSuccessToast, {
+    exact: true,
+  });
+
+  await expect(successToast).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // Optional extra assertion:
+  // make sure the actual visible text is exactly what we expect
+  await expect(successToast).toHaveText(expectedSuccessToast);
+
+  // Reload to verify persistence
+  await page.goto(websiteUrl);
   await page.locator('#settings-tab').click();
 
-  // Verify updated text values
-  await expect(page.locator('#blogname')).toHaveValue(newBlogName);
-  await expect(page.locator('#blogdescription')).toHaveValue(newBlogDescription);
-  await expect(page.locator('#admin_email')).toHaveValue(newAdminEmail);
+  // Wait until saved values are loaded again
+  await expect(blogName).toHaveValue(newBlogName, {
+    timeout: 20_000,
+  });
 
-  // Verify checkbox states persisted
-  await expect(page.locator('#users_can_register')).toBeChecked({ checked: expectedUsersCanRegister });
-  await expect(page.locator('#blog_public')).toBeChecked({ checked: expectedBlogPublic });
-  await expect(page.locator('#default_ping_status')).toBeChecked({ checked: expectedDefaultPingStatus });
+  // Verify persisted text values
+  await expect(blogDescription).toHaveValue(newBlogDescription);
+  await expect(adminEmail).toHaveValue(newAdminEmail);
+
+  // Verify persisted checkbox states
+  await expect(usersCanRegister).toBeChecked({
+    checked: expectedUsersCanRegister,
+  });
+
+  await expect(blogPublic).toBeChecked({
+    checked: expectedBlogPublic,
+  });
+
+  await expect(defaultPingStatus).toBeChecked({
+    checked: expectedDefaultPingStatus,
+  });
 
   console.log('general options are working');
 });
