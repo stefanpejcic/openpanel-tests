@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// covers all record_user_action(username, action) calls in all core .py files
+// Import this from wherever your existing helper lives.
+// import { navigateToDashboardPage } from './helpers';
+
+// Covers all record_user_action(username, action) calls in all core .py files.
 
 const actionTemplates = [
   // account
@@ -204,48 +207,205 @@ const actionTemplates = [
   'Executed command: wp {command} for website {domain} using WP Manager',
 ];
 
-// Two call sites in the source don't follow the "{placeholder}" convention, so they
-// need their own regex rather than the generic template conversion below:
-//   - malware_scan.py builds the message WITHOUT an f-prefix, so "{requested_path}"
-//     is logged literally instead of being interpolated
-//   - pgadmin.py concatenates "edited " + "; ".join(...) + "for pgAdmin" with no
-//     space before "for", e.g. "edited theme; modefor pgAdmin"
+/**
+ * These actions cannot use the normal "{placeholder}" conversion.
+ *
+ * 1. malware_scan.py logs "{requested_path}" literally because the source
+ *    string is missing the f-prefix.
+ *
+ * 2. pgadmin.py produces:
+ *      edited <settings>for pgAdmin
+ *    with no space before "for".
+ */
 const literalActionPatterns = [
-  { label: 'initiated a Malware Scan for {requested_path} (logged literally, not interpolated)', regex: /initiated a Malware Scan for \{requested_path\}/ },
-  { label: 'edited <settings>for pgAdmin (note: missing space before "for")', regex: /^edited .+for pgAdmin$/ },
+  {
+    label:
+      'initiated a Malware Scan for {requested_path} (logged literally, not interpolated)',
+    regex: /^initiated a Malware Scan for \{requested_path\}$/,
+  },
+  {
+    label: 'edited <settings>for pgAdmin (missing space before "for")',
+    regex: /^edited .+for pgAdmin$/,
+  },
 ];
 
+/**
+ * Converts:
+ *
+ *   changed email address to {email}
+ *
+ * into:
+ *
+ *   /^changed email address to .+?$/
+ *
+ * Every placeholder must contain at least one character.
+ */
 function templateToRegex(template: string): RegExp {
   const escaped = template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = escaped.replace(/\\\{[^}]*\\\}/g, '.*?');
-  return new RegExp(pattern);
+
+  const pattern = escaped.replace(
+    /\\\{[^}]+\\\}/g,
+    '.+?',
+  );
+
+  return new RegExp(`^${pattern}$`);
 }
 
 test('activity log contains all known recorded user actions', async ({ page }) => {
-  await page.goto('/account/activity?show_all=true');
+  /*
+   * If your authentication fixture already starts every test authenticated,
+   * you can remove this line.
+   *
+   * Otherwise use your existing helper here:
+   *
+   * await navigateToDashboardPage(page);
+   */
 
-  const actionCells = page.locator('table tbody tr td:nth-child(2)');
-  const count = await actionCells.count();
+  console.log('\nOpening Activity Log...');
 
-  const loggedActions: string[] = [];
-  for (let i = 0; i < count; i++) {
-    loggedActions.push((await actionCells.nth(i).innerText()).trim());
-  }
+  const response = await page.goto('/account/activity', {
+    waitUntil: 'domcontentloaded',
+  });
 
-  expect(loggedActions.length).toBeGreaterThan(0);
-  console.log(`Found ${loggedActions.length} entries in the activity log table.\n`);
+  /*
+   * Navigation sanity checks.
+   *
+   * These make failures such as:
+   *   - redirect to /login
+   *   - HTTP 500
+   *   - wrong route
+   *
+   * immediately obvious instead of eventually reporting 0 activity rows.
+   */
+  expect(
+    response,
+    `Navigation to Activity Log returned no response. Current URL: ${page.url()}`,
+  ).not.toBeNull();
 
+  expect(
+    response!.ok(),
+    `Activity Log returned HTTP ${response!.status()} ${response!.statusText()}`,
+  ).toBeTruthy();
+
+  await expect(
+    page,
+    `Expected Activity Log page but ended up at ${page.url()}`,
+  ).toHaveURL(/\/account\/activity(?:\?.*)?$/);
+
+  await expect(page).toHaveTitle(/Activity/i);
+
+  /*
+   * Wait specifically for the real activity table.
+   */
+  const activityTable = page.locator('#activity-table');
+
+  await expect(
+    activityTable,
+    `Activity table was not found. Current URL: ${page.url()}`,
+  ).toBeVisible();
+
+  /*
+   * Use the explicit semantic attribute from the HTML instead of:
+   *
+   *   td:nth-child(2)
+   *
+   * This survives column reordering much better.
+   */
+  const actionCells = activityTable.locator(
+    'tbody td[data-sort-col="action"]',
+  );
+
+  await expect(
+    actionCells.first(),
+    'Activity table exists but contains no action rows',
+  ).toBeVisible();
+
+  /*
+   * allTextContents() is cleaner and significantly faster than calling
+   * innerText() one element at a time.
+   */
+  const loggedActions = (await actionCells.allTextContents())
+    .map((text) => text.trim())
+    .filter(Boolean);
+
+  expect(
+    loggedActions.length,
+    'Activity Log contained no recorded actions',
+  ).toBeGreaterThan(0);
+
+  console.log(
+    `Activity Log loaded successfully at: ${page.url()}`,
+  );
+
+  console.log(
+    `Found ${loggedActions.length} activity log entries.\n`,
+  );
+
+  /*
+   * Compile all expected action matchers once.
+   */
   const matchers = [
-    ...actionTemplates.map((t) => ({ label: t, regex: templateToRegex(t) })),
+    ...actionTemplates.map((template) => ({
+      label: template,
+      regex: templateToRegex(template),
+    })),
     ...literalActionPatterns,
   ];
 
-  let foundCount = 0;
+  const found: string[] = [];
+  const missing: string[] = [];
+
   for (const { label, regex } of matchers) {
-    const found = loggedActions.some((entry) => regex.test(entry));
-    if (found) foundCount++;
-    console.log(`[${found ? 'FOUND  ' : 'MISSING'}] ${label}`);
+    const matchingEntry = loggedActions.find((entry) =>
+      regex.test(entry),
+    );
+
+    if (matchingEntry) {
+      found.push(label);
+
+      console.log(
+        `[FOUND  ] ${label}`,
+      );
+    } else {
+      missing.push(label);
+
+      console.log(
+        `[MISSING] ${label}`,
+      );
+    }
   }
 
-  console.log(`\n${foundCount}/${matchers.length} known action types were present in the activity log.`);
+  console.log('\n----------------------------------------');
+  console.log('Activity Log coverage');
+  console.log('----------------------------------------');
+  console.log(`Known action types : ${matchers.length}`);
+  console.log(`Found              : ${found.length}`);
+  console.log(`Missing            : ${missing.length}`);
+  console.log('----------------------------------------\n');
+
+  if (missing.length > 0) {
+    console.log('Missing action types:\n');
+
+    for (const action of missing) {
+      console.log(`  - ${action}`);
+    }
+
+    console.log('');
+  }
+
+  /*
+   * IMPORTANT:
+   *
+   * Currently this test reports coverage but does NOT deliberately fail
+   * because some actions are missing.
+   *
+   * This matches the behavior of your original test.
+   *
+   * If you eventually want this to be a strict coverage test, enable:
+   *
+   * expect(
+   *   missing,
+   *   `${missing.length} known activity action types were not found`,
+   * ).toEqual([]);
+   */
 });
