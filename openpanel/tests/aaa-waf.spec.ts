@@ -56,7 +56,7 @@ test('waf on/off and disabled rules for domain', async ({ page }) => {
 
   await openDomainPage(page, domain);
 
-  const ruleId = '941100';
+  const ruleId = '941100 941110 941160 941390 949110';
   const removedRules = page.locator('#removed_rules');
   const saveButton = page.getByRole('button', { name: 'Save' });
 
