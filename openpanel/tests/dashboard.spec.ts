@@ -125,24 +125,82 @@ test('icons mode toggle', async ({ page }) => {
   const iconsPosition = page.locator('#tour-icons-position');
   await expect(iconsPosition).toBeVisible();
 
-  const iconViewBtn = iconsPosition.locator('button[title="Top"]');
-  const listViewBtn = iconsPosition.locator('button[title="Start"]');
+  const topBtn = iconsPosition.locator('button[title="Top"]');
+  const startBtn = iconsPosition.locator('button[title="Start"]');
 
-  await listViewBtn.click();
+  await expect(topBtn).toBeVisible();
+  await expect(startBtn).toBeVisible();
 
-  const listValue = await page.evaluate(() => localStorage.getItem('dashboard_icon_view'));
+  //
+  // START / list
+  //
+  await startBtn.click();
 
-  expect(listValue).toBe('list');
-  await expect(listViewBtn).toHaveClass(/bg-slate-700/);
-  await expect(iconViewBtn).not.toHaveClass(/bg-slate-700/);
+  await expect(startBtn).toHaveClass(/bg-slate-700/);
+  await expect(topBtn).not.toHaveClass(/bg-slate-700/);
 
-  await iconViewBtn.click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => Alpine.store('dashboardIconView').value)
+    )
+    .toBe('list');
 
-  const iconValue = await page.evaluate(() => localStorage.getItem('dashboard_icon_view'));
+  await expect
+    .poll(async () => {
+      const cookies = await page.context().cookies();
+      return cookies.find(
+        cookie => cookie.name === 'dashboard_icon_view'
+      )?.value;
+    })
+    .toBe('list');
 
-  expect(iconValue).toBe('icon');
-  await expect(iconViewBtn).toHaveClass(/bg-slate-700/);
-  await expect(listViewBtn).not.toHaveClass(/bg-slate-700/);
+  //
+  // Verify LIST survives reload
+  //
+  await page.reload();
+
+  await page.locator('#user-btn-info').click();
+
+  const iconsPositionAfterReload = page.locator('#tour-icons-position');
+  await expect(iconsPositionAfterReload).toBeVisible();
+
+  const topBtnAfterReload =
+    iconsPositionAfterReload.locator('button[title="Top"]');
+
+  const startBtnAfterReload =
+    iconsPositionAfterReload.locator('button[title="Start"]');
+
+  await expect(startBtnAfterReload).toHaveClass(/bg-slate-700/);
+  await expect(topBtnAfterReload).not.toHaveClass(/bg-slate-700/);
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => Alpine.store('dashboardIconView').value)
+    )
+    .toBe('list');
+
+  //
+  // Switch back to TOP / icon
+  //
+  await topBtnAfterReload.click();
+
+  await expect(topBtnAfterReload).toHaveClass(/bg-slate-700/);
+  await expect(startBtnAfterReload).not.toHaveClass(/bg-slate-700/);
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => Alpine.store('dashboardIconView').value)
+    )
+    .toBe('icon');
+
+  await expect
+    .poll(async () => {
+      const cookies = await page.context().cookies();
+      return cookies.find(
+        cookie => cookie.name === 'dashboard_icon_view'
+      )?.value;
+    })
+    .toBe('icon');
 
   console.log('icons toggle working');
 });
