@@ -121,8 +121,8 @@ test('waf logs show blocked requests for domain', async ({ page }) => {
   const rowCount = await rows.count();
 
   // Scoped so it can't collide with the sidebar search input
-  const searchInput = page.getByRole('region', { name: /logs/i })
-                          .locator('input[type="search"]');
+  const searchInput = page.getByRole('region', { name: /log/i })
+                        .locator('input[type="search"]:visible');
   await searchInput.fill('alert(1)');
 
   await expect(rows.first()).toContainText('alert(1)');
