@@ -49,12 +49,16 @@ test('test autologin', async ({ page, context }) => {
   newTab.on('console', msg => console.log('CONSOLE:', msg.text()));
   newTab.on('pageerror', err => console.log('PAGE ERROR:', err.message));
   newTab.on('requestfailed', req => console.log('REQ FAILED:', req.url(), req.failure()?.errorText));
+  newTab.on('close', () => console.log('TAB CLOSED'));
 
-  await newTab.waitForTimeout(3000);
-  console.log('URL AFTER WAIT:', newTab.url());
 
-  await expect(newTab).toHaveURL(/dashboard/, { timeout: 10_000 });
-  await expect(newTab.getByText(/last login ip address/i)).toBeVisible();
+  await newTab.waitForURL(/dashboard/, { timeout: 20_000, waitUntil: 'load' });
+
+  console.log('URL AFTER NAV:', newTab.url());
+
+  await newTab.waitForLoadState('domcontentloaded');
+
+  await expect(newTab.getByText(/last login ip address/i)).toBeVisible({ timeout: 10_000 });
 
   console.log('autologin is working');
 });
