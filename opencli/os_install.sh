@@ -39,20 +39,18 @@ TEST_ADMIN_USER="${PANEL_USERNAME:-stefan}"
 TEST_ADMIN_PASS="${PANEL_PASSWORD:-stefan}"
 
 declare -A OS_MAP=(
-  #["ubuntu-22"]=1017
   ["ubuntu-24"]=1108
-  #["ubuntu-26"]=1215
+  ["ubuntu-26"]=1215
 
-  #["debian-11"]=979
-  #["debian-12"]=1055
-  #["debian-13"]=1188
+  ["debian-12"]=1055
+  ["debian-13"]=1188
 
-  #["almalinux-9"]=1200
-  #["almalinux-10"]=1176
+  ["almalinux-9"]=1200
+  ["almalinux-10"]=1176
 
-  #["rocky-10"]=1182
+  ["rocky-10"]=1182
 
-  #["centos-10"]=1179
+  ["centos-10"]=1179
 )
 
 declare -A TEST_RESULTS
