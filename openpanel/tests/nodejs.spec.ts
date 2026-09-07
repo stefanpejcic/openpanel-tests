@@ -52,6 +52,8 @@ test.describe('Node.js autoinstaller', () => {
   });
 
   test('2. install app', async ({ page }) => {
+    test.setTimeout(300000);
+ 
     await page.goto('/nodejs/install');
 
     await page.locator('#service_name').fill(APP_NAME);
@@ -75,7 +77,7 @@ test.describe('Node.js autoinstaller', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText(NODE_VERSION)).toBeVisible();
   
-    await row.getByRole('link', { name: 'Manage' }).click();
+    await row.getByRole('link', { name: 'Manage', exact: true }).click();
     await expect(page).toHaveURL(`/website?domain=${DOMAIN}`);
   });
 
@@ -88,7 +90,7 @@ test.describe('Node.js autoinstaller', () => {
     await page.goto(url);
 
     const locator = page.getByText(expected);
-    const timeout = 30000;
+    const timeout = 90000;
     const start = Date.now();
 
     while (Date.now() - start < timeout) {

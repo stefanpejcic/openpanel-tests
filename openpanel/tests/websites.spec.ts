@@ -8,6 +8,14 @@ test('auto-installer page has install links', async ({ page }) => {
     '/website-builder/install',
     '/python/install',
     '/nodejs/install',
+    '/drupal/install',
+    '/joomla/install',
+    '/opencart/install',
+    '/nextcloud/install',
+    '/prestashop/install',
+    '/moodle/install',
+    '/mediawiki/install',
+    '/matomo/install',
   ];
 
   for (const href of expectedHrefs) {

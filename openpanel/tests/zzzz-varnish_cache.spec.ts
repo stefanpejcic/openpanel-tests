@@ -3,11 +3,14 @@ import { test, expect, type Page } from '@playwright/test';
 const DOMAIN = 'wp.tests.openpanel.org';
 
 test('enable varnish', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/cache/varnish');
   const status = page.locator('#service-page-status');
   await expect(status).toHaveText('Disabled');
   await page.getByRole('button', { name: 'Click to Enable' }).click();
-  await expect(status).not.toHaveText('Disabled');
+  // Enabling stops/recreates both the webserver and varnish containers,
+  // which routinely takes longer than the 5s default assertion timeout.
+  await expect(status).not.toHaveText('Disabled', { timeout: 40_000 });
 });
 
 test('should show domains table and enable Varnish', async ({ page }) => {
@@ -132,9 +135,13 @@ test('should disable Varnish for domain', async ({ page }) => {
 
 });
 test('disable varnish', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/cache/varnish');
   const status = page.locator('#service-page-status');
   await expect(status).not.toHaveText('Disabled');
   await page.getByRole('button', { name: 'Click to Disable' }).click();
-  await expect(status).toHaveText('Disabled');
+  // Disabling stops/removes both the webserver and varnish containers then
+  // recreates the webserver, which routinely takes longer than the 5s
+  // default assertion timeout.
+  await expect(status).toHaveText('Disabled', { timeout: 40_000 });
 });

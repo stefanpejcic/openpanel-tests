@@ -20,5 +20,5 @@
    ```
 4. Run tests:   
    ```
-   cd /root/playwright-test && npx playwright test -c openpanel/playwright.config.ts --project=tests --project=tests --ui
+   cd /root/playwright-test && npx playwright test -c openpanel/playwright.config.ts --project=tests --ui
    ```

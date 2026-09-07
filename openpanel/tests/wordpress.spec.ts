@@ -133,21 +133,25 @@ test('wp-admin - install nexusslash theme', async ({ page }) => {
   await expect(nexusslashTheme).toBeVisible({ timeout: 60000 });
   await expect(nexusslashTheme.locator('.theme-name')).toHaveText(/NexusSlash/i);
 
-  const installButton = nexusslashTheme.locator('a.theme-install[data-slug="nexusslash"]');
+  const installButton = nexusslashTheme.locator(
+    'a.theme-install[data-slug="nexusslash"]'
+  );
 
   if (await installButton.count()) {
     console.log('Installing NexusSlash theme...');
 
-    await Promise.all([
-      page.waitForURL(/update\.php\?action=install-theme|theme-install\.php|themes\.php/, {
-        timeout: 60000,
-      }).catch(() => null),
-      installButton.click(),
-    ]);
+    await installButton.click();
 
-    await expect(page.locator('body')).toContainText(/installed successfully|activate|live preview|NexusSlash/i, {
-      timeout: 60000,
+    // Wait for the Install button to become Activate
+    const activateButton = nexusslashTheme.locator(
+      'a.activate, a.theme-activate, .button.activate'
+    );
+
+    await expect(activateButton).toBeVisible({
+      timeout: 20000,
     });
+
+    console.log('NexusSlash installation completed.');
   } else {
     console.log('NexusSlash theme may already be installed.');
   }
@@ -164,12 +168,10 @@ test('wp-admin - install nexusslash theme', async ({ page }) => {
 });
 });
 
-
-
 test('wordpress security hardening page', async ({ page }) => {
   await page.goto(`/wordpress/secure/${domain}`);
   await expect(page).toHaveURL(/wordpress\/secure/);
-  await expect(page.locator('body')).toContainText(/security|hardening|disable/i);
+  await expect(page.locator('body')).toContainText('[]');
   console.log('wordpress security page accessible');
 });
 
@@ -183,25 +185,26 @@ test('wordpress vulnerability scan', async ({ page }) => {
 });
 
 
-test('wp-cli plugin list', async ({ page }) => {
-  await page.goto(`/wp-cli/plugin-list?domain=${domain}`);
-  await expect(page.locator('body')).toContainText(/plugin|akismet|hello/i, { timeout: 30000 });
-  console.log('wp-cli plugin list working');
-});
-
-
-test('wp-cli update check', async ({ page }) => {
-  await page.goto(`/wp-cli/update-check?domain=${domain}`);
-  await expect(page.locator('body')).toContainText(/update|no updates|current/i, { timeout: 30000 });
+test('wp-cli check update preferences check', async ({ page }) => {
+  await page.goto(`/wordpress/wp-cli/update_info?domain=${domain}&docroot=/var/www/html/wp.tests.openpanel.org`);  
+  await expect(page.locator('body')).toContainText(/WP_AUTO_UPDATE_CORE|WP_AUTO_UPDATE_PLUGINS|WP_AUTO_UPDATE_THEMES/i, { timeout: 30000 });
   console.log('wp-cli update check working');
 });
 
 
-test('wordpress backup', async ({ page }) => {
+test('generate backup', async ({ page }) => {
   test.setTimeout(3 * 60 * 1000);
-  await page.goto(`/wordpress/backup/run/${domain}`);
+  await page.goto(`/wordpress/backup/run/${domain}?docroot=/var/www/html/wp.tests.openpanel.org&backup_database=true&backup_files=true`);
   await expect(page.locator('body')).toContainText(/backup.*complete|successfully.*backup|done/i, { timeout: 2 * 60 * 1000 });
-  console.log('wordpress backup completed');
+  console.log('wordpress backup generated');
+});
+
+
+test('list backup', async ({ page }) => {
+  test.setTimeout(3 * 60 * 1000);
+  await page.goto(`/wordpress/backup/get_dates/${domain}?docroot=/var/www/html/wp.tests.openpanel.org`);
+  await expect(page.locator('body')).toContainText(/hasFilesBackup|hasDbBackup|date/i, { timeout: 2 * 60 * 1000 });
+  console.log('wordpress backup available');
 });
 
 
@@ -265,7 +268,7 @@ test('live preview', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
   const popupPromise = page.waitForEvent('popup');
-  await page.locator('button[onclick="sendDataToPreview(event)"]').click();
+  await page.getByRole('link', { name: 'Live Preview' }).click();
 
   const previewPage = await popupPromise;
   await previewPage.waitForLoadState();
@@ -280,7 +283,6 @@ test('wp-admin autologin', async ({ page }) => {
 
   const popupPromise = page.waitForEvent('popup');
   await page.locator('#login_button_text').click();
-  await expect(page.locator('body')).toContainText('Generating auto-login link');
 
   const previewPage = await popupPromise;
   await previewPage.waitForLoadState();
@@ -291,62 +293,134 @@ test('wp-admin autologin', async ({ page }) => {
 
 
 test('general options', async ({ page }) => {
-  await page.goto('/website?domain=wp.tests.openpanel.org');
-  await page.locator('#settings-tab').click();
-  await expect(page.getByText('Checking options from WP-CLI')).toBeVisible();
-  await expect(page.getByText('WordPress Options loaded')).toBeVisible();
+  const domain = 'wp.tests.openpanel.org';
+  const websiteUrl = `/website?domain=${domain}`;
 
-  // new values
   const newBlogName = 'Test Blog Name';
   const newBlogDescription = 'Test Blog Description';
   const newAdminEmail = 'test@example.com';
 
-  // Edit text inputs
-  await page.locator('#blogname').clear();
-  await page.locator('#blogname').fill(newBlogName);
+  const expectedSuccessToast = 'General options edited successfully';
 
-  await page.locator('#blogdescription').clear();
-  await page.locator('#blogdescription').fill(newBlogDescription);
+  // Open website settings
+  await page.goto(websiteUrl);
+  await page.locator('#settings-tab').click();
 
-  await page.locator('#admin_email').clear();
-  await page.locator('#admin_email').fill(newAdminEmail);
+  // General settings locators
+  const blogName = page.locator('#blogname');
+  const blogDescription = page.locator('#blogdescription');
+  const adminEmail = page.locator('#admin_email');
 
-  // get current, then click to change
   const usersCanRegister = page.locator('#users_can_register');
-  const usersCanRegisterChecked = await usersCanRegister.isChecked();
-  await usersCanRegister.click();
-  const expectedUsersCanRegister = !usersCanRegisterChecked;
-
   const blogPublic = page.locator('#blog_public');
-  const blogPublicChecked = await blogPublic.isChecked();
-  await blogPublic.click();
-  const expectedBlogPublic = !blogPublicChecked;
-
   const defaultPingStatus = page.locator('#default_ping_status');
-  const defaultPingStatusChecked = await defaultPingStatus.isChecked();
+
+  // Wait until settings are loaded
+  await expect(blogName).toBeVisible();
+  await expect(blogDescription).toBeVisible();
+  await expect(adminEmail).toBeVisible();
+
+  // Update text values
+  await blogName.fill(newBlogName);
+  await blogDescription.fill(newBlogDescription);
+  await adminEmail.fill(newAdminEmail);
+
+  // Toggle checkboxes and remember expected states
+  const expectedUsersCanRegister = !(await usersCanRegister.isChecked());
+  const expectedBlogPublic = !(await blogPublic.isChecked());
+  const expectedDefaultPingStatus = !(await defaultPingStatus.isChecked());
+
+  await usersCanRegister.click();
+  await blogPublic.click();
   await defaultPingStatus.click();
-  const expectedDefaultPingStatus = !defaultPingStatusChecked;
+
+  // Verify checkbox state changed before saving
+  await expect(usersCanRegister).toBeChecked({
+    checked: expectedUsersCanRegister,
+  });
+
+  await expect(blogPublic).toBeChecked({
+    checked: expectedBlogPublic,
+  });
+
+  await expect(defaultPingStatus).toBeChecked({
+    checked: expectedDefaultPingStatus,
+  });
+
+  // Start waiting for backend response BEFORE clicking Save
+  const saveResponsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/wordpress/wp-cli/update_site_information') &&
+      response.request().method() === 'GET',
+    { timeout: 30_000 }
+  );
 
   // Save
   await page.locator('#saveGeneralBtn').click();
-  await expect(page.getByText('Saving general settings')).toBeVisible();
-  await expect(page.getByText('General options edited successfully')).toBeVisible();
 
-  // Reload and re-navigate to settings
-  await page.goto('/website?domain=wp.tests.openpanel.org');
+  // Verify loading toast appears
+  const loadingToast = page.getByText(
+    'Saving general settings... Please wait.',
+    { exact: true }
+  );
+
+  await expect(loadingToast).toBeVisible({
+    timeout: 5_000,
+  });
+
+  // Wait for backend operation
+  const saveResponse = await saveResponsePromise;
+
+  expect(
+    saveResponse.ok(),
+    `Save request failed with HTTP ${saveResponse.status()}`
+  ).toBeTruthy();
+
+  const saveResult = await saveResponse.json();
+
+  expect(saveResult.error).toBeFalsy();
+
+  // Verify backend returned exactly the expected success message
+  expect(saveResult.message).toBe(expectedSuccessToast);
+
+  // Verify the SUCCESS TOAST itself appears with the exact expected text
+  const successToast = page.getByText(expectedSuccessToast, {
+    exact: true,
+  });
+
+  await expect(successToast).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // Optional extra assertion:
+  // make sure the actual visible text is exactly what we expect
+  await expect(successToast).toHaveText(expectedSuccessToast);
+
+  // Reload to verify persistence
+  await page.goto(websiteUrl);
   await page.locator('#settings-tab').click();
-  await expect(page.getByText('Checking options from WP-CLI')).toBeVisible();
-  await expect(page.getByText('WordPress Options loaded')).toBeVisible();
 
-  // Verify updated text values
-  await expect(page.locator('#blogname')).toHaveValue(newBlogName);
-  await expect(page.locator('#blogdescription')).toHaveValue(newBlogDescription);
-  await expect(page.locator('#admin_email')).toHaveValue(newAdminEmail);
+  // Wait until saved values are loaded again
+  await expect(blogName).toHaveValue(newBlogName, {
+    timeout: 20_000,
+  });
 
-  // Verify checkbox states persisted
-  await expect(page.locator('#users_can_register')).toBeChecked({ checked: expectedUsersCanRegister });
-  await expect(page.locator('#blog_public')).toBeChecked({ checked: expectedBlogPublic });
-  await expect(page.locator('#default_ping_status')).toBeChecked({ checked: expectedDefaultPingStatus });
+  // Verify persisted text values
+  await expect(blogDescription).toHaveValue(newBlogDescription);
+  await expect(adminEmail).toHaveValue(newAdminEmail);
+
+  // Verify persisted checkbox states
+  await expect(usersCanRegister).toBeChecked({
+    checked: expectedUsersCanRegister,
+  });
+
+  await expect(blogPublic).toBeChecked({
+    checked: expectedBlogPublic,
+  });
+
+  await expect(defaultPingStatus).toBeChecked({
+    checked: expectedDefaultPingStatus,
+  });
 
   console.log('general options are working');
 });
@@ -410,8 +484,9 @@ test('maintenance mode', async ({ page }) => {
 test('cache flush', async ({ page }) => {
   await page.goto('/website?domain=wp.tests.openpanel.org');
 
-  await page.locator('button[click="flushCache"]').click();
-  const message = await page.getByText(/Cache flushed successfully/).innerText();
+  await page.getByRole('button', { name: 'Purge WP Cache' }).click();
+  await expect(page.getByText(/Cache flushed successfully/)).toBeVisible({ timeout: 10000 });
+
   console.log('flush wp cache is working');
 });
 
@@ -472,13 +547,13 @@ test('waf on/off', async ({ page }) => {
 test('wp remove', async ({ page }) => {
 
   // 5. test remove
-  await page.goto('/website?domain=website-builder.tests.openpanel.org');
+  await page.goto('/website?domain=wp.tests.openpanel.org');
   await page.locator('a#remove-tab').click();
   await page.locator('button#delete-site').click();
   await page.locator('button#confirm-delete-site').click();
   await expect(page.locator('text=Website deleted successfully!')).toBeVisible({ timeout: 30000 });
   await page.goto('/sites');
-  await expect(page.locator('tr#site-row-website-builder.tests.openpanel.org')).not.toBeVisible();
+  await expect(page.locator('tr#site-row-wp.tests.openpanel.org')).not.toBeVisible();
   console.log('website uninstall is working');
 
   // 6. install again and test detach

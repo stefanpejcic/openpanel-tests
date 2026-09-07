@@ -13,7 +13,7 @@ test('auto-installer shows available applications', async ({ page }) => {
   await page.goto('/auto-installer');
 
   // should list at least some installable apps
-  const apps = ['WordPress', 'Python', 'NodeJS'];
+  const apps = ['WordPress', 'Python', 'NodeJS', 'PHP', 'Docker'];
   let found = 0;
   for (const app of apps) {
     const isVisible = await page.locator('body').textContent().then(t => t?.includes(app) ?? false);

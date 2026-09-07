@@ -18,31 +18,37 @@ test.describe('Process Manager', () => {
     test('kill a random process, expect toast and row removed', async ({ page }) => {
         await page.goto(`/process-manager`);
         await page.waitForLoadState('networkidle');
-
         const rows = page.locator('tbody tr[x-show]');
         const count = await rows.count();
         expect(count).toBeGreaterThan(0);
 
-        // Pick a random row
-        const targetIndex = Math.floor(Math.random() * count);
-        const targetRow = rows.nth(targetIndex);
-
-        // Grab the PID from the 3rd td (index 2)
-        killedPid = (await targetRow.locator('td').nth(2).innerText()).trim();
+        // Pick a random row, retrying if it's PID 1 (respawns instantly)
+        let targetRow, killedName;
+        for (let attempts = 0; attempts < 20; attempts++) {
+            const targetIndex = Math.floor(Math.random() * count);
+            targetRow = rows.nth(targetIndex);
+            killedPid = (await targetRow.locator('td').nth(2).innerText()).trim();
+            if (killedPid !== '1') {
+                killedName = (await targetRow.locator('td').nth(0).innerText()).trim();
+                break;
+            }
+        }
+        expect(killedPid).not.toBe('1');
 
         const terminateBtn = targetRow.locator('button', { hasText: 'Terminate' });
 
         // Listen for the POST response
         const responsePromise = page.waitForResponse(r => r.url().includes('/process-manager') && r.request().method() === 'POST');
-
         await terminateBtn.click();
         const response = await responsePromise;
         const body = await response.json();
         console.log('Kill response:', JSON.stringify(body));
         expect(body.success).toBe(true);
 
-        // Row should be gone from DOM
-        await expect(targetRow).not.toBeAttached();
+        const rowByPidAndName = page.locator(
+            `tbody tr[x-show]:has(td:nth-child(3):text-is("${killedPid}"))`
+        ).filter({ has: page.locator(`td:nth-child(1):text-is("${killedName}")`) });
+        await expect(rowByPidAndName).toHaveCount(0);
     });
 
     test('refresh and confirm killed PID is absent', async ({ page }) => {
@@ -67,7 +73,7 @@ test.describe('Process Manager', () => {
         // Grab container name from first column to use as search term
         const containerName = (await firstRow.locator('td').first().innerText()).trim();
 
-        const searchInput = page.locator('input[type="search"]');
+        const searchInput = page.locator('section[aria-label="Processes Table"] input[type="search"]');
         await searchInput.fill(containerName);
 
         // Alpine x-show filters are DOM-based, wait for them to settle

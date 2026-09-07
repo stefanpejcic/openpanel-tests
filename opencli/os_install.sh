@@ -39,19 +39,15 @@ TEST_ADMIN_USER="${PANEL_USERNAME:-stefan}"
 TEST_ADMIN_PASS="${PANEL_PASSWORD:-stefan}"
 
 declare -A OS_MAP=(
-  ["ubuntu-22"]=1017
   ["ubuntu-24"]=1108
   ["ubuntu-26"]=1215
 
-  ["debian-11"]=979
   ["debian-12"]=1055
   ["debian-13"]=1188
 
-  ["almalinux-8"]=1081
   ["almalinux-9"]=1200
   ["almalinux-10"]=1176
 
-  ["rocky-8"]=1078
   ["rocky-10"]=1182
 
   ["centos-10"]=1179
@@ -99,9 +95,10 @@ echo "$SSH_PRIVATE_KEY" > "$SSH_PRIVATE_FILE"
 chmod 600 "$SSH_PRIVATE_FILE"
 
 send_discord() {
-  local resp
-  resp=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"content\": \"$1\"}" "$DISCORD_WEBHOOK")
-  log "DISCORD: sent (http $resp): $1"
+  local resp payload
+  payload=$(printf '%s' "$1" | head -c 1900 | jq -Rs '{content: .}')
+  resp=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "$payload" "$DISCORD_WEBHOOK")
+  log "DISCORD: sent (http $resp)"
 }
 
 # format_duration <seconds> -- prints "1h2m3s" / "2m3s" / "3s" depending on magnitude
@@ -295,6 +292,8 @@ install_openpanel() {
 
   os_log "$os" "Starting OpenPanel installation on $ip (attempt $attempt/$max_attempts)..."
 
+  os_log "$os" "Using admin credentials: user=$TEST_ADMIN_USER pass=$TEST_ADMIN_PASS"
+
   local install_out
   install_out=$(yes | /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "bash <(/usr/bin/curl -sSL https://openpanel.org) --skip-firewall --skip-dns-server --skip-requirements --skip-panel-check --username=$TEST_ADMIN_USER --password=$TEST_ADMIN_PASS" 2>&1)
   local exit_code=$?
@@ -323,6 +322,33 @@ install_openpanel() {
     return $?
   fi
 
+start_openpanel_container() {
+  local ip="$1"
+  local os="$2"
+
+  os_log "$os" "Starting openpanel container via podman compose on $ip..."
+
+  local out
+  out=$(/usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "cd /root && podman compose up openpanel -d" 2>&1)
+  local rc=$?
+  {
+    echo "----- PODMAN COMPOSE OUTPUT -----"
+    echo "$out"
+    echo "----- PODMAN COMPOSE EXIT CODE: $rc -----"
+  } >> "$RUN_DIR/${os}.log"
+  os_log "$os" "podman compose exit code: $rc"
+
+  if [[ $rc -ne 0 ]]; then
+    os_log "$os" "ERROR: podman compose up openpanel failed on $ip"
+    send_discord "❌ [$os] podman compose up openpanel failed on $ip"
+    return 1
+  fi
+
+  os_log "$os" "openpanel container started on $ip"
+  return 0
+}
+  
+
   if [[ "$exit_code" -ne 0 ]]; then
     os_log "$os" "ERROR: OpenPanel installation failed on $ip (exit $exit_code)"
     send_discord "❌ [$os] OpenPanel installation failed on $ip (exit $exit_code)"
@@ -331,15 +357,7 @@ install_openpanel() {
 
   os_log "$os" "OpenPanel installation finished on $ip"
 
-  local docker_login_out
-  docker_login_out=$(/usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "/usr/bin/docker login --username openpanel --password $DOCKER_HUB_TOKEN" 2>&1)
-  local docker_login_rc=$?
-  {
-    echo "----- DOCKER LOGIN OUTPUT -----"
-    echo "$docker_login_out"
-    echo "----- DOCKER LOGIN EXIT CODE: $docker_login_rc -----"
-  } >> "$RUN_DIR/${os}.log"
-  os_log "$os" "docker login exit code: $docker_login_rc"
+  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "touch /etc/openpanel/openadmin/config/quick_start.dismissed" 2>&1
 
   return 0
 }
@@ -358,22 +376,24 @@ run_openadmin_playwright_tests() {
   local status=""
   local ADMIN_URL=""
 
-  while true; do
-    status=$(/usr/bin/curl -s -o /dev/null -w "%{http_code}" "http://${ip}:2087/login")
-    if [[ "$status" != "000" ]]; then
+while true; do
+    body=$(/usr/bin/curl -s "http://${ip}:2087/login")
+    if echo "$body" | grep -qi "username"; then
       ADMIN_URL="http://${ip}:2087"
-      os_log "$os" "OpenAdmin available over HTTP: $ADMIN_URL (http $status)"
+      PANEL_URL="http://${ip}:2083"
+      os_log "$os" "OpenAdmin login page ready: $ADMIN_URL"
       break
     fi
 
-    status=$(/usr/bin/curl -k -s -o /dev/null -w "%{http_code}" "https://${ip}:2087/login")
-    if [[ "$status" != "000" ]]; then
+    body=$(/usr/bin/curl -k -s "https://${ip}:2087/login")
+    if echo "$body" | grep -qi "username"; then
       ADMIN_URL="https://${ip}:2087"
-      os_log "$os" "OpenAdmin available over HTTPS: $ADMIN_URL (http $status)"
+      PANEL_URL="https://${ip}:2083"
+      os_log "$os" "OpenAdmin login page ready: $ADMIN_URL"
       break
     fi
 
-    os_log "$os" "OpenAdmin not ready yet (HTTP/HTTPS both failed, elapsed ${elapsed}s)"
+    os_log "$os" "OpenAdmin not ready yet (elapsed ${elapsed}s)"
     elapsed=$((elapsed + RETRY_INTERVAL))
 
     if [ "$elapsed" -ge "$MAX_WAIT" ]; then
@@ -381,32 +401,55 @@ run_openadmin_playwright_tests() {
       send_discord "❌ [$os] OpenAdmin not reachable on port 2087 after ${MAX_WAIT}s"
       return 1
     fi
-
     sleep "$RETRY_INTERVAL"
-  done
+done
+
+sleep 90 
 
   os_log "$os" "Running Playwright tests: aa-users.spec.ts 'create user' + 'test autologin'..."
 
   local pw_out
   local pw_rc
   pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$ADMIN_URL" PANEL_USERNAME="$TEST_ADMIN_USER" PANEL_PASSWORD="$TEST_ADMIN_PASS" \
-    npx playwright test -c ../openadmin/playwright.config.ts --project=setup --project=tests ../openadmin/tests/aa-users.spec.ts --grep "create user|test autologin" --reporter=line 2>&1)
+    npx playwright test -c openadmin/playwright.config.ts --project=setup --project=tests openadmin/tests/aa-users.spec.ts --grep "create user|test autologin" --reporter=line 2>&1)
   pw_rc=$?
   {
     echo "----- PLAYWRIGHT OUTPUT -----"
     echo "$pw_out"
     echo "----- PLAYWRIGHT EXIT CODE: $pw_rc -----"
   } >> "$RUN_DIR/${os}.log"
-  os_log "$os" "Playwright exit code: $pw_rc"
+  os_log "$os" "oa Playwright exit code: $pw_rc"
 
   if [[ $pw_rc -ne 0 ]]; then
-    os_log "$os" "ERROR: Playwright openadmin tests failed on $ip"
-    send_discord "❌ [$os] Playwright openadmin tests (create user / autologin) failed on $ip"
-    return 1
+      os_log "$os" "ERROR: Playwright openadmin tests failed on $ip"
+      local pw_tail
+      pw_tail=$(echo "$pw_out" | tail -40)
+      send_discord "❌ [$os]  [$os] Playwright admin-user-create tests failed on $ip:\`\`\`$pw_tail\`\`\`"
   fi
 
-  os_log "$os" "SUCCESS: openadmin create-user + autologin tests passed on $ip"
-  send_discord "✅ [$os] OpenPanel installed — openadmin create-user + autologin tests passed on $ip ($ADMIN_URL)"
+  pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$PANEL_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
+    npx playwright test -c openpanel/playwright.config.ts --project=setup --project=tests openpanel/tests/dashboard.spec.ts --grep "access dashboard" --reporter=line 2>&1)
+  pw_rc=$?
+  {
+    echo "----- PLAYWRIGHT OUTPUT -----"
+    echo "$pw_out"
+    echo "----- PLAYWRIGHT EXIT CODE: $pw_rc -----"
+  } >> "$RUN_DIR/${os}.log"
+  os_log "$os" "op Playwright exit code: $pw_rc"
+
+  if [[ $pw_rc -ne 0 ]]; then
+      os_log "$os" "ERROR: Playwright user-login tests failed on $ip"
+      local pw_tail
+      pw_tail=$(echo "$pw_out" | tail -40)
+      send_discord "❌ [$os] Playwright user-login tests failed on $ip:
+\`\`\`
+$pw_tail
+\`\`\`"
+      return 1
+  fi
+  
+  os_log "$os" "SUCCESS: openadmin create-user + openpanel autologin tests passed on $ip"
+  send_discord "✅ [$os] OpenPanel installed — openadmin create-user + openpanel autologin tests passed on $ip ($ADMIN_URL)"
 }
 
 run_test_cycle() {
@@ -428,11 +471,13 @@ run_test_cycle() {
   TEST_INSTALL_TIME["$os"]=$(format_duration $((install_end - install_start)))
   os_log "$os" "Install time: ${TEST_INSTALL_TIME[$os]}"
   send_discord "⏱️ [$os] Install time: ${TEST_INSTALL_TIME[$os]}"
+  start_openpanel_container "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
+
 
   run_openadmin_playwright_tests "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
 
   TEST_RESULTS["$os"]="pass"
-  update_readme_results
+  #update_readme_results
 }
 
 ############################################

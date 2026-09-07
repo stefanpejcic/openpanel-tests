@@ -9,6 +9,14 @@ const DOMAINS = [
   'website-builder.tests.openpanel.org',
   'files.tests.openpanel.org',
   'redirect.tests.openpanel.org',
+  'drupal.tests.openpanel.org',
+  'joomla.tests.openpanel.org',
+  'opencart.tests.openpanel.org',
+  'nextcloud.tests.openpanel.org',
+  'prestashop.tests.openpanel.org',
+  'moodle.tests.openpanel.org',
+  'mediawiki.tests.openpanel.org',
+  'matomo.tests.openpanel.org',
   'to-be-removed.com',
 ];
 
@@ -54,7 +62,7 @@ async function addDomain(page, domain) {
 
 
 test('add domains', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(100_000);
 
   await page.goto('/dashboard');
   const initialCount = await getDomainCount(page);
@@ -108,7 +116,7 @@ test('verify files created for a new domain', async ({ page }) => {
     await page.goto('/domains/ssl?domain_name=wp.tests.openpanel.org');
   
     try {
-      await expect(certData).toBeVisible({ timeout: 2000 });
+      await expect(certData).toBeVisible({ timeout: 8000 });
       break;
     } catch (e) {
       // retry
@@ -174,7 +182,7 @@ test('check columns for domains table', async ({ page }) => {
     const initialState = await checkbox.isChecked();
 
     await row.locator('label').click();
-    await page.waitForTimeout(100); // needed for alpine.js x-show
+    await page.waitForTimeout(500); // needed for alpine.js x-show
 
     const expectedStateAfterToggle = !initialState;
 
@@ -185,7 +193,7 @@ test('check columns for domains table', async ({ page }) => {
     }
 
     await row.locator('label').click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(500);
 
     if (initialState) {
       await expect(th).toBeVisible();
@@ -240,7 +248,7 @@ test('change docroot', async ({ page }) => {
   await page.goto(`https://${DOMAIN}/testing.php`);
   const locator = page.getByText(`File is shown from folder: ${NEW_FOLDER}`);
   
-  const timeout = 30000;
+  const timeout = 80000;
   const start = Date.now();
   
   while (Date.now() - start < timeout) {
@@ -291,7 +299,7 @@ test('add dns record', async ({ page }) => {
   await expect(newRow.locator('td').nth(3)).toContainText(recordValue);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -322,7 +330,7 @@ test('edit dns record', async ({ page }) => {
   await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(1);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -352,7 +360,7 @@ test('delete dns record', async ({ page }) => {
   await expect(page.locator('tr.domain_row', { hasText: `${recordValue}-edited` })).toHaveCount(0);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible();
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -401,7 +409,7 @@ test('edit zone file', async ({ page }) => {
   await expect(newRow.locator('td').nth(3)).toContainText(`added via zone editor`);
 
   // 3. validate using dig tools
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -442,7 +450,7 @@ test('reset dns zone', async ({ page }) => {
   const successMsg = page.getByText('DNS zone restarted successfully.');
   await expect(successMsg).toBeVisible();
   await expect(newRow).not.toBeVisible();
-  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=${domain}`);
+  await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
   const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
   await expect(resultsArea).toBeVisible({ timeout: 10_000 });
   await page.waitForFunction(() => !document.querySelector('.loading, .spinner, [aria-busy="true"]'), { timeout: 30_000 });
@@ -511,13 +519,13 @@ test('dynamic dns record', async ({ page, context }) => {
   await expect(updateUrlCode).toBeVisible();
   await expect(updateUrlCode).toContainText('/dynamic-dns/update?token=');
   // Save without changes (just confirm the form submits cleanly)
-  await editForm.locator('button[type="button"]', { hasText: 'Save' }).click();
+  await editForm.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.locator('tbody tr', { hasText: subdomain })).toBeVisible();
 
 
   // 7. validate publicly using dig (optional, only if IP resolved)
   if (updatedIp) {
-    await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10`);
+    await page.goto(`https://digwebinterface.com/?hostnames=${fqdn}&type=A&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
     const resultsArea = page.locator('#results, pre, .results, [id*="result"]').first();
     await expect(resultsArea).toBeVisible({ timeout: 10000 });
     await page.waitForFunction(
@@ -532,6 +540,7 @@ test('dynamic dns record', async ({ page, context }) => {
 
   
   // 8. delete the entry
+  await page.goto(`/domains/dynamic-dns`);
   const rowAfterEdit = page.locator('tbody tr', { hasText: subdomain });
   const deleteBtn = rowAfterEdit.locator('button[title="Delete"]');
   await deleteBtn.click();

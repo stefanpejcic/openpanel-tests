@@ -106,48 +106,57 @@ test('view ssl info', async ({ page }) => {
 
 
 test('add custom ssl', async ({ page }) => {
-
-  // Write files
-  await page.goto('/file-manager/edit-file/cert.txt?editor=text&new=true');
-  await page.locator('#editor-text').fill(CERT_PEM);
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
-
-  await page.goto('/file-manager/edit-file/private.txt?editor=text&new=true');
-  await page.locator('#editor-text').fill(KEY_PEM);
-  await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.getByText(/saved|success/i).first()).toBeVisible();
-
-  // 2. set ssl in UI
+  // 1. Open SSL configuration page
   await page.goto(`/domains/ssl?domain_name=${DOMAIN}`);
-  await page.locator('input[name="public_path"]').fill('/var/www/html/cert.txt');
-  await page.locator('input[name="private_path"]').fill('/var/www/html/private.txt');
-  await page.getByRole('button', { name: 'Configure Custom Certificate' }).click();
 
-  await expect(page.getByText(/to use custom ssl/i).first()).toBeVisible();
+  // 2. Insert certificate and private key directly
+  await page.locator('textarea[name="certificate"]').fill(CERT_PEM);
+  await page.locator('textarea[name="private_key"]').fill(KEY_PEM);
+
+  await page
+    .getByRole('button', { name: 'Configure Custom Certificate' })
+    .click();
+
+  await expect(
+    page.getByText(/to use custom ssl|custom ssl.*success|certificate.*configured/i).first()
+  ).toBeVisible();
 
   await page.waitForLoadState('networkidle');
-  await expect(page.getByText(/US, CloudFlare, Inc/i).first()).toBeVisible();
 
-  // 3. verify panel shows it
+  await expect(
+    page.getByText(/US, CloudFlare, Inc/i).first()
+  ).toBeVisible();
+
+  // 3. Verify the certificate panel contains the custom certificate and key
   await page.locator('a#view-cert').click();
+
   const certCode = page.locator('pre#certCode');
   await expect(certCode).toBeVisible();
 
   await expect(certCode).toContainText('BEGIN CERTIFICATE');
   await expect(certCode).toContainText('BEGIN PRIVATE KEY');
 
-  // 4. verify domain uses it
+  // 4. Verify the domain is reachable over HTTPS
   const domainPage = await page.context().newPage();
-  await domainPage.goto(`https://${DOMAIN}`);
+
+  await domainPage.goto(`https://${DOMAIN}`, {
+    waitUntil: 'domcontentloaded',
+  });
+
   const title = await domainPage.title();
-  expect(title).not.toMatch(/privacy error|your connection is not private|err_cert/i);
+  expect(title).not.toMatch(
+    /privacy error|your connection is not private|err_cert/i
+  );
+
   await domainPage.close();
 
+  // 5. Verify the certificate presented by the server
   const cert = await getCert(DOMAIN);
   const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
+
   console.log('Issuer:', issuer);
   expect(issuer).toMatch(/cloudflare/i);
+
   console.log('custom ssl is working');
 });
 

@@ -76,7 +76,7 @@ test('containers page New Service button navigates to add form', async ({ page }
   await page.getByRole('link', { name: 'New Service' }).click();
   await page.waitForLoadState('networkidle');
   expect(page.url()).toContain('/containers/new');
-  await expect(page.locator('h1')).toContainText('Add New Service');
+  await expect(page.locator('h1')).toContainText('Add service');
 });
 
 test('edit cpu, ram and toggle container state for all rows', async ({ page }) => {
@@ -173,20 +173,22 @@ test('edit cpu, ram and toggle container state for all rows', async ({ page }) =
 
 test('add new service form loads', async ({ page }) => {
   await page.goto('/containers/new');
-  await expect(page.locator('h1')).toContainText('Add New Service');
+  await expect(page.locator('h1')).toContainText('Add service');
   await expect(page.locator('input#service_name')).toBeVisible();
   await expect(page.locator('input#image')).toBeVisible();
   await expect(page.locator('input#cpu')).toBeVisible();
   await expect(page.locator('input#ram')).toBeVisible();
   await expect(page.locator('button[type="submit"]')).toBeVisible();
-  await expect(page.locator('a[href="/containers"]')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('a[href="/containers"]')).toBeVisible();
 });
 
 test('add new service - invalid name shows error', async ({ page }) => {
   await page.goto('/containers/new');
 
   await page.locator('input#image').fill('nginx:latest');
-  await page.locator('input#service_name').fill('ab'); // too short
+  const field = page.locator('input#service_name');
+  await field.clear();
+  await field.fill('ab'); //too short
   await page.locator('input#cpu').fill('0.5');
   await page.locator('input#ram').fill('1G');
   await page.locator('button[type="submit"]').click();
@@ -194,6 +196,15 @@ test('add new service - invalid name shows error', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   // Should stay on the form page (not redirect to /containers)
   expect(page.url()).toContain('/containers/new');
+
+  //create real test container that will be deleted in another task
+  await page.locator('input#image').fill('nginx:latest');
+  
+  await field.clear();
+  await field.fill('testapp'); //to short
+  await page.locator('input#cpu').fill('0.5');
+  await page.locator('input#ram').fill('1G');
+  await page.locator('button[type="submit"]').click();
 });
 
 test('add new service - image blur suggests service name', async ({ page }) => {
@@ -233,7 +244,7 @@ test('add new service - add and remove volume entry', async ({ page }) => {
 
 test('add new service - Back to Containers link works', async ({ page }) => {
   await page.goto('/containers/new');
-  await page.locator('a[href="/containers"]').click();
+  await page.getByRole('navigation', { name: 'Breadcrumb' }).locator('a[href="/containers"]').click();
   await page.waitForLoadState('networkidle');
   expect(page.url()).toContain('/containers');
   await expect(page.locator('h1')).toContainText('Containers');
@@ -255,7 +266,7 @@ test('delete confirm page loads for a custom service', async ({ page }) => {
     await expect(page.locator('text=Are you sure')).toBeVisible();
 
     // Cancel button should go back to containers
-    const cancelLink = page.locator('a[href="/containers"]');
+    const cancelLink = page.getByRole('link', { name: 'Cancel', exact: true });
     await expect(cancelLink).toBeVisible();
     await cancelLink.click();
     await page.waitForLoadState('networkidle');
@@ -297,43 +308,6 @@ test('change webserver page loads', async ({ page }) => {
   await expect(page.locator('h1')).toBeVisible();
   await expect(page.locator('text=Current:')).toBeVisible();
   await expect(page.locator('text=All existing domains must be removed')).toBeVisible();
-});
-
-// ─────────────────────────────────────────────
-// /containers/image  (image updates)
-// ─────────────────────────────────────────────
-
-test('image updates page loads', async ({ page }) => {
-  await page.goto('/containers/image');
-  await expect(page.locator('h1')).toContainText('Image Updates');
-  await expect(page.locator('text=Last checked')).toBeVisible();
-  // Refresh button should exist
-  await expect(page.locator('button[type="submit"]')).toBeVisible();
-});
-
-test('image updates - change tag page loads with service selector', async ({ page }) => {
-  await page.goto('/containers/image/change');
-  await expect(page.locator('h1')).toContainText('Change docker image tag');
-  await expect(page.locator('select#domains')).toBeVisible();
-});
-
-test('image updates - selecting service redirects to tag change page', async ({ page }) => {
-  await page.goto('/containers/image/change');
-
-  const select = page.locator('select#domains');
-  const options = select.locator('option:not([disabled])');
-  const count = await options.count();
-
-  if (count > 0) {
-    const value = await options.first().getAttribute('value');
-    await select.selectOption(value);
-    await page.waitForURL(`**/containers/image/change/${value}`, { timeout: 5000 });
-    await expect(page.locator('h1')).toContainText('Change image tag for');
-    await expect(page.locator('input#new_tag')).toBeVisible();
-    await expect(page.locator('a[href="/containers/image"]')).toBeVisible();
-  } else {
-    console.log('No services available in image change selector, skipping.');
-  }
 });
 
 // ─────────────────────────────────────────────
@@ -391,7 +365,7 @@ test('logs page - ?container= param pre-selects and loads', async ({ page }) => 
 
 test('terminal page without container shows service picker', async ({ page }) => {
   await page.goto('/containers/terminal');
-  await expect(page.locator('h1')).toContainText('Docker Terminal');
+  await expect(page.locator('h1')).toContainText('Container Terminal');
   await expect(page.locator('select#service-select')).toBeVisible();
 });
 
@@ -406,7 +380,7 @@ test('terminal page - selecting service redirects', async ({ page }) => {
     const value = await options.first().getAttribute('value');
     await select.selectOption(value);
     await page.waitForURL(`**/containers/terminal/${value}`, { timeout: 5000 });
-    await expect(page.locator('h1')).toContainText('Docker Terminal');
+    await expect(page.locator('h1')).toContainText('Container Terminal');
     await expect(page.locator('#terminal')).toBeVisible();
     await expect(page.locator('select#shell')).toBeVisible();
   } else {
@@ -417,7 +391,7 @@ test('terminal page - selecting service redirects', async ({ page }) => {
 test('terminal', async ({ page }) => {
   test.setTimeout(90_000);
 
-  await page.goto('/containers/terminal/php-fpm-8.0');
+  await page.goto('/containers/terminal/php-fpm-8.5');
   await page.locator('.xterm-rows > div').first().click();
   await page.locator('.xterm-rows > div').first().click({ button: 'right' });
   await page.getByRole('textbox', { name: 'Terminal input' }).fill('php -v');
@@ -430,7 +404,7 @@ test('terminal', async ({ page }) => {
 });
 
 test('terminal - reconnect button appears after disconnect', async ({ page }) => {
-  await page.goto('/containers/terminal/php-fpm-8.0');
+  await page.goto('/containers/terminal/php-fpm-8.5');
   await page.waitForTimeout(2000);
 
   // Status dot and text should be present

@@ -6,16 +6,31 @@ PANEL_USERNAME="testinguser"
 PANEL_PASSWORD="testingpassword"
 PANEL_EMAIL="test@test.com"
 
+# AUTOSTART SERVICES ON USER-ADD
+FILE=/etc/openpanel/docker/compose/1.0/autostart.services
+ENV=/etc/openpanel/docker/compose/1.0/.env
+PHPV=$(grep -E '^DEFAULT_PHP_VERSION=' "$ENV" | cut -d= -f2- | tr -d '\r"'"'")
+PHP_SVC="php-fpm-${PHPV}"
+
+sed -i '/^varnish$/d' "$FILE"
+grep -qxF "$PHP_SVC"  "$FILE" || echo "$PHP_SVC"  >> "$FILE"
+grep -qxF 'cron'      "$FILE" || echo 'cron'      >> "$FILE"
+grep -qxF 'memcached' "$FILE" || echo 'memcached' >> "$FILE"
+
+echo "Services that will auto-start for user:"
+cat "$FILE"
+echo
+
 # INCREASE LIMITS SO TESTS DONT GET BLOCKED
 opencli config update login_ratelimit 100
-opencli plan-edit id=2 name="Developer plus" description="A professional plan" emails=500 max_email_quota=2G ftp=100 domains=10 websites=10 disk=50 inodes=1000000 databases=20 cpu=4 ram=6 bandwidth=500 max_hourly_email=6000
+opencli plan-edit id=2 name="Developer plus" description="A professional plan" emails=500 max_email_quota=2G ftp=100 domains=25 websites=25 disk=50 inodes=1000000 databases=40 cpu=4 ram=6 bandwidth=500 max_hourly_email=6000
 # ENABLE ALL FEATURES
 for f in basic.txt default.txt; do
   # DOCKER:
   # wget -qO- https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/openadmin/config/features.json | jq -r '.[].name' > "/etc/openpanel/openpanel/features/$f"
   #
   # PODMAN:
-  wget -qO- https://gist.githubusercontent.com/stefanpejcic/acf42a0d36635fffbeb7f8ce81840abe/raw/2c6d78c37cf20cbe5e0467ea8e4beb52948f5d4f/features.json | jq -r '.[].name' > "/etc/openpanel/openpanel/features/$f"
+  wget -qO- https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/openadmin/config/features.json | jq -r '.[].name' > "/etc/openpanel/openpanel/features/$f"
 done
 
 # ENABLE ALL MODULES
@@ -32,7 +47,14 @@ else
   cd /root && podman-compose up -d openpanel
 fi
 
-# ADD LICENSE LICENSE
+# ENABLE PHPMYADMIN
+if podman container exists phpmyadmin; then
+  podman start phpmyadmin >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate phpmyadmin
+else
+  cd /root && podman-compose up -d phpmyadmin
+fi
+
+# ADD LICENSE KEY
 opencli license $LICENSE_KEY
 
 # ENABLE EMAILS
@@ -42,10 +64,23 @@ opencli email-server install
 opencli locale $(curl -s "https://api.github.com/repos/stefanpejcic/openpanel-translations/contents" | jq -r '.[] | select(.type=="dir") | .name' | tr '\n' ' ')
 
 # DNS
-cd /root && podman-compose up -d bind9
+opencli config update ns1 ns1.openpanel.org
+opencli config update ns2 ns2.openpanel.org
+
+if podman container exists openpanel_dns; then
+  podman start openpanel_dns >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate bind9
+else
+  cd /root && podman-compose up -d bind9
+fi
 
 # ENABLE FTP
-cd /root && podman-compose up -d openadmin_ftp
+if podman container exists openadmin_ftp; then
+  podman start openadmin_ftp >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate openadmin_ftp
+else
+  cd /root && podman-compose up -d openadmin_ftp
+fi
+
+csf -r
 
 # RESTART USER-PANEL TO APPLY ALL CHANGES!
 podman restart openpanel

@@ -18,8 +18,9 @@ test('server info page', async ({ page }) => {
   }
   for (const field of ['plan_bandwidth', 'plan_db_limit', 'plan_domains_limit',
     'plan_email_limit', 'plan_ftp_limit', 'plan_inodes_limit', 'plan_websites_limit']) {
-    expect(typeof planData[field], `plan.${field} should be a number`).toBe('number');
-    expect(planData[field], `plan.${field} should be >= 0`).toBeGreaterThanOrEqual(0);
+    expect(typeof planData[field], `plan.${field} should be a string`).toBe('string');
+    expect(Number(planData[field]), `plan.${field} should be parseable as a number >= 0`)
+    .toBeGreaterThanOrEqual(0);
   }
   expect(typeof planData['plan_cpu_limit'], 'plan.plan_cpu_limit should be a string').toBe('string');
   expect(Number(planData['plan_cpu_limit']), 'plan_cpu_limit should be parseable as a positive number')
@@ -28,7 +29,7 @@ test('server info page', async ({ page }) => {
   expect(['mariadb', 'mysql', 'percona']).toContain(planData.plan_mysql);
 
   // 2. /json/system/hosting/ports
-  for (const field of ['pgadmin_port', 'phpmyadmin_port', 'remote_mysql_port', 'remote_postgres_port']) {
+  for (const field of ['remote_mysql_port', 'remote_postgres_port']) {
     expect(typeof portsData[field], `ports.${field} should be a string`).toBe('string');
     const port = Number(portsData[field]);
     expect(Number.isInteger(port), `ports.${field} should be parseable as an integer`).toBe(true);

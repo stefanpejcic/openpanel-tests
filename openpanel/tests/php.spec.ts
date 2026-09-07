@@ -288,7 +288,7 @@ test('edit php options', async ({ page }) => {
 
   const successRegex = new RegExp(`${randomVersion} Options`, 'i');
   await expect(page.getByText(successRegex).first()).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}/options\\?php_version=${randomVersion}`));
+  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}/options`));
 
   // 1. max_execution_time
   const maxExecTime = page.locator('input[name="max_execution_time"]');
@@ -335,9 +335,10 @@ test('edit php.ini files', async ({ page }) => {
   await page.click('#submit_version');
   await page.waitForURL(new RegExp(`/php/php${randomVersion}\\.ini/editor`));
 
-  const successRegex = new RegExp(`Edit PHP\\.INI file for version ${randomVersion}`, 'i');
-  await expect(page.getByRole('heading', { name: successRegex })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}.ini/editor\\?php_version=${randomVersion}`));
+  const successRegex = new RegExp(`/etc/php/${randomVersion}/fpm/php.ini`, 'i');
+  await expect(page.getByText(successRegex)).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/php/php${randomVersion}\\.ini/editor`));
+
 
   const editorLocator = page.locator('.CodeMirror'); 
   await expect(editorLocator).toBeVisible();

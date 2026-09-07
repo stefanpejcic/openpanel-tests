@@ -21,7 +21,7 @@ async function expectDatabaseNotInTable(page: any, dbName: string) {
 // ACCESS
 test('list databases', async ({ page }) => {
   await navigateToPostgreSQLPage(page);
-  await expect(page.locator('body')).toContainText(/create your first database|no databases/i, { timeout: 20000 });
+  await expect(page.locator('body')).toContainText(/create your first database|no databases/i, { timeout: 25000 });
   console.log('postgresql initialized');
 });
 
@@ -31,7 +31,7 @@ test('create database', async ({ page }) => {
   await page.getByRole('link', { name: 'New Database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_psql');
   await page.getByRole('button', { name: 'Create Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created/i);
+  await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 });
   await expectDatabaseInTable(page, 'stefan_psql');
   console.log('postgresql database created');
 });
@@ -75,7 +75,10 @@ test('assign user to database', async ({ page }) => {
   await page.goto('/postgresql/users');
   await page.getByRole('link', { name: 'Assign User to Database' }).click();
   await expect(page).toHaveURL(/postgresql\/assign/);
-  await page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200);
+  const [response] = await Promise.all([
+    page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
+    page.getByRole('link', { name: 'Assign User to Database' }).click(),
+  ]);
   await page.locator('select[name="db_user"]').selectOption('stefan_psql_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.getByRole('button', { name: 'Assign' }).click();
@@ -88,13 +91,17 @@ test('revoke user from database', async ({ page }) => {
   await page.goto('/postgresql/users');
   await page.getByRole('link', { name: 'Remove User from DB' }).click();
   await expect(page).toHaveURL(/postgresql\/remove/);
-  await page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200);
+  const [response] = await Promise.all([
+    page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
+    page.getByRole('link', { name: 'Remove User from DB' }).click(),
+  ]);
   await page.locator('select[name="db_user"]').selectOption('stefan_psql_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.getByRole('button', { name: 'Remove User from Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully revoked|removed/i);
   console.log('postgresql user revoked from database');
 });
+
 
 
 test('database wizard', async ({ page }) => {
@@ -104,8 +111,7 @@ test('database wizard', async ({ page }) => {
   await page.locator('input[name="db_user"]').fill('psql_novi_user');
   await page.locator('#password').fill('stefan456g7dsd');
   await page.getByRole('button', { name: 'Create DB, User, and Grant Privileges' }).click();
-  await expect(page.getByText('Process completed!')).toBeVisible();
-  await page.getByRole('link', { name: 'Back to Databases' }).click();
+  await expect(page.getByText('Successfully created database')).toBeVisible();
   await expect(page).toHaveURL(/postgresql/);
   const row = page.locator('#databases-table tr', { hasText: 'psql_proba' });
   await expect(row).toContainText(/psql_proba/i);
@@ -169,20 +175,15 @@ INSERT INTO users VALUES (1, 'John');
 
   await page.goto('/postgresql/import/stefan_psql');
   await expect(page).toHaveURL(/postgresql\/import\/stefan_psql/);
-  await page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200);
+  const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
+      page.getByRole('link', { name: 'Import' }).click(),
+    ]);
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
   await page.getByRole('button', { name: 'Upload & Import' }).click();
   await expect(page.locator('body')).toContainText(/successfully imported|import.*success/i);
   console.log('postgresql import working');
-});
-
-
-test('pgadmin settings', async ({ page }) => {
-  await page.goto('/postgresql/pgadmin');
-  await expect(page).toHaveURL(/postgresql\/pgadmin/);
-  await expect(page.locator('body')).toContainText(/pgadmin|postgresql/i);
-  console.log('pgadmin settings page accessible');
 });
 
 

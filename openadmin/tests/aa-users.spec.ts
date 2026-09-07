@@ -33,7 +33,6 @@ test('create user', async ({ page }) => {
 });
 
 
-
 test('test autologin', async ({ page, context }) => {
   const impersonateLink = page.locator('a[href="/login/token/testinguser"]');
 
@@ -47,9 +46,19 @@ test('test autologin', async ({ page, context }) => {
     impersonateLink.click(),
   ]);
 
-  await newTab.waitForLoadState();
-  await expect(newTab).toHaveURL(/dashboard/);
-  await expect(newTab.getByText(/last login ip address/i)).toBeVisible();
+  newTab.on('console', msg => console.log('CONSOLE:', msg.text()));
+  newTab.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+  newTab.on('requestfailed', req => console.log('REQ FAILED:', req.url(), req.failure()?.errorText));
+  newTab.on('close', () => console.log('TAB CLOSED'));
+
+
+  await newTab.waitForURL(/dashboard/, { timeout: 20_000, waitUntil: 'load' });
+
+  console.log('URL AFTER NAV:', newTab.url());
+
+  await newTab.waitForLoadState('domcontentloaded');
+
+  await expect(newTab.getByText(/last login ip address/i)).toBeVisible({ timeout: 10_000 });
 
   console.log('autologin is working');
 });
