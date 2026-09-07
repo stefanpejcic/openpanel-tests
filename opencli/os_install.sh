@@ -47,11 +47,9 @@ declare -A OS_MAP=(
   #["debian-12"]=1055
   #["debian-13"]=1188
 
-  #["almalinux-8"]=1081
   #["almalinux-9"]=1200
   #["almalinux-10"]=1176
 
-  #["rocky-8"]=1078
   #["rocky-10"]=1182
 
   #["centos-10"]=1179
