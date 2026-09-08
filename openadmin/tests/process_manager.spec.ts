@@ -20,12 +20,12 @@ test.describe('processes table', () => {
     console.log(`search testinguser: ${testingUserCount}`);
     expect(testingUserCount).not.toBe(initialCount);
 
-    await searchInput.fill('dockerd');
-    await expect(rows.first()).toContainText('dockerd');
+    await searchInput.fill('cron');
+    await expect(rows.first()).toContainText('cron');
 
-    const dockerdCount = await rows.count();
-    console.log(`search dockerd: ${dockerdCount}`);
-    expect(dockerdCount).not.toBe(initialCount);
+    const cronCount = await rows.count();
+    console.log(`search cron: ${cronCount}`);
+    expect(cronCount).not.toBe(initialCount);
 
     await expect(table).toBeVisible();
   });
