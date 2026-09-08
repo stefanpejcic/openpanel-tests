@@ -23,29 +23,66 @@ test('onboarding page loads with the intro step', async ({ page }) => {
 
 test('Start walks through steps 1-3 with progress indicator and Back navigation', async ({ page }) => {
   await page.goto('/onboarding');
+  await expect(page).toHaveURL(/\/onboarding/);
+
+  const main = page.getByRole('main');
 
   await page.getByRole('button', { name: 'Start' }).click();
-  await expect(page.getByText('Step 1 of 3')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Enable modules & services' })).toBeVisible();
 
-  const serviceCards = page.locator('#onboarding-services input[type="checkbox"]');
+  await expect(
+    main.locator('p.onb-step-eyebrow', { hasText: 'Step 1 of 3' })
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Enable modules & services' })
+  ).toBeVisible();
+
+  const serviceCards = page.locator(
+    '#onboarding-services input[type="checkbox"]'
+  );
+
   const serviceCount = await serviceCards.count();
+
   if (serviceCount > 0) {
     console.log(`step 1 lists ${serviceCount} onboarding service checkbox(es)`);
   }
 
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByText('Step 2 of 3')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Server configuration' })).toBeVisible();
+
+  await expect(
+    main.locator('p.onb-step-eyebrow', { hasText: 'Step 2 of 3' })
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Server configuration' })
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByText('Step 3 of 3')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Users and plans' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Got it, take me to the dashboard' })).toBeVisible();
 
-  // Back navigates without losing wizard state
+  await expect(
+    main.locator('p.onb-step-eyebrow', { hasText: 'Step 3 of 3' })
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Users and plans' })
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole('button', {
+      name: 'Got it, take me to the dashboard',
+    })
+  ).toBeVisible();
+
+  // Back navigates without losing wizard state.
   await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.getByText('Step 2 of 3')).toBeVisible();
+
+  await expect(
+    main.locator('p.onb-step-eyebrow', { hasText: 'Step 2 of 3' })
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Server configuration' })
+  ).toBeVisible();
 
   console.log('walked forward through all three steps and back one step');
 });
