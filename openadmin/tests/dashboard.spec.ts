@@ -9,7 +9,7 @@ async function navigateToDashboardPage(page: any) {
 
 test('access dashboard', async ({ page }) => {
   await navigateToDashboardPage(page);
-  await expect(page.getByText(/welcome/i)).toBeVisible();
+  await expect(page.locator('h1', { hasText: /welcome/i })).toBeVisible();
   console.log('Dashboard page is accessible');
 });
 
