@@ -13,26 +13,74 @@ test('notifications page loads with table and edit settings link', async ({ page
 
 test('search filters the notifications table', async ({ page }) => {
   await page.goto('/notifications');
+  await expect(page).toHaveURL(/\/notifications/);
 
-  const rows = page.locator('#tour-notifications-table tbody tr');
+  const table = page.locator('#tour-notifications-table');
+  const rows = table.locator('tbody tr');
+  const search = page.locator('#tour-notifications-search');
+
+  await expect(table).toBeVisible();
+  await expect(search).toBeVisible();
+
   const initialCount = await rows.count();
 
-  test.skip(initialCount === 0, 'No notifications recorded on this environment');
+  test.skip(
+    initialCount === 0,
+    'No notifications recorded on this environment'
+  );
 
-  const firstTitle = (await rows.first().locator('td').nth(1).innerText()).trim();
-  test.skip(!firstTitle, 'Notification title cell empty, cannot build a meaningful search');
+  // Columns:
+  // 0 = Time
+  // 1 = Status (hidden)
+  // 2 = Notification
+  // 3 = Details
+  // 4 = Actions
+  const firstTitle = (
+    await rows.first().locator('td').nth(2).innerText()
+  ).trim();
 
-  const search = page.locator('#tour-notifications-search');
+  expect(firstTitle).not.toBe('');
+
+  console.log(`Searching notifications for: "${firstTitle}"`);
+
   await search.fill(firstTitle);
 
-  const filteredRows = rows.filter({ hasText: firstTitle });
+  // The rows stay in the DOM; Alpine x-show hides non-matches.
+  const matchingRows = rows.filter({
+    has: page.locator('td:nth-child(3)', {
+      hasText: firstTitle,
+    }),
+  });
 
-  await expect(filteredRows).toHaveCount(1);
-  await expect(filteredRows.first()).toBeVisible();
+  // At least one matching notification must be visible.
+  await expect(matchingRows.first()).toBeVisible();
 
-  await expect(rows).toHaveCount(1);
+  // Every non-matching row must be hidden.
+  const count = await rows.count();
 
-  console.log(`search filtered notifications table to "${firstTitle}"`);
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    const title = (
+      await row.locator('td').nth(2).innerText()
+    ).trim();
+
+    if (title.toLowerCase().includes(firstTitle.toLowerCase())) {
+      await expect(row).toBeVisible();
+    } else {
+      await expect(row).toBeHidden();
+    }
+  }
+
+  // Clear search and verify all rows become visible again.
+  await search.fill('');
+
+  for (let i = 0; i < count; i++) {
+    await expect(rows.nth(i)).toBeVisible();
+  }
+
+  console.log(
+    `search correctly filtered notifications using "${firstTitle}"`
+  );
 });
 
 test('acknowledge a single unread notification', async ({ page }) => {
