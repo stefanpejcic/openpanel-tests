@@ -83,19 +83,32 @@ test.describe('processes table', () => {
     );
   });
 
-  test('kill', async ({ page }) => {
-    const userRow = page
-      .locator('#processes_table tbody tr', { hasText: 'testinguser' })
-      .first();
+test('kill', async ({ page }) => {
+  const userRow = page
+    .locator('#processes_table tbody tr', { hasText: 'testinguser' })
+    .first();
 
-    const pid = (await userRow.locator('td').first().innerText()).trim();
+  await expect(userRow).toBeVisible();
 
-    await userRow.getByRole('link', { name: 'Kill' }).click();
+  // Extract only the numeric PID from the first cell.
+  const pidCellText = await userRow.locator('td').first().innerText();
+  const pidMatch = pidCellText.match(/\d+/);
 
-    await expect(page.locator('body')).toContainText(
-      new RegExp(`Process with PID ${pid} killed successfully`)
-    );
+  expect(pidMatch).not.toBeNull();
 
-    await expect(page.locator('#processes_table')).not.toContainText(pid);
-  });
+  const pid = pidMatch![0];
+
+  await userRow.getByRole('link', { name: 'Kill', exact: true }).click();
+
+  await expect(page.locator('body')).toContainText(
+    `Process with PID ${pid} killed successfully`
+  );
+
+  // Verify that exact PID no longer exists in the PID column.
+  await expect(
+    page.locator('#processes_table tbody tr td:first-child').filter({
+      hasText: new RegExp(`^\\s*${pid}\\s*$`),
+    })
+  ).toHaveCount(0);
+});
 });
