@@ -13,7 +13,7 @@ test('vhost editor loads, edits, saves, and reverts', async ({ page }) => {
   test.skip(!href, 'No domains available to inspect VirtualHost for');
 
   await page.goto(href!);
-  await expect(page.getByText('Edit Domain VirtualHost')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Edit Domain VirtualHost' })).toBeVisible();
 
   const textarea = page.locator('#bind_content');
   await expect(textarea).toBeVisible();
