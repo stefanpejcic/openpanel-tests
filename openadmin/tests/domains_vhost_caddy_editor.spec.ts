@@ -51,7 +51,7 @@ test('caddyfile editor loads with warning banner', async ({ page }) => {
   test.skip(!href, 'No domains available to inspect Caddyfile for');
 
   await page.goto(href!);
-  await expect(page.getByText('Edit Domain Caddyfile')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Edit Domain Caddyfile' })).toBeVisible();
   await expect(page.locator('#bind_content')).not.toHaveValue('');
   await expect(page.getByText('Directly editing the Caddyfile is not recommended')).toBeVisible();
 
