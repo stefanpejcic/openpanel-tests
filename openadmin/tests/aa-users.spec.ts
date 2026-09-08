@@ -496,3 +496,21 @@ test('delete user', async ({ page }) => {
 
   console.log('delete user is working');
 });
+
+
+
+test('recreate user', async ({ page }) => {
+  await page.goto(`/user/new`);
+  await expect(page).toHaveURL(/user\/new/);
+
+  await page.fill('[name="admin_username"]', 'testinguser');
+  await page.fill('[name="admin_password"]', 'testingpassword');
+  await page.fill('[name="admin_email"]', 'stefan@test.rs');
+
+  await page.click('#CreateUserButton');
+
+  const successMessage = page.getByText('user created successfully');
+  await expect(successMessage).toBeVisible({ timeout: 20_000 });
+
+  console.log('User recreated successfully');
+});
