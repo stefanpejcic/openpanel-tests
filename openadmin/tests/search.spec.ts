@@ -21,46 +21,108 @@ test('searching a known page surfaces it in the dropdown and navigates on click'
 
 test('searching an existing username surfaces a user result', async ({ page }) => {
   await page.goto('/dashboard');
+  await expect(page).toHaveURL(/\/dashboard/);
 
-  await page.locator('#searchInput').fill('testinguser');
+  const search = page.locator('#searchInput');
   const dropdown = page.locator('#filteredDropdown');
 
+  await expect(search).toBeVisible();
+
+  await search.fill('testinguser');
+
+  // Alpine uses a 300ms debounced input handler, so let Playwright
+  // auto-wait for the rendered dropdown result.
+  await expect(dropdown).toBeVisible();
+
   const userLink = dropdown.locator('a[href="/users/testinguser"]');
-  const hasUser = await userLink.isVisible({ timeout: 5000 }).catch(() => false);
-  test.skip(!hasUser, 'testinguser not present on this environment');
+  const impersonationLink = dropdown.locator(
+    'a[href="/login/token/testinguser"]'
+  );
 
   await expect(userLink).toBeVisible();
-  await expect(dropdown.locator('a[href="/login/token/testinguser"]')).toBeVisible();
-  console.log('search for "testinguser" surfaced a matching user result with an impersonation link');
+  await expect(userLink).toContainText('testinguser');
+
+  await expect(impersonationLink).toBeVisible();
+  await expect(impersonationLink).toHaveAttribute(
+    'title',
+    'Login as testinguser into OpenPanel'
+  );
+
+  console.log(
+    'search for "testinguser" surfaced a matching user result with an impersonation link'
+  );
 });
 
 test('searching an existing website surfaces a website result', async ({ page }) => {
   await page.goto('/dashboard');
+  await expect(page).toHaveURL(/\/dashboard/);
 
-  // Discover a real, existing website name from the search endpoint itself
-  // rather than assuming one -- this environment's domains are whatever
-  // other test suites (e.g. domains_*.spec.ts) have created.
-  const websites: unknown = await page.evaluate(() => fetch('/search/websites').then(r => r.json()));
-  const siteRows = Array.isArray(websites) ? (websites as unknown[][]) : [];
-  test.skip(siteRows.length === 0, 'No websites present on this environment');
+  // Discover a real existing website from the search endpoint.
+  const websites = await page.evaluate(async () => {
+    const response = await fetch('/search/websites');
+    return response.json();
+  });
+
+  const siteRows = Array.isArray(websites) ? websites : [];
+
+  test.skip(
+    siteRows.length === 0,
+    'No websites present on this environment'
+  );
 
   const siteName = String(siteRows[0][0]);
-  await page.locator('#searchInput').fill(siteName);
 
+  const search = page.locator('#searchInput');
   const dropdown = page.locator('#filteredDropdown');
-  await expect(dropdown.locator(`a[href="/domains/${siteName}"]`)).toBeVisible({ timeout: 5000 });
-  console.log(`search for "${siteName}" surfaced a matching website result`);
+
+  await expect(search).toBeVisible();
+
+  await search.fill(siteName);
+
+  // Search results are populated asynchronously after the debounced input handler.
+  await expect(dropdown).toBeVisible();
+
+  const websiteLink = dropdown.locator(
+    `a[href="/domains/${siteName}"]`
+  );
+
+  await expect(websiteLink).toBeVisible();
+  await expect(websiteLink).toContainText(siteName);
+
+  console.log(
+    `search for "${siteName}" surfaced a matching website result`
+  );
 });
 
-test('clearing the search query closes the dropdown', async ({ page }) => {
+test('clearing the search query restores the dropdown results', async ({ page }) => {
   await page.goto('/dashboard');
 
-  await page.locator('#searchInput').fill('Firewall');
-  await expect(page.locator('#filteredDropdown')).toBeVisible({ timeout: 5000 });
+  const search = page.locator('#searchInput');
+  const dropdown = page.locator('#filteredDropdown');
+  const results = dropdown.locator('li');
 
-  await page.locator('#searchInput').fill('');
-  await page.waitForTimeout(400);
-  await expect(page.locator('#filteredDropdown')).toBeHidden();
+  await expect(search).toBeVisible();
 
-  console.log('clearing the search query closed the dropdown');
+  // Search for something specific.
+  await search.fill('Firewall');
+
+  await expect(dropdown).toBeVisible();
+  await expect(
+    dropdown.getByRole('link', { name: /Firewall/i }).first()
+  ).toBeVisible();
+
+  const filteredCount = await results.count();
+
+  // Clear the query.
+  await search.fill('');
+  await expect(search).toHaveValue('');
+
+  // The dropdown remains open, but the full result set is restored.
+  await expect(dropdown).toBeVisible();
+
+  await expect
+    .poll(async () => results.count())
+    .toBeGreaterThanOrEqual(filteredCount);
+
+  console.log('clearing the search query restored the dropdown results');
 });
