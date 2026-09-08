@@ -69,12 +69,12 @@ test('open single user', async ({ page }) => {
   await expect(page).toHaveURL(/users\/testinguser/);
 
   const expectedItems = [
-    'Statistics',
+    'Overview',
     'Services',
     'Storage',
-    'Overview',
     'Edit',
-    'Transfer',
+    'Permissions',
+    'Export',
     'Suspend',
     'Delete',
     'Activity Log',
