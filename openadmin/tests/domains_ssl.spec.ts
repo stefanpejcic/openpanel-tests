@@ -14,7 +14,7 @@ test('ssl management page loads for a domain', async ({ page }) => {
 
   await page.goto(href!);
   await expect(page.getByText('Manage SSL for')).toBeVisible();
-  await expect(page.getByText('Status')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Status' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Back to Domains' })).toHaveAttribute('href', '/domains');
 
   console.log(`ssl management page loaded for ${href}`);
