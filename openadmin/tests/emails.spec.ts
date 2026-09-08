@@ -4,80 +4,145 @@ import { test, expect } from '@playwright/test';
 
 test('emails accounts page loads', async ({ page }) => {
   await page.goto('/emails/accounts');
-  await expect(page).toHaveURL(/emails\/accounts/);
+  await expect(page).toHaveURL(/\/emails\/accounts/);
 
-  const mailserverNotInstalled = page.getByText('opencli email-server install');
-  const mailserverStopped = page.locator('text=stopped').first();
-  const emailTable = page.locator('table#exiting_users');
+  const mailserverNotInstalled = page.getByText(
+    'opencli email-server install',
+    { exact: false }
+  );
 
-  const isNotInstalled = await mailserverNotInstalled.isVisible().catch(() => false);
-  const isStopped = await mailserverStopped.isVisible().catch(() => false);
+  const mailserverStopped = page.getByText(/stopped/i).first();
+
+  const emailTable = page.getByRole('table').filter({
+    has: page.getByRole('columnheader', { name: 'Email' }),
+  });
+
+  const isNotInstalled = await mailserverNotInstalled
+    .isVisible()
+    .catch(() => false);
+
+  const isStopped = await mailserverStopped
+    .isVisible()
+    .catch(() => false);
 
   if (isNotInstalled) {
     await expect(mailserverNotInstalled).toBeVisible();
-  } else if (isStopped) {
-    await expect(mailserverStopped).toBeVisible();
-  } else {
-    await expect(emailTable).toBeVisible();
+    return;
   }
+
+  if (isStopped) {
+    await expect(mailserverStopped).toBeVisible();
+    return;
+  }
+
+  await expect(emailTable).toBeVisible();
+
+  await expect(
+    emailTable.getByRole('columnheader', { name: 'Email' })
+  ).toBeVisible();
+
+  await expect(
+    emailTable.getByRole('columnheader', { name: 'Quota' })
+  ).toBeVisible();
+
+  await expect(
+    emailTable.getByRole('columnheader', { name: 'Webmail' })
+  ).toBeVisible();
+
+  await expect(
+    emailTable.getByRole('columnheader', { name: 'Actions' })
+  ).toBeVisible();
+
+  console.log('emails accounts page working');
 });
 
 test('emails accounts search filters rows', async ({ page }) => {
   await page.goto('/emails/accounts');
+  await expect(page).toHaveURL(/\/emails\/accounts/);
 
-  const table = page.locator('table#exiting_users');
-  const isTableVisible = await table.isVisible().catch(() => false);
-  if (!isTableVisible) {
-    test.skip();
+  const table = page.getByRole('table').filter({
+    has: page.getByRole('columnheader', { name: 'Email' }),
+  });
+
+  await expect(table).toBeVisible();
+
+  const searchInput = page.getByPlaceholder('Search emails...');
+  await expect(searchInput).toBeVisible();
+
+  // Only actual email account rows.
+  const dataRows = table.locator(
+    'tbody tr[x-show*="searchQuery"]'
+  );
+
+  const emptyState = table.getByText(
+    'No email accounts yet.',
+    { exact: true }
+  );
+
+  // No accounts currently exist.
+  if (await dataRows.count() === 0) {
+    await expect(emptyState).toBeVisible();
+    console.log('No email accounts to search');
     return;
   }
 
-  const searchInput = page.locator('input[placeholder="Search emails..."]');
-  await expect(searchInput).toBeVisible();
-
-  // Type a query unlikely to match anything
+  // Search for something guaranteed not to match.
   await searchInput.fill('zzznomatch_xyz');
-  // All data rows should be hidden (Alpine x-show hides them)
-  const visibleRows = page.locator('tbody tr[x-show]');
-  for (const row of await visibleRows.all()) {
+
+  await expect(dataRows).toHaveCount(await dataRows.count());
+
+  for (const row of await dataRows.all()) {
     await expect(row).toBeHidden();
   }
 
-  // Clear search — rows come back
+  // Clear search and verify rows return.
   await searchInput.fill('');
-  const firstRow = visibleRows.first();
-  if (await firstRow.count() > 0) {
-    await expect(firstRow).toBeVisible();
-  }
+
+  await expect(dataRows.first()).toBeVisible();
+
+  console.log('emails accounts search is functional');
 });
 
 test('emails accounts webmail link present per row', async ({ page }) => {
   await page.goto('/emails/accounts');
+  await expect(page).toHaveURL(/\/emails\/accounts/);
 
-  const table = page.locator('table#exiting_users');
-  if (!await table.isVisible().catch(() => false)) {
-    test.skip();
-    return;
-  }
+  const table = page.getByRole('table').filter({
+    has: page.getByRole('columnheader', { name: 'Email' }),
+  });
 
-  const rows = page.locator('tbody tr').filter({ has: page.locator('a[href^="/emails/webmail/"]') });
+  await expect(table).toBeVisible();
+
+  const rows = table
+    .locator('tbody tr')
+    .filter({
+      has: table.locator('a[href^="/emails/webmail/"]'),
+    });
+
   const count = await rows.count();
+
   if (count === 0) {
-    // No email accounts — just verify empty state message
-    await expect(page.getByText('No email accounts yet.')).toBeVisible();
+    await expect(
+      table.getByText('No email accounts yet.', { exact: true })
+    ).toBeVisible();
+
+    console.log('No email accounts present');
     return;
   }
 
-  // Each visible row should have a webmail link
   for (let i = 0; i < count; i++) {
     const link = rows.nth(i).locator('a[href^="/emails/webmail/"]');
+
     await expect(link).toBeVisible();
+
     const href = await link.getAttribute('href');
+
+    expect(href).not.toBeNull();
     expect(href).toMatch(/^\/emails\/webmail\/.+@.+/);
   }
-});
 
-// ─── Queue ───────────────────────────────────────────────────────────────────
+  console.log('webmail links present for all email accounts');
+});// ─── Queue ───────────────────────────────────────────────────────────────────
 
 test('emails queue page loads', async ({ page }) => {
   await page.goto('/emails/queue');
@@ -132,22 +197,39 @@ test('emails queue search filters rows', async ({ page }) => {
 
 test('emails queue bulk actions visible when messages exist', async ({ page }) => {
   await page.goto('/emails/queue');
+  await expect(page).toHaveURL(/\/emails\/queue/);
 
-  const retryAllBtn  = page.getByRole('button', { name: /retry all/i });
+  const retryAllBtn = page.getByRole('button', { name: /retry all/i });
   const deleteAllBtn = page.getByRole('button', { name: /delete all/i });
+  const emptyQueue = page.getByText('Queue is empty.', { exact: true });
+  const mailserverNotInstalled = page.getByText(
+    'opencli email-server install',
+    { exact: false }
+  );
 
-  const hasRetry = await retryAllBtn.isVisible().catch(() => false);
-  if (!hasRetry) {
-    // Queue is empty or mailserver not running — acceptable
-    test.skip();
+  // Mail server is not installed — valid page state.
+  if (await mailserverNotInstalled.isVisible().catch(() => false)) {
+    await expect(mailserverNotInstalled).toBeVisible();
     return;
   }
 
+  // Empty queue — bulk actions are correctly unavailable.
+  if (await emptyQueue.isVisible().catch(() => false)) {
+    await expect(emptyQueue).toBeVisible();
+    await expect(retryAllBtn).toBeHidden();
+    await expect(deleteAllBtn).toBeHidden();
+
+    console.log('Queue is empty; bulk actions correctly unavailable');
+    return;
+  }
+
+  // Queue contains messages — bulk actions must be available.
   await expect(retryAllBtn).toBeVisible();
   await expect(deleteAllBtn).toBeVisible();
-});
 
-// ─── Settings ────────────────────────────────────────────────────────────────
+  console.log('queue bulk actions working');
+  
+});// ─── Settings ────────────────────────────────────────────────────────────────
 
 test('emails settings page loads', async ({ page }) => {
   await page.goto('/emails/settings');
@@ -269,51 +351,93 @@ test('email rate limits shows rules table or empty state', async ({ page }) => {
 
 test('email rate limits search input filters rows', async ({ page }) => {
   await page.goto('/emails/domain-limits');
+  await expect(page).toHaveURL(/\/emails\/domain-limits/);
 
-  const table = page.locator('table#exiting_users');
-  if (!await table.isVisible().catch(() => false)) {
-    test.skip();
+  const searchInput = page.getByRole('searchbox', {
+    name: 'Filter domain / user…',
+  });
+
+  await expect(searchInput).toBeVisible();
+
+  const table = page.getByRole('table');
+  const emptyState = page.getByText(
+    'No rate-limit rules configured',
+    { exact: true }
+  );
+
+  // No rules configured — valid state.
+  if (await emptyState.isVisible().catch(() => false)) {
+    await expect(emptyState).toBeVisible();
+    await expect(table).toHaveCount(0);
+
+    console.log('No rate-limit rules configured; search input is present');
     return;
   }
 
-  const searchInput = page.locator('input[placeholder*="Filter"]');
-  await expect(searchInput).toBeVisible();
+  // Rules exist, so the table must be present.
+  await expect(table).toBeVisible();
 
+  const dataRows = table.locator('tbody tr[x-data]');
+  await expect(dataRows.first()).toBeVisible();
+
+  // Search for something that should match nothing.
   await searchInput.fill('zzznomatch_xyz_unique');
-  const dataRows = page.locator('tbody tr[x-data]');
+
   for (const row of await dataRows.all()) {
     await expect(row).toBeHidden();
   }
 
+  // Clear search and verify rows return.
   await searchInput.fill('');
+
+  await expect(dataRows.first()).toBeVisible();
+
+  console.log('email rate limits search is functional');
 });
 
 test('email rate limits edit pencil opens inline input', async ({ page }) => {
   await page.goto('/emails/domain-limits');
+  await expect(page).toHaveURL(/\/emails\/domain-limits/);
 
-  const table = page.locator('table#exiting_users');
-  if (!await table.isVisible().catch(() => false)) {
-    test.skip();
+  const emptyState = page.getByText(
+    'No rate-limit rules configured',
+    { exact: true }
+  );
+
+  const table = page.getByRole('table');
+
+  // No rules configured — valid state, nothing to edit.
+  if (await emptyState.isVisible().catch(() => false)) {
+    await expect(emptyState).toBeVisible();
+    await expect(table).toHaveCount(0);
+
+    console.log('No email rate limit rows available to edit');
     return;
   }
 
-  const rows = page.locator('tbody tr[x-data]');
-  if (await rows.count() === 0) {
-    test.skip();
-    return;
-  }
+  // Rules exist, so the table must be present.
+  await expect(table).toBeVisible();
 
-  const firstRow   = rows.first();
-  const editBtn    = firstRow.locator('button[title="Edit limit"]');
+  const rows = table.locator('tbody tr[x-data]');
+  expect(await rows.count()).toBeGreaterThan(0);
+
+  const firstRow = rows.first();
+  await expect(firstRow).toBeVisible();
+
+  const editBtn = firstRow.locator('button[title="Edit limit"]');
   await expect(editBtn).toBeVisible();
+
   await editBtn.click();
 
   const editInput = firstRow.locator('input[type="number"]');
   await expect(editInput).toBeVisible();
 
-  // Cancel via escape
+  // Cancel editing without changing anything.
   await editInput.press('Escape');
+
   await expect(editInput).toBeHidden();
+
+  console.log('email rate limit inline edit working');
 });
 
 test('email rate limits raw mode toggle shows textarea', async ({ page }) => {
