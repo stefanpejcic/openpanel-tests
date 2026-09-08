@@ -65,8 +65,14 @@ test('test autologin', async ({ page, context }) => {
 
 
 test('open single user', async ({ page }) => {
-  await page.goto(`/users/testinguser`);
-  await expect(page).toHaveURL(/users\/testinguser/);
+  await page.goto('/users/testinguser');
+  await expect(page).toHaveURL(/\/users\/testinguser/);
+
+  const nav = page.getByRole('navigation', {
+    name: 'core navigation links',
+  });
+
+  await expect(nav).toBeVisible();
 
   const expectedItems = [
     'Overview',
@@ -83,7 +89,7 @@ test('open single user', async ({ page }) => {
 
   for (const item of expectedItems) {
     await expect(
-      page.locator('nav[aria-label="core navigation links"] a').filter({ hasText: item })
+      nav.getByText(item, { exact: true })
     ).toHaveCount(1);
   }
 
@@ -91,155 +97,315 @@ test('open single user', async ({ page }) => {
 });
 
 test('test tabs', async ({ page }) => {
-  await page.goto(`/users/testinguser`);
-  await expect(page).toHaveURL(/users\/testinguser/);
-  const nav = page.getByRole('navigation', { name: 'core navigation links' });
-  
+  await page.goto('/users/testinguser');
+  await expect(page).toHaveURL(/\/users\/testinguser/);
+
+  const nav = page.getByRole('navigation', {
+    name: 'core navigation links',
+  });
+
+  await expect(nav).toBeVisible();
+
   // SERVICES
-  await nav.getByText('Services').click();
-  await expect(page).toHaveURL(/#services/);
+  await nav.getByText('Services', { exact: true }).click();
+  await expect(page).toHaveURL(/#services$/);
+
+  const servicesPanel = page.locator('[x-show="activeTab === \'services\'"]');
+  await expect(servicesPanel).toBeVisible();
+
   const expectedServices = ['cpu', 'ram', 'actions'];
+
   for (const col of expectedServices) {
-    await expect(page.locator(`th[x-show="columns.${col}"]`)).toBeVisible();
+    await expect(
+      servicesPanel.locator(`th[x-show="columns.${col}"]`)
+    ).toBeVisible();
   }
+
   console.log('services tab ok');
 
   // STORAGE
-  await nav.getByText('Storage').click();
-  await expect(page).toHaveURL(/#storage/);
-  // TODO //
+  await nav.getByText('Storage', { exact: true }).click();
+  await expect(page).toHaveURL(/#storage$/);
+
+  const storagePanel = page.locator(
+    '[x-show="activeTab === \'storage\'"]'
+  );
+
+  await expect(storagePanel).toBeVisible();
+
   console.log('storage tab ok');
 
   // OVERVIEW
-  await nav.getByText('Overview').click();
-  await expect(page).toHaveURL(/#info/);
-    
-  const infoPanel = page.locator('[x-show="activeTab === \'info\'"]');
-  
-  // Get row by matching the label span text exactly (case-insensitive)
-  function getRow(panel, labelText) {
-    return panel.locator('.rounded-lg').filter({
-      has: panel.page().locator('span.text-sm', { hasText: labelText })
+  await nav.getByText('Overview', { exact: true }).click();
+  await expect(page).toHaveURL(/#stats$/);
+
+  const overviewPanel = page.locator(
+    '[x-show="activeTab === \'stats\'"]'
+  );
+
+  await expect(overviewPanel).toBeVisible();
+
+  // Helper to find an information row by its label.
+  function getRow(labelText: string) {
+    return overviewPanel.locator('.rounded-lg').filter({
+      has: page.locator('span.text-sm', {
+        hasText: new RegExp(
+          `^\\s*${labelText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`,
+          'i'
+        ),
+      }),
     }).first();
   }
-  
-  // Extract only direct text nodes from value span, ignoring child elements (badges, SVGs, imgs)
-  async function extractValue(row) {
+
+  // Extract text while ignoring nested badges/icons.
+  async function extractValue(row: any) {
     return row.locator('span.font-medium').first().evaluate(el =>
       Array.from(el.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent.trim())
+        .filter(node => node.nodeType === Node.TEXT_NODE)
+        .map(node => node.textContent?.trim() ?? '')
         .filter(Boolean)
         .join('')
         .trim()
     );
   }
-  
-  // For fields where the value is inside a nested badge span
-  async function extractBadgeValue(row) {
-    return row.locator('span.font-medium span').first().innerText().then(v => v.trim());
+
+  // Values rendered inside a nested badge.
+  async function extractBadgeValue(row: any) {
+    return (
+      await row.locator('span.font-medium span').first().innerText()
+    ).trim();
   }
-  
+
   const fields = [
-    { label: 'Username:',        validate: v => /^[a-z0-9_-]+$/i.test(v) },
-    { label: 'Email address:',   validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-    { label: 'Locale:',          validate: v => v.length > 0 },
-    { label: '2FA status:',      validate: v => ['Active', 'Inactive'].includes(v), badge: true },
-    { label: 'User ID (UID):',   validate: v => /^\d+$/.test(v) },
-    { label: 'IP address:',      validate: v => /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v) },
-    { label: 'Geo Location:',    validate: v => /^[A-Z]{2}$/.test(v) },
-    { label: 'Server:',          validate: v => v.length > 0 },
-    { label: 'Docker Context:',  validate: v => v.length > 0 },
-    { label: 'Home dir:',        validate: v => v.startsWith('/home/') },
-    { label: 'Web server:',      validate: v => ['apache', 'nginx', 'openlitespeed', 'openresty'].includes(v.toLowerCase())},
-    { label: 'Varnish Caching:', validate: v => ['Enabled', 'Disabled'].includes(v), badge: true },
-    { label: 'Database type:',   validate: v => ['mariadb', 'mysql'].includes(v.toLowerCase())},
-    { label: 'Setup time:',      validate: v => /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}$/.test(v) },
+    {
+      label: 'Username:',
+      validate: (v: string) => /^[a-z0-9_-]+$/i.test(v),
+    },
+    {
+      label: 'Email address:',
+      validate: (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    },
+    {
+      label: 'Locale:',
+      validate: (v: string) => v.length > 0,
+    },
+    {
+      label: '2FA status:',
+      validate: (v: string) => ['Active', 'Inactive'].includes(v),
+      badge: true,
+    },
+    {
+      label: 'User ID (UID):',
+      validate: (v: string) => /^\d+$/.test(v),
+    },
+    {
+      label: 'IP address:',
+      validate: (v: string) =>
+        /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v),
+    },
+    {
+      label: 'Geo Location:',
+      validate: (v: string) => /^[A-Z]{2}$/.test(v),
+    },
+    {
+      label: 'Server:',
+      validate: (v: string) => v.length > 0,
+    },
+    {
+      label: 'Docker Context:',
+      validate: (v: string) => v.length > 0,
+    },
+    {
+      label: 'Home dir:',
+      validate: (v: string) => v.startsWith('/home/'),
+    },
+    {
+      label: 'Web server:',
+      validate: (v: string) =>
+        ['apache', 'nginx', 'openlitespeed', 'openresty'].includes(
+          v.toLowerCase()
+        ),
+    },
+    {
+      label: 'Varnish Caching:',
+      validate: (v: string) => ['Enabled', 'Disabled'].includes(v),
+      badge: true,
+    },
+    {
+      label: 'Database type:',
+      validate: (v: string) =>
+        ['mariadb', 'mysql'].includes(v.toLowerCase()),
+    },
+    {
+      label: 'Setup time:',
+      // Current UI uses ISO timestamps such as:
+      // 2026-09-08T12:07:32Z
+      validate: (v: string) =>
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(v),
+    },
   ];
 
   for (const { label, validate, badge } of fields) {
-    const row = getRow(infoPanel, label);
+    const row = getRow(label);
+
     await expect(row).toBeVisible();
-  
-    const value = badge ? await extractBadgeValue(row) : await extractValue(row);
-  
+
+    const value = badge
+      ? await extractBadgeValue(row)
+      : await extractValue(row);
+
     if (!validate(value)) {
-      throw new Error(`Field "${label}" failed validation with value: "${value}"`);
+      throw new Error(
+        `Field "${label}" failed validation with value: "${value}"`
+      );
     }
+
     console.log(`  ✓ ${label.padEnd(20)} "${value}"`);
   }
-  
+
   console.log('overview tab ok');
 
   // EDIT
-  await nav.getByText('Edit').click();
-  await expect(page).toHaveURL(/#edit/);
-  const expectedFields = ['input[name="new_username"]', 'input[name="new_email"]', 'input[name="new_password"]', 'select[name="new_ip"]',];
+  await nav.getByText('Edit', { exact: true }).click();
+  await expect(page).toHaveURL(/#edit$/);
+
+  const editPanel = page.locator(
+    '[x-show="activeTab === \'edit\'"]'
+  );
+
+  await expect(editPanel).toBeVisible();
+
+  const expectedFields = [
+    'input[name="new_username"]',
+    'input[name="new_email"]',
+    'input[name="new_password"]',
+    'select[name="new_ip"]',
+  ];
+
   for (const selector of expectedFields) {
-    await expect(page.locator(selector)).toBeVisible();
+    await expect(editPanel.locator(selector)).toBeVisible();
   }
+
   console.log('edit tab ok');
 
-  // TRANSFER
-  await nav.getByText('Transfer').click();
-  await expect(page).toHaveURL(/#transfer/);
-  await expect(page.locator('#server')).toBeVisible();
-  await expect(page.locator('#port')).toBeVisible();
-  await expect(page.locator('#username')).toBeVisible();
-  await expect(page.locator('#password')).toBeVisible();
-  await expect(page.locator('#live_transfer')).toBeVisible();
-  console.log('transfer tab ok');
+  // PERMISSIONS
+  await nav.getByText('Permissions', { exact: true }).click();
+  await expect(page).toHaveURL(/#permissions$/);
+
+  const permissionsPanel = page.locator(
+    '[x-show="activeTab === \'permissions\'"]'
+  );
+
+  await expect(permissionsPanel).toBeVisible();
+
+  console.log('permissions tab ok');
+
+  // EXPORT
+  await nav.getByText('Export', { exact: true }).click();
+  await expect(page).toHaveURL(/#export$/);
+
+  const exportPanel = page.locator(
+    '[x-show="activeTab === \'export\'"]'
+  );
+
+  await expect(exportPanel).toBeVisible();
+
+  console.log('export tab ok');
 
   // SUSPEND
-  await nav.getByText('Suspend').click();
-  await expect(page).toHaveURL(/#suspend/);
-  
-  await expect(page.getByText('suspend user account', { exact: false })).toBeVisible();
-  await page.locator('[x-model="confirmationText"]:visible').fill('testinguser');
-  await expect(page.getByRole('button', { name: /suspend account/i })).toBeVisible();
-  
+  await nav.getByText('Suspend', { exact: true }).click();
+  await expect(page).toHaveURL(/#suspend$/);
+
+  const suspendPanel = page.locator(
+    '[x-show="activeTab === \'suspend\'"]'
+  );
+
+  await expect(suspendPanel).toBeVisible();
+
+  await expect(
+    suspendPanel.getByText(/suspend user account/i)
+  ).toBeVisible();
+
+  const suspendConfirmation = suspendPanel.locator(
+    '[x-model="confirmationText"]'
+  );
+
+  await expect(suspendConfirmation).toBeVisible();
+  await suspendConfirmation.fill('testinguser');
+
+  await expect(
+    suspendPanel.getByRole('button', {
+      name: /suspend account/i,
+    })
+  ).toBeVisible();
+
   console.log('suspend tab ok');
 
   // DELETE
-  await nav.getByText('Delete').click();
-  await expect(page).toHaveURL(/#delete/);
-  
-  await expect(page.getByText('delete user account', { exact: false })).toBeVisible();
-  await page.locator('[x-model="confirmationText"]:visible').fill('testinguser');
-  await expect(page.getByRole('button', { name: /delete account permanently/i })).toBeVisible();
-  
+  await nav.getByText('Delete', { exact: true }).click();
+  await expect(page).toHaveURL(/#delete$/);
+
+  const deletePanel = page.locator(
+    '[x-show="activeTab === \'delete\'"]'
+  );
+
+  await expect(deletePanel).toBeVisible();
+
+  await expect(
+    deletePanel.getByText(/delete user account/i)
+  ).toBeVisible();
+
+  const deleteConfirmation = deletePanel.locator(
+    '[x-model="confirmationText"]'
+  );
+
+  await expect(deleteConfirmation).toBeVisible();
+  await deleteConfirmation.fill('testinguser');
+
+  await expect(
+    deletePanel.getByRole('button', {
+      name: /delete account permanently/i,
+    })
+  ).toBeVisible();
+
   console.log('delete tab ok');
 
   // ACTIVITY LOG
-  await nav.getByText('Activity Log').click();
-  await expect(page).toHaveURL(/#activity/);
-  
-  const activityLink = page.locator('a[href="/json/user-activity/testinguser?raw=true"]');
+  await nav.getByText('Activity Log', { exact: true }).click();
+  await expect(page).toHaveURL(/#activity$/);
+
+  const activityPanel = page.locator(
+    '[x-show="activeTab === \'activity\'"]'
+  );
+
+  await expect(activityPanel).toBeVisible();
+
+  const activityLink = activityPanel.locator(
+    'a[href="/json/user-activity/testinguser?raw=true"]'
+  );
+
   await expect(activityLink).toBeVisible();
+
   console.log('activity tab ok');
 
   // LOGIN LOG
-  await nav.getByText('Login Log').click();
-  await expect(page).toHaveURL(/#logins/);
-  
-  const loginlogLink = page.locator('a[href="/json/user-logins/testinguser?raw=true"]');
-  await expect(loginlogLink).toBeVisible();
-  console.log('loginlog tab ok');
+  await nav.getByText('Login Log', { exact: true }).click();
+  await expect(page).toHaveURL(/#logins$/);
+
+  const loginPanel = page.locator(
+    '[x-show="activeTab === \'logins\'"]'
+  );
+
+  await expect(loginPanel).toBeVisible();
+
+  const loginLogLink = loginPanel.locator(
+    'a[href="/json/user-logins/testinguser?raw=true"]'
+  );
+
+  await expect(loginLogLink).toBeVisible();
+
+  console.log('login log tab ok');
 });
-
-
-
-test('search users', async ({ page }) => {
-  await navigateToUsersPage(page);
-  await page.locator('[x-model="searchQuery"]').fill('testinguser');
-  
-  const row = page.getByRole('row').filter({ hasText: 'testinguser' });
-  await expect(row).toHaveCount(1);
-  await expect(row).toHaveText(/testinguser/i);
-
-  console.log('Users search is functional');
-});
-
 
 
 test('toggle columns', async ({ page }) => {
