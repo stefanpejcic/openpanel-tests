@@ -82,44 +82,111 @@ async function navigateToUserPackages(page: any) {
 }
 
 test('create new hosting plan and verify all fields', async ({ page }) => {
-  await page.goto(`/dashboard`);
+  await page.goto('/dashboard');
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
-  await expect(page.getByText('developer plus')).toBeVisible();
+
+  await expect(
+    page.getByText('Developer plus', { exact: true })
+  ).toBeVisible();
 
   await page.getByRole('link', { name: 'Create New' }).click();
   await expect(page).toHaveURL(/\/plans\/new/);
 
   await fillPlanForm(page);
-  await page.getByRole('combobox').selectOption('mysql_only');
+
+  const featureSet = page.locator('select[name="feature_set"]');
+
+  await expect(featureSet).toBeVisible();
+  await featureSet.selectOption('mysql_only');
+  await expect(featureSet).toHaveValue('mysql_only');
+
   await page.getByRole('button', { name: 'Create Plan' }).click();
 
-  await expect(page.getByText('plan probni created successfully')).toBeVisible();
-  await verifyPlanRow(page, 'probni');
+  // Verify success toast.
+  const successAlert = page.getByRole('alert');
 
-  console.log('Plan "probni" created successfully with all fields verified in table');
+  await expect(successAlert).toBeVisible();
+  await expect(successAlert).toContainText(
+    /Plan\s+probni\s+created\s+successfully/i
+  );
+
+  // Explicitly open the plans table after creation.
+  await page.goto('/plans');
+  await expect(page).toHaveURL(/\/plans/);
+
+  await expect(
+    page.getByRole('heading', { name: 'User Packages' })
+  ).toBeVisible();
+
+  // Find the newly-created plan in the table.
+  const row = page.locator('tr.user-row').filter({
+    has: page.getByRole('cell', {
+      name: 'probni',
+      exact: true,
+    }),
+  });
+
+  await expect(row).toHaveCount(1);
+  await expect(row).toBeVisible();
+
+  const cells = row.getByRole('cell');
+
+  // Verify displayed values.
+  await expect(cells.nth(0)).toHaveText('probni');
+  await expect(cells.nth(1)).toContainText('25 GB');
+  await expect(cells.nth(2)).toContainText('15 Core');
+  await expect(cells.nth(3)).toContainText('400 GB');
+  await expect(cells.nth(4)).toContainText('699.999');
+  await expect(cells.nth(5)).toHaveText('28 mbits');
+  await expect(cells.nth(6)).toHaveText('44');
+  await expect(cells.nth(7)).toHaveText('55');
+  await expect(cells.nth(8)).toHaveText('88');
+  await expect(cells.nth(9)).toHaveText('99');
+  await expect(cells.nth(10)).toHaveText('∞');
+  await expect(cells.nth(11)).toHaveText('22');
+
+  // Verify feature set.
+  await expect(
+    cells.nth(12).getByRole('link', {
+      name: 'mysql_only',
+      exact: true,
+    })
+  ).toBeVisible();
+
+  console.log(
+    'Plan "probni" created successfully, toast verified, and plan verified in /plans table'
+  );
 });
 
 
 test('edit hosting plan and verify all fields', async ({ page }) => {
-  await page.goto(`/dashboard`);
+  await page.goto('/dashboard');
   await expect(page).toHaveURL(/dashboard/);
 
   await navigateToUserPackages(page);
 
   const planName = 'probni';
+  const editedPlanName = 'probniRenamed';
 
   const row = page.locator('tr.user-row').filter({
-    has: page.locator('td', { hasText: new RegExp(`^${planName}$`) }),
+    has: page.getByRole('cell', {
+      name: planName,
+      exact: true,
+    }),
   }).first();
 
   await expect(row).toBeVisible();
 
-  const menuButton = row.locator('button[data-dropdown-toggle^="dropdown-"]').first();
+  const menuButton = row
+    .locator('button[data-dropdown-toggle^="dropdown-"]')
+    .first();
+
   await expect(menuButton).toBeVisible();
 
   const dropdownId = await menuButton.getAttribute('data-dropdown-toggle');
+
   if (!dropdownId) {
     throw new Error(`Dropdown ID not found for plan row: ${planName}`);
   }
@@ -130,24 +197,76 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
   await expect(dropdown).toBeVisible();
 
   const editLink = dropdown.getByRole('link', { name: /^Edit$/ });
-  await expect(editLink).toBeVisible();
 
+  await expect(editLink).toBeVisible();
   await editLink.click();
 
   await expect(page).toHaveURL(/\/plans\/\d+/);
 
   await fillPlanEditForm(page);
-  await page.getByRole('combobox').selectOption('mysql_only');
+
+  const featureSet = page.locator('select[name="feature_set"]');
+
+  await expect(featureSet).toBeVisible();
+  await featureSet.selectOption('mysql_only');
+  await expect(featureSet).toHaveValue('mysql_only');
+
   await page.getByRole('button', { name: 'Save changes' }).click();
 
+  // Verify success notification.
+  const successAlert = page.getByRole('alert');
+
+  await expect(successAlert).toBeVisible();
+  await expect(successAlert).toContainText(
+    /updated successfully|successfully updated/i
+  );
+
+  // Explicitly go back to plans table.
+  await page.goto('/plans');
+  await expect(page).toHaveURL(/\/plans/);
+
   await expect(
-  page.getByText(/.*(updated successfully|successfully updated).*/i)
-).toBeVisible();
+    page.getByRole('heading', { name: 'User Packages' })
+  ).toBeVisible();
 
-  await navigateToUserPackages(page);
-  await verifyPlanRow(page, 'probni');
+  // Find renamed plan.
+  const editedRow = page.locator('tr.user-row').filter({
+    has: page.getByRole('cell', {
+      name: editedPlanName,
+      exact: true,
+    }),
+  });
+
+  await expect(editedRow).toHaveCount(1);
+  await expect(editedRow).toBeVisible();
+
+  const cells = editedRow.getByRole('cell');
+
+  // Verify edited plan values in table.
+  await expect(cells.nth(0)).toHaveText('probniRenamed');
+  await expect(cells.nth(1)).toContainText('25 GB');
+  await expect(cells.nth(2)).toContainText('15 Core');
+  await expect(cells.nth(3)).toContainText('400 GB');
+  await expect(cells.nth(4)).toContainText('699.999');
+  await expect(cells.nth(5)).toHaveText('28 mbits');
+  await expect(cells.nth(6)).toHaveText('44');
+  await expect(cells.nth(7)).toHaveText('55');
+  await expect(cells.nth(8)).toHaveText('88');
+  await expect(cells.nth(9)).toHaveText('99');
+  await expect(cells.nth(10)).toHaveText('∞');
+  await expect(cells.nth(11)).toHaveText('22');
+
+  await expect(
+    cells.nth(12).getByRole('link', {
+      name: 'mysql_only',
+      exact: true,
+    })
+  ).toBeVisible();
+
+  console.log(
+    'Plan "probni" successfully renamed to "probniRenamed", notification verified, and edited values verified in /plans table'
+  );
 });
-
 
 
 test('delete hosting plan', async ({ page }) => {
