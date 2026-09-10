@@ -4,6 +4,7 @@ test('resource usage page shows drop-cache and clear-swap controls', async ({ pa
   await page.goto('/server/resource-usage');
   await expect(page).toHaveURL(/server\/resource-usage/);
 
+  await page.getByRole('tab', { name: 'RAM' }).click();
   await expect(page.locator('#human-readable-info')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#swap-human-readable-info')).toBeVisible();
   await expect(page.locator('#clear-cache')).toBeVisible();
