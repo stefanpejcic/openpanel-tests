@@ -28,6 +28,14 @@ README="$PROJECT_DIR/README.md"
 mkdir -p "$LOG_DIR"
 cd "$REPO_DIR" || { echo "Cannot cd to $REPO_DIR" >&2; exit 1; }
 
+# pull in GITHUB_TOKEN (and anything else) from the same shared secrets
+# file opencli/os_install.sh uses -- see .env.template for the full list
+if [ -f "$REPO_DIR/.env" ]; then
+  set -a
+  source "$REPO_DIR/.env"
+  set +a
+fi
+
 # keep each run's HTML report separate instead of overwriting the last one
 export PLAYWRIGHT_HTML_REPORT="$LOG_DIR/html-report-openpanel-${TIMESTAMP}"
 export PLAYWRIGHT_HTML_OPEN=never
@@ -46,14 +54,27 @@ export PLAYWRIGHT_JSON_OUTPUT_NAME="$JSON_FILE"
 # build the results table into README.md, regardless of pass/fail
 node "$REPO_DIR/scripts/build-report.js" "$JSON_FILE" "$README" "$LABEL" >>"$LOG_FILE" 2>&1
 
-# commit and push the updated README so results are visible on git
+# commit and push ONLY the README's current content -- `--only` ignores
+# anything else that might already be staged, and this reuses the same
+# GITHUB_TOKEN that opencli/os_install.sh expects in the environment,
+# instead of requiring an SSH deploy key on this box.
+GITHUB_REPO="stefanpejcic/openpanel-tests"
+BRANCH="main"
+
 if ! git diff --quiet -- "$README"; then
-  {
-    git add "$README"
-    git commit -m "Automated $LABEL test run: $(date +%Y-%m-%d\ %H:%M)"
-    git pull --rebase --autostash
-    git push
-  } >>"$LOG_FILE" 2>&1
+  if [ -z "${GITHUB_TOKEN:-}" ]; then
+    {
+      echo "GITHUB_TOKEN is not set -- committing locally only, not pushing."
+      git commit --only -m "Automated $LABEL test run: $(date +%Y-%m-%d\ %H:%M)" -- "$README"
+    } >>"$LOG_FILE" 2>&1
+  else
+    {
+      git commit --only -m "Automated $LABEL test run: $(date +%Y-%m-%d\ %H:%M)" -- "$README" \
+        && git -c http.extraHeader="Authorization: Bearer ${GITHUB_TOKEN}" fetch "https://github.com/${GITHUB_REPO}.git" "$BRANCH" \
+        && git rebase --autostash FETCH_HEAD \
+        && git -c http.extraHeader="Authorization: Bearer ${GITHUB_TOKEN}" push "https://github.com/${GITHUB_REPO}.git" "HEAD:$BRANCH"
+    } >>"$LOG_FILE" 2>&1
+  fi
 fi
 
 # prune logs/reports older than 30 days so this doesn't grow forever

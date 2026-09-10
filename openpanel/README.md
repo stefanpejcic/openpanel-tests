@@ -44,6 +44,12 @@ cd /root/playwright-test && npx playwright test -c openpanel/playwright.config.t
 results table into this README (below), and commits + pushes it so the
 latest run is visible on git without needing to log into the server.
 
+Pushing requires `GITHUB_TOKEN` (a token with write access to this repo).
+Copy `/root/playwright-test/.env.template` to `/root/playwright-test/.env`
+and fill it in — this is the same file `opencli/os_install.sh` reads. If
+`GITHUB_TOKEN` isn't set, the script still commits locally, it just skips
+the push.
+
 ```bash
 chmod +x /root/playwright-test/openpanel/run-tests.sh
 ```

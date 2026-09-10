@@ -2,27 +2,20 @@
 
 GITHUB_REPO="stefanpejcic/OpenPanel"
 
-# NEEDED DATA:
-: '
-GITHUB_TOKEN
-
-SSH_PUBLIC_KEY
-SSH_PRIVATE_FILE
-SSH_PRIVATE_KEY
-
-VIRTUALIZOR_API
-API_KEY
-API_HASH
-VPSID
-VPS_IP
-TEST_PASS
-
-DOCKER_HUB_TOKEN
-DISCORD_WEBHOOK
-'
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# read shared secrets -- see ../.env.template for the full list
+# (GITHUB_TOKEN, SSH_PRIVATE_KEY, VIRTUALIZOR_API, API_KEY, API_HASH,
+# VPSID, VPS_IP, TEST_PASS, DOCKER_HUB_TOKEN, DISCORD_WEBHOOK)
+SECRETS_FILE="$SCRIPT_DIR/../.env"
+
+if [ -f "$SECRETS_FILE" ]; then
+    set -a
+    source "$SECRETS_FILE"
+    set +a
+else
+    echo "Warning: $SECRETS_FILE not found"
+fi
 
 # read admin logins
 ENV_FILE="$SCRIPT_DIR/../openadmin/.env"
