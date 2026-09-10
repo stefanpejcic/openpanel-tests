@@ -30,7 +30,13 @@ test('search filters the services table', async ({ page }) => {
 test('each service row exposes start/stop and restart actions', async ({ page }) => {
   await page.goto('/services');
 
-  const rows = page.locator('#exiting_users tbody tr');
+  const table = page.locator('#exiting_users');
+  const headers = table.locator('thead th');
+  const headerTexts = await headers.allInnerTexts();
+  const realNameIdx = headerTexts.findIndex(h => h.trim() === 'Real Name');
+  expect(realNameIdx).toBeGreaterThanOrEqual(0);
+
+  const rows = table.locator('tbody tr');
   const count = await rows.count();
 
   test.skip(count === 0, 'No services detected on this environment');
@@ -40,10 +46,9 @@ test('each service row exposes start/stop and restart actions', async ({ page })
   for (let i = 0; i < count; i++) {
     const row = rows.nth(i);
 
-    const realName = (await row.locator('td').nth(3).innerText()).trim();
+    const realName = (await row.locator('td').nth(realNameIdx).innerText()).trim();
     if (!realName) continue;
 
-    // Use accessible names instead of non-existent title attributes
     const startBtn = row.getByRole('button', { name: new RegExp(`Start ${realName}`, 'i') });
     const stopBtn = row.getByRole('button', { name: new RegExp(`Stop ${realName}`, 'i') });
     const restartBtn = row.getByRole('button', { name: new RegExp(`Restart ${realName}`, 'i') });
@@ -60,6 +65,7 @@ test('each service row exposes start/stop and restart actions', async ({ page })
   expect(foundAtLeastOne).toBeTruthy();
   console.log('verified start/stop and restart action buttons are present for services');
 });
+
 test('monitored services link to notifications settings', async ({ page }) => {
   await page.goto('/services');
 
