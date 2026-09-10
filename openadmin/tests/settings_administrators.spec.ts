@@ -15,11 +15,12 @@ test('search filters the administrators table', async ({ page }) => {
   const count = await rows.count();
   test.skip(count === 0, 'No administrators to search');
 
-  const firstUsername = (await rows.first().locator('td').nth(1).innerText()).trim();
+  const firstUsername = (await rows.first().locator('td').first().innerText()).trim();
   await page.locator('input[x-model="searchQuery"]').fill(firstUsername);
   await page.waitForTimeout(150);
 
-  await expect(rows.filter({ hasText: firstUsername })).toBeVisible();
+  const matchedRow = rows.filter({ hasText: firstUsername });
+  await expect(matchedRow.first()).toBeVisible();
   console.log(`search filtered administrators table to "${firstUsername}"`);
 });
 
