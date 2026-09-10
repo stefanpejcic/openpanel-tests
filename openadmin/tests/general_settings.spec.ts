@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test('update proxy and test restart needed msg', async ({ page }) => {
+  // this test restarts both the openpanel container and the OpenAdmin
+  // service itself and waits for each to come back, which together can
+  // comfortably exceed the default 30s test timeout.
+  test.setTimeout(180_000);
+
   const randomNum = Math.floor(Math.random() * 100000);
   const randomLink = `newlink${randomNum}`;
 
