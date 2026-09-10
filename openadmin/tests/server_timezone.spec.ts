@@ -19,7 +19,7 @@ test('change timezone updates host setting and can be reverted', async ({ page }
 
   const select = page.locator('#timezone');
   const original = await select.inputValue();
-  const target = original === 'UTC' ? 'Europe/Belgrade' : 'UTC';
+  const target = original === 'Europe/Belgrade' ? 'Etc/Greenwich' : 'Europe/Belgrade';
 
   await select.selectOption(target);
   await page.getByRole('button', { name: 'Change Timezone' }).click();
