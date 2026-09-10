@@ -1,6 +1,60 @@
+# OpenAdmin tests
 
-`#npx playwright test --project=setup`
+Playwright end-to-end tests for the OpenAdmin (admin) panel.
 
+## Setup
+
+1. Download the tests: `cd /root/playwright-test && git pull`
+2. Add logins to `/root/playwright-test/openadmin/.env`:
+   ```
+   BASE_URL=
+   PANEL_USERNAME=
+   PANEL_PASSWORD=
+   ```
+
+## Run manually
+
+```bash
+cd /root/playwright-test && npx playwright test -c openadmin/playwright.config.ts --project=tests --ui
 ```
-cd /root/playwright-test && npx playwright test -c openadmin/playwright.config.ts --project=tests --project=tests --ui
+
+## Run headlessly (single worker)
+
+This is what `run-tests.sh` and cron use — no `--ui`, since there's no
+display available in cron. Always run this suite with a single worker;
+running it in parallel hammers the shared test server and causes
+contention-related failures that aren't real bugs.
+
+```bash
+cd /root/playwright-test && npx playwright test -c openadmin/playwright.config.ts --project=tests --workers=1
 ```
+
+## Automated daily runs (cron)
+
+`run-tests.sh` runs the suite headlessly on a single worker, writes a
+results table into this README (below), and commits + pushes it so the
+latest run is visible on git without needing to log into the server.
+
+```bash
+chmod +x /root/playwright-test/openadmin/run-tests.sh
+```
+
+Add to crontab (`crontab -e`) to run daily at 17:00:
+
+```cron
+0 17 * * * /root/playwright-test/openadmin/run-tests.sh
+```
+
+Full logs, the Playwright HTML report, and the raw JSON results for each
+run are kept under `/root/playwright-test/logs/` (not committed to git,
+pruned after 30 days). The README below only ever shows the *latest* run.
+
+**Note:** two tests in this suite (`reboot.spec.ts`, and the OpenAdmin
+self-restart in `general_settings.spec.ts`) genuinely reboot/restart the
+server. Expect a brief outage each time this suite runs.
+
+## Automated Test Results
+
+<!-- AUTOMATED-RESULTS:START -->
+_No automated run yet — this section is filled in automatically by `run-tests.sh`._
+<!-- AUTOMATED-RESULTS:END -->

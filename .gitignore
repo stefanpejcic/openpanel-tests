@@ -5,3 +5,4 @@ node_modules
 .auth
 *.env
 *.totp-secret.tmp
+logs/

@@ -117,14 +117,24 @@ npx --yes playwright install --with-deps
 
 echo "=== Configuring cron ==="
 
-CRON_JOB="0 3 * * * bash /root/playwright-test/opencli/os_install.sh"
+chmod +x /root/playwright-test/openadmin/run-tests.sh /root/playwright-test/openpanel/run-tests.sh
 
-# Install the cron entry without opening an editor or prompting.
+CRON_JOBS=(
+    "0 7 * * * bash /root/playwright-test/opencli/os_install.sh"
+    "0 17 * * * /root/playwright-test/openadmin/run-tests.sh"
+    "0 22 * * * /root/playwright-test/openpanel/run-tests.sh"
+)
+
+# Install the cron entries without opening an editor or prompting.
 CURRENT_CRON="$(crontab -l 2>/dev/null || true)"
 
-if ! printf '%s\n' "$CURRENT_CRON" | grep -Fqx "$CRON_JOB"; then
-    printf '%s\n' "$CURRENT_CRON" "$CRON_JOB" | crontab -
-fi
+for CRON_JOB in "${CRON_JOBS[@]}"; do
+    if ! printf '%s\n' "$CURRENT_CRON" | grep -Fqx "$CRON_JOB"; then
+        CURRENT_CRON="$(printf '%s\n%s\n' "$CURRENT_CRON" "$CRON_JOB")"
+    fi
+done
+
+printf '%s\n' "$CURRENT_CRON" | crontab -
 
 echo
 echo "================================"
@@ -141,3 +151,8 @@ echo "   /root/playwright-test/openadmin/.env"
 echo "5. Edit:"
 echo "   /root/playwright-test/opencli/os_install.sh"
 echo "6. Run tests as described in the README files."
+echo
+echo "Cron jobs installed:"
+echo "  07:00 daily - opencli/os_install.sh"
+echo "  17:00 daily - openadmin/run-tests.sh (results pushed to openadmin/README.md)"
+echo "  22:00 daily - openpanel/run-tests.sh (results pushed to openpanel/README.md)"
