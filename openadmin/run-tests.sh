@@ -9,6 +9,10 @@
 #
 # Can also be run manually:
 #   ./run-tests.sh
+#
+# To test the README-build + commit/push step alone, without waiting on a
+# full (slow) test run, reuse the last JSON results file:
+#   SKIP_TESTS=1 ./run-tests.sh
 
 set -uo pipefail
 
@@ -41,15 +45,24 @@ export PLAYWRIGHT_HTML_REPORT="$LOG_DIR/html-report-openadmin-${TIMESTAMP}"
 export PLAYWRIGHT_HTML_OPEN=never
 export PLAYWRIGHT_JSON_OUTPUT_NAME="$JSON_FILE"
 
-{
-  echo "=== $LABEL tests starting at $(date) ==="
+if [ "${SKIP_TESTS:-0}" = "1" ]; then
+  if [ ! -f "$JSON_FILE" ]; then
+    echo "SKIP_TESTS=1 but no existing results file at $JSON_FILE" >&2
+    exit 1
+  fi
+  echo "SKIP_TESTS=1 -- reusing existing results file, not running tests" | tee -a "$LOG_FILE"
+  TEST_STATUS=0
+else
+  {
+    echo "=== $LABEL tests starting at $(date) ==="
 
-  npx playwright test -c openadmin/playwright.config.ts --project=tests --workers=1 --reporter=list,html,json
-  TEST_STATUS=$?
+    npx playwright test -c openadmin/playwright.config.ts --project=tests --workers=1 --reporter=list,html,json
+    TEST_STATUS=$?
 
-  echo "=== $LABEL tests finished at $(date) with exit code $TEST_STATUS ==="
-  echo "=== HTML report: $PLAYWRIGHT_HTML_REPORT ==="
-} >>"$LOG_FILE" 2>&1
+    echo "=== $LABEL tests finished at $(date) with exit code $TEST_STATUS ==="
+    echo "=== HTML report: $PLAYWRIGHT_HTML_REPORT ==="
+  } >>"$LOG_FILE" 2>&1
+fi
 
 GITHUB_REPO="stefanpejcic/openpanel-tests"
 BRANCH="main"
