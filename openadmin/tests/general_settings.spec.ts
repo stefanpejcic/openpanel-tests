@@ -23,8 +23,7 @@ test('update proxy and test restart needed msg', async ({ page }) => {
   await restartLink.click();
   await expect(page).toHaveURL(/\/services/);
 
-  // Restart first service
-  await page.getByRole('button', { name: /restart openpanel/i }).click();
+  await page.getByRole('row', { name: 'OpenPanel UI' }).getByRole('button', { name: 'Restart openpanel', exact: true }).click();
   await expect(page.getByRole('link', { name: /1 service needs restart/i })).toBeVisible();
 
   // Restart second service
