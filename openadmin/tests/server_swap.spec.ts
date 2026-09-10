@@ -11,9 +11,9 @@ test('swap page loads with current usage, devices table, and controls', async ({
   await expect(page).toHaveURL(/server\/swap/);
 
   await expect(page.getByRole('heading', { name: 'Swap', level: 1, exact: true })).toBeVisible();
-  await expect(page.getByText('Total', { exact: true })).toBeVisible();
-  await expect(page.getByText('Used', { exact: true })).toBeVisible();
-  await expect(page.getByText('Free', { exact: true })).toBeVisible();
+  await expect(page.getByRole('paragraph').filter({ hasText: 'Total' })).toBeVisible();
+  await expect(page.getByRole('paragraph').filter({ hasText: 'Used' })).toBeVisible();
+  await expect(page.getByRole('paragraph').filter({ hasText: 'Free' })).toBeVisible();
 
   const rows = page.locator('tbody tr');
   const count = await rows.count();
