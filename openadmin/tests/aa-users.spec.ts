@@ -17,6 +17,11 @@ test('view users', async ({ page }) => {
 
 
 test('create user', async ({ page }) => {
+  // account provisioning through the UI (home dir, docker container, mail,
+  // etc.) is noticeably slower than the CLI equivalent and can occasionally
+  // take well over 20s, especially under load -- give it more room.
+  test.setTimeout(90_000);
+
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
 
@@ -27,13 +32,17 @@ test('create user', async ({ page }) => {
   await page.click('#CreateUserButton');
 
   const successMessage = page.getByText('user created successfully');
-  await expect(successMessage).toBeVisible({ timeout: 20_000 });
+  await expect(successMessage).toBeVisible({ timeout: 60_000 });
 
   console.log('User created successfully');
 });
 
 
 test('test autologin', async ({ page, context }) => {
+  // the inner toPass() below can retry for up to 60s; make sure the test's
+  // own timeout doesn't cut that short (default is 30s).
+  test.setTimeout(90_000);
+
   const impersonateLink = page.locator('a[href="/login/token/testinguser"]');
 
   await expect(async () => {
@@ -500,6 +509,8 @@ test('delete user', async ({ page }) => {
 
 
 test('recreate user', async ({ page }) => {
+  test.setTimeout(90_000);
+
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
 
@@ -510,7 +521,7 @@ test('recreate user', async ({ page }) => {
   await page.click('#CreateUserButton');
 
   const successMessage = page.getByText('user created successfully');
-  await expect(successMessage).toBeVisible({ timeout: 20_000 });
+  await expect(successMessage).toBeVisible({ timeout: 60_000 });
 
   console.log('User recreated successfully');
 });
