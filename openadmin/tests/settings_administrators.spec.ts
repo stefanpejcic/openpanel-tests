@@ -56,12 +56,13 @@ test('create, inspect, and delete a new administrator (Enterprise only)', async 
 test('rename and change-password links navigate to dedicated pages', async ({ page }) => {
   await page.goto('/administrators');
 
-  const rows = page.locator('#exiting_users tbody tr');
-  const count = await rows.count();
-  test.skip(count === 0, 'No administrators to inspect');
+  // Target a row that has an edit action button
+  const rowWithActions = page.locator('#exiting_users tbody tr').filter({has: page.locator('button[data-dropdown-toggle]')}).first();
+  test.skip(await rowWithActions.count() === 0, 'No editable administrators available');
 
-  const username = (await rows.first().locator('td').nth(1).innerText()).trim();
-  await rows.first().locator('button[data-dropdown-toggle]').click();
+  const username = (await rowWithActions.locator('td').first().innerText()).trim();
+  await rowWithActions.locator('button[data-dropdown-toggle]').click();
+
   const dropdown = page.locator(`#dropdown-${username}`);
   await expect(dropdown.getByRole('link', { name: 'Rename' })).toHaveAttribute('href', `/administrators/rename/${username}`);
   await expect(dropdown.getByRole('link', { name: 'Change Password' })).toHaveAttribute('href', `/administrators/password/${username}`);
