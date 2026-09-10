@@ -25,9 +25,8 @@ test('update proxy and test restart needed msg', async ({ page }) => {
 
   await page.getByRole('row', { name: 'OpenPanel UI' }).getByRole('button', { name: 'Restart openpanel', exact: true }).click();
   await expect(page.getByRole('link', { name: /1 service needs restart/i })).toBeVisible();
-
-  // Restart second service
-  await page.getByRole('button', { name: /restart admin/i }).click();
+  
+  await page.getByRole('row', { name: 'OpenAdmin UI' }).getByRole('button', { name: 'Restart admin', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText(/failed to restart/i);
 
   // Final state
