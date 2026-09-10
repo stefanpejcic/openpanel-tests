@@ -151,12 +151,17 @@ test('add custom ssl', async ({ page }) => {
   await domainPage.close();
 
   // 5. Verify the certificate presented by the server
+  await expect(async () => {
+    const cert = await getCert(DOMAIN);
+    const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
+    expect(issuer).toMatch(/cloudflare/i);
+  }).toPass({
+    timeout: 60_000,
+    intervals: [2000, 3000, 5000, 10000],
+  });
+
   const cert = await getCert(DOMAIN);
-  const issuer = cert?.issuer?.O || cert?.issuer?.CN || '';
-
-  console.log('Issuer:', issuer);
-  expect(issuer).toMatch(/cloudflare/i);
-
+  console.log('Issuer:', cert?.issuer?.O || cert?.issuer?.CN || '');
   console.log('custom ssl is working');
 });
 
