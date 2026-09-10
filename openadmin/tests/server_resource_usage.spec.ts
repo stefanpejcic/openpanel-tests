@@ -19,9 +19,7 @@ test('resource usage history page loads with default line view', async ({ page }
 
   await expect(page).toHaveURL(/server\/resource-usage\/history/);
 
-  await expect(
-    page.getByRole('heading', { name: 'Resource Usage History' })
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resource Usage History' })).toBeVisible();
 
   await expect(page.locator('#chart-cpu')).toBeVisible();
   await expect(page.locator('#chart-mem')).toBeVisible();
@@ -62,6 +60,6 @@ test('refresh button reloads the page', async ({ page }) => {
     page.getByRole('button', { name: 'Refresh' }).click(),
   ]);
 
-  await expect(page.getByText('Resource Usage History')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Resource Usage History' })).toBeVisible();
   console.log('refresh button reloaded the page');
 });
