@@ -70,7 +70,7 @@ server. Expect a brief outage each time this suite runs.
 <!-- AUTOMATED-RESULTS:START -->
 ### Latest OpenAdmin run
 
-**Last run:** 2026-09-10 15:16:03 UTC  
+**Last run:** 2026-09-10 15:35:41 UTC  
 **Result:** ❌ 14 failed — 262 passed, 14 failed, 115 skipped (391 total) in 10m 56s
 
 #### ❌ Failures
