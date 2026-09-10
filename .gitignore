@@ -6,6 +6,4 @@ node_modules
 *.env
 *.totp-secret.tmp
 logs/
-cron.log
-admin_cron.log
-user_cron.log
+*.log

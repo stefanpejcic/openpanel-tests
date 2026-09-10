@@ -51,15 +51,18 @@ export PLAYWRIGHT_JSON_OUTPUT_NAME="$JSON_FILE"
   echo "=== HTML report: $PLAYWRIGHT_HTML_REPORT ==="
 } >>"$LOG_FILE" 2>&1
 
-# build the results table into README.md, regardless of pass/fail
-node "$REPO_DIR/scripts/build-report.js" "$JSON_FILE" "$README" "$LABEL" >>"$LOG_FILE" 2>&1
+GITHUB_REPO="stefanpejcic/openpanel-tests"
+BRANCH="main"
+
+# build the results table into README.md, and (if GITHUB_TOKEN is set)
+# open/update/close a single persistent GitHub issue for this script's
+# failures -- regardless of pass/fail
+node "$REPO_DIR/scripts/build-report.js" "$JSON_FILE" "$README" "$LABEL" "$GITHUB_REPO" >>"$LOG_FILE" 2>&1
 
 # commit and push ONLY the README's current content -- `--only` ignores
 # anything else that might already be staged, and this reuses the same
 # GITHUB_TOKEN that opencli/os_install.sh expects in the environment,
 # instead of requiring an SSH deploy key on this box.
-GITHUB_REPO="stefanpejcic/openpanel-tests"
-BRANCH="main"
 
 if ! git diff --quiet -- "$README"; then
   if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -68,11 +71,14 @@ if ! git diff --quiet -- "$README"; then
       git commit --only -m "Automated $LABEL test run: $(date +%Y-%m-%d\ %H:%M)" -- "$README"
     } >>"$LOG_FILE" 2>&1
   else
+    # embed the token directly in the URL (standard PAT-over-HTTPS auth) so
+    # git never falls back to an interactive credential prompt
+    REMOTE_URL="https://stefanpejcic:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git"
     {
       git commit --only -m "Automated $LABEL test run: $(date +%Y-%m-%d\ %H:%M)" -- "$README" \
-        && git -c http.extraHeader="Authorization: Bearer ${GITHUB_TOKEN}" fetch "https://github.com/${GITHUB_REPO}.git" "$BRANCH" \
+        && GIT_TERMINAL_PROMPT=0 git fetch "$REMOTE_URL" "$BRANCH" \
         && git rebase --autostash FETCH_HEAD \
-        && git -c http.extraHeader="Authorization: Bearer ${GITHUB_TOKEN}" push "https://github.com/${GITHUB_REPO}.git" "HEAD:$BRANCH"
+        && GIT_TERMINAL_PROMPT=0 git push "$REMOTE_URL" "HEAD:$BRANCH"
     } >>"$LOG_FILE" 2>&1
   fi
 fi

@@ -41,6 +41,12 @@ and fill it in — this is the same file `opencli/os_install.sh` reads. If
 `GITHUB_TOKEN` isn't set, the script still commits locally, it just skips
 the push.
 
+With `GITHUB_TOKEN` set, it also keeps a single [GitHub issue](https://github.com/stefanpejcic/openpanel-tests/issues)
+in sync for this script: opens one the first time a run fails, updates
+that same issue (with a "still failing" comment) on every subsequent
+failing run instead of opening duplicates, and closes it with a comment
+once a run passes again.
+
 ```bash
 chmod +x /root/playwright-test/openadmin/run-tests.sh
 ```
