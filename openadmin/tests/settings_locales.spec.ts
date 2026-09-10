@@ -19,7 +19,7 @@ test('search filters the locales table', async ({ page }) => {
   await page.locator('input[x-model="searchQuery"]').fill(firstLocale);
   await page.waitForTimeout(150);
 
-  await expect(rows.filter({ hasText: firstLocale })).toBeVisible();
+  await expect(rows.filter({ hasText: firstLocale }).first()).toBeVisible();
   console.log(`search filtered locales table to "${firstLocale}"`);
 });
 
@@ -32,17 +32,21 @@ test('set a different installed locale as default, then revert', async ({ page }
 
   const rows = page.locator('#tour-locales-table tbody tr');
 
-  const defaultRow = rows.filter({ hasText: 'Default' }).first();
+  // Find default row specifically by matching exact 'Default' badge text in the cell
+  const defaultRow = rows.filter({
+    has: page.getByText('Default', { exact: true })
+  });
   const originalLocale = (await defaultRow.locator('td').nth(1).innerText()).trim();
 
   const firstNonDefaultButton = setDefaultButtons.first();
-
   await firstNonDefaultButton.click();
 
-  // wait for UI to reflect change instead of assuming immediate DOM stability
-  await expect(rows.filter({ hasText: 'Default' })).not.toHaveText(originalLocale);
+  // Assert that the original locale row no longer has the 'Default' badge
+  await expect(
+    rows.filter({ hasText: originalLocale }).getByText('Default', { exact: true })
+  ).toBeHidden();
 
-  // now find the new "Set as Default" button for the original row
+  // Find the "Set as Default" button for the original locale row
   const restoreButton = rows
     .filter({ hasText: originalLocale })
     .getByRole('button', { name: 'Set as Default' });
@@ -50,8 +54,9 @@ test('set a different installed locale as default, then revert', async ({ page }
   await expect(restoreButton).toBeVisible();
   await restoreButton.click();
 
+  // Assert that the original locale restored its 'Default' badge
   await expect(
-    rows.filter({ hasText: originalLocale }).getByText('Default')
+    rows.filter({ hasText: originalLocale }).getByText('Default', { exact: true })
   ).toBeVisible();
 
   console.log(`switched default locale away from "${originalLocale}" and back`);
