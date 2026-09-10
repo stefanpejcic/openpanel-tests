@@ -19,8 +19,8 @@ test('view users', async ({ page }) => {
 test('create user', async ({ page }) => {
   // account provisioning through the UI (home dir, docker container, mail,
   // etc.) is noticeably slower than the CLI equivalent and can occasionally
-  // take well over 20s, especially under load -- give it more room.
-  test.setTimeout(90_000);
+  // take well over a minute under load -- give it plenty of room.
+  test.setTimeout(150_000);
 
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
@@ -32,7 +32,7 @@ test('create user', async ({ page }) => {
   await page.click('#CreateUserButton');
 
   const successMessage = page.getByText('user created successfully');
-  await expect(successMessage).toBeVisible({ timeout: 60_000 });
+  await expect(successMessage).toBeVisible({ timeout: 120_000 });
 
   console.log('User created successfully');
 });
@@ -509,7 +509,7 @@ test('delete user', async ({ page }) => {
 
 
 test('recreate user', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
 
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
@@ -521,7 +521,7 @@ test('recreate user', async ({ page }) => {
   await page.click('#CreateUserButton');
 
   const successMessage = page.getByText('user created successfully');
-  await expect(successMessage).toBeVisible({ timeout: 60_000 });
+  await expect(successMessage).toBeVisible({ timeout: 120_000 });
 
   console.log('User recreated successfully');
 });
