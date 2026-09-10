@@ -48,7 +48,7 @@ chmod +x /root/playwright-test/openadmin/run-tests.sh
 Add to crontab (`crontab -e`) to run daily at 17:00:
 
 ```cron
-0 17 * * * /root/playwright-test/openadmin/run-tests.sh
+0 17 * * * /root/playwright-test/openadmin/run-tests.sh >> /root/playwright-test/admin_cron.log 2>&1
 ```
 
 Full logs, the Playwright HTML report, and the raw JSON results for each

@@ -120,9 +120,9 @@ echo "=== Configuring cron ==="
 chmod +x /root/playwright-test/openadmin/run-tests.sh /root/playwright-test/openpanel/run-tests.sh
 
 CRON_JOBS=(
-    "0 7 * * * bash /root/playwright-test/opencli/os_install.sh"
-    "0 17 * * * /root/playwright-test/openadmin/run-tests.sh"
-    "0 22 * * * /root/playwright-test/openpanel/run-tests.sh"
+    "0 7 * * * /bin/bash /root/playwright-test/opencli/os_install.sh >> /root/playwright-test/cron.log 2>&1"
+    "0 17 * * * /root/playwright-test/openadmin/run-tests.sh >> /root/playwright-test/admin_cron.log 2>&1"
+    "0 22 * * * /root/playwright-test/openpanel/run-tests.sh >> /root/playwright-test/user_cron.log 2>&1"
 )
 
 # Install the cron entries without opening an editor or prompting.

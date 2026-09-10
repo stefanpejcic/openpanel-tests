@@ -57,7 +57,7 @@ chmod +x /root/playwright-test/openpanel/run-tests.sh
 Add to crontab (`crontab -e`) to run daily at 22:00:
 
 ```cron
-0 22 * * * /root/playwright-test/openpanel/run-tests.sh
+0 22 * * * /root/playwright-test/openpanel/run-tests.sh >> /root/playwright-test/user_cron.log 2>&1
 ```
 
 Full logs, the Playwright HTML report, and the raw JSON results for each
