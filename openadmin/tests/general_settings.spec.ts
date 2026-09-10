@@ -1,12 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 test('update proxy and test restart needed msg', async ({ page }) => {
+  const randomNum = Math.floor(Math.random() * 100000);
+  const randomLink = `newlink${randomNum}`;
+
   await page.goto('/settings/general');
   await expect(page).toHaveURL(/\/settings\/general/);
 
   // Update setting
   const redirectInput = page.getByRole('textbox', { name: /openpanel/i });
-  await redirectInput.fill('newlink');
+  await redirectInput.fill(randomLink);
 
   await page.getByRole('button', { name: /save settings/i }).click();
 
@@ -14,7 +17,7 @@ test('update proxy and test restart needed msg', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText(/settings updated/i);
 
   // Input value, not text content
-  await expect(redirectInput).toHaveValue('newlink');
+  await expect(redirectInput).toHaveValue(randomLink);
 
   // Restart banner is a link; assert on the role, tolerate 1 or 2
   const restartLink = page.getByRole('link', { name: /services? needs? restart/i });
