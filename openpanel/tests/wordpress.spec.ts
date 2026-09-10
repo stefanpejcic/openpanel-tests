@@ -545,18 +545,39 @@ test('waf on/off', async ({ page }) => {
 
 
 test('wp remove', async ({ page }) => {
-
-  // 5. test remove
   await page.goto('/website?domain=wp.tests.openpanel.org');
+
   await page.locator('a#remove-tab').click();
-  await page.locator('button#delete-site').click();
-  await page.locator('button#confirm-delete-site').click();
-  await expect(page.locator('text=Website deleted successfully!')).toBeVisible({ timeout: 30000 });
+
+  // Match despite the icon glyph being part of the accessible name
+  const uninstallButton = page.getByRole('button', {
+    name: /Uninstall WordPress/,
+  });
+
+  await expect(uninstallButton).toBeVisible();
+  await uninstallButton.click();
+
+  const confirmButton = page.getByRole('button', {
+    name: /Confirm Uninstall/,
+  });
+
+  await expect(confirmButton).toBeVisible();
+  await confirmButton.click();
+
+  await expect(
+    page.getByText('WordPress uninstalled successfully!', { exact: true })
+  ).toBeVisible({ timeout: 30_000 });
+
   await page.goto('/sites');
-  await expect(page.locator('tr#site-row-wp.tests.openpanel.org')).not.toBeVisible();
+
+  await expect(
+    page.locator('tr[id="site-row-wp.tests.openpanel.org"]')
+  ).toHaveCount(0);
+
   console.log('website uninstall is working');
+});
 
   // 6. install again and test detach
   // TODO: remove files
 
-});
+
