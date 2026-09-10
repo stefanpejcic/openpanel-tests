@@ -45,7 +45,7 @@ test('account imports log page lists past import runs or the empty state', async
   await expect(page).toHaveURL(/import\/openpanel/);
 
   await expect(page.getByRole('heading', { name: 'Account Imports' })).toBeVisible();
-  await expect(page.locator('a[href="/user/import"]', { hasText: 'Import Account' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Import Account', exact: true })).toBeVisible();
 
   const rows = page.locator('tbody tr').filter({ hasNot: page.locator('td[colspan]') });
   const count = await rows.count();

@@ -13,6 +13,9 @@ test('check updates page', async ({ page, context }) => {
   const listbox = page.getByRole('listbox');
   await expect(listbox).toBeVisible();
 
+  // options are populated asynchronously via fetchTags(), so wait for them
+  await expect(listbox.locator('option').first()).toBeAttached({ timeout: 10_000 });
+
   const options = await listbox.locator('option').allTextContents();
   expect(options.length).toBeGreaterThan(0);
 

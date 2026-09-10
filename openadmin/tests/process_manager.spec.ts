@@ -42,8 +42,12 @@ test.describe('processes table', () => {
       { name: 'Command', asc: 'command', desc: '-command' },
     ];
 
-    const getColumnValues = async (colIndex: number) =>
-      table.locator(`tbody tr td:nth-child(${colIndex + 1})`).allInnerTexts();
+    const getColumnValues = async (colIndex: number) => {
+      // sorting re-navigates the page; wait for the table to repopulate
+      // before reading values, otherwise we can read it mid-reload.
+      await expect(table.locator('tbody tr').first()).toBeVisible();
+      return table.locator(`tbody tr td:nth-child(${colIndex + 1})`).allInnerTexts();
+    };
 
     const normalize = (vals: string[]) =>
       vals.map(v => v.replace(/\u00a0/g, '').trim()).filter(Boolean);

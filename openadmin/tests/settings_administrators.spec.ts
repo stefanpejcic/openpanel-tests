@@ -38,8 +38,20 @@ test('create, inspect, and delete a new administrator (Enterprise only)', async 
   await page.locator('#password').fill('TestPassword123');
   await page.getByRole('button', { name: 'Create' }).click();
 
+  // the create button is shown regardless of license tier, but the server
+  // still hard-enforces a single-administrator limit on non-Enterprise
+  // licenses -- treat that as an expected, environment-specific outcome.
+  const licenseLimitError = page.getByText(/only one administrator account/i);
   const row = page.locator('#exiting_users tbody tr').filter({ hasText: testUsername });
-  await expect(row).toBeVisible({ timeout: 15_000 });
+
+  await expect(row.or(licenseLimitError)).toBeVisible({ timeout: 15_000 });
+
+  test.skip(
+    await licenseLimitError.isVisible().catch(() => false),
+    'License only supports a single Administrator account'
+  );
+
+  await expect(row).toBeVisible();
   await expect(row.getByText('Active')).toBeVisible();
   await expect(row.getByText('Admin', { exact: true })).toBeVisible();
 

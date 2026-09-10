@@ -8,7 +8,7 @@ test('default node page loads with expected fields', async ({ page }) => {
   await page.goto('/server/node');
   await expect(page).toHaveURL(/server\/node/);
 
-  await expect(page.locator('#default_node')).toBeVisible();
+  await expect(page.locator('[name="default_node"]')).toBeVisible();
   await expect(page.locator('#default_ssh_key_path')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Save settings' })).toBeVisible();
 
@@ -18,7 +18,7 @@ test('default node page loads with expected fields', async ({ page }) => {
 test('default node fields are required', async ({ page }) => {
   await page.goto('/server/node');
 
-  await expect(page.locator('#default_node')).toHaveAttribute('required', '');
+  await expect(page.locator('[name="default_node"]')).toHaveAttribute('required', '');
   await expect(page.locator('#default_ssh_key_path')).toHaveAttribute('required', '');
 
   console.log('default node fields correctly required');

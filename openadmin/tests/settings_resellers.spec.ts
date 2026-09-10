@@ -11,6 +11,13 @@ test('resellers page loads with table', async ({ page }) => {
 test('create a new reseller', async ({ page }) => {
   await page.goto('/resellers');
 
+  // reseller accounts are gated behind a feature flag; enable it first if needed
+  const enableBtn = page.getByRole('button', { name: 'Enable Resellers' });
+  if (await enableBtn.isVisible().catch(() => false)) {
+    await enableBtn.click();
+    await expect(enableBtn).toBeHidden({ timeout: 10_000 });
+  }
+
   await page.locator('#tour-create-reseller-btn').click();
 
   const testUsername = `tstreseller${Date.now() % 100000}`;
@@ -32,7 +39,7 @@ test('edit plans & limits link navigates to update page', async ({ page }) => {
   const count = await rows.count();
   test.skip(count === 0, 'No resellers to inspect');
 
-  const username = (await rows.first().locator('td').nth(1).innerText()).trim();
+  const username = (await rows.first().locator('td').nth(0).innerText()).trim();
   await rows.first().locator('button[data-dropdown-toggle]').click();
 
   const dropdown = page.locator(`#dropdown-${username}`);
@@ -50,7 +57,7 @@ test('delete reseller (runs last)', async ({ page }) => {
   const count = await rows.count();
   test.skip(count === 0, 'No resellers to delete');
 
-  const username = (await rows.first().locator('td').nth(1).innerText()).trim();
+  const username = (await rows.first().locator('td').nth(0).innerText()).trim();
 
   await rows.first().locator('button[data-dropdown-toggle]').click();
 

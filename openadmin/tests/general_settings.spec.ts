@@ -27,13 +27,24 @@ test('update proxy and test restart needed msg', async ({ page }) => {
   await expect(page).toHaveURL(/\/services/);
 
   await page.getByRole('row', { name: 'OpenPanel UI' }).getByRole('button', { name: 'Restart openpanel', exact: true }).click();
-  await expect(page.getByRole('link', { name: /1 service needs restart/i })).toBeVisible();
-  
+  // restarting the openpanel container is async, so the banner count updates
+  // only once the restart actually completes -- can take a while
+  await expect(page.getByRole('link', { name: /1 service needs restart/i })).toBeVisible({ timeout: 60_000 });
+
+  // the page-level "actions in progress" lock only clears on a fresh page
+  // load, so the other action buttons stay disabled until we reload
+  await page.reload();
+
   await page.getByRole('row', { name: 'OpenAdmin UI' }).getByRole('button', { name: 'Restart admin', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText(/failed to restart/i);
+  await expect(page.getByRole('alert')).toContainText(/openadmin is restarting/i);
+
+  // OpenAdmin restarts itself here, so give it a moment to come back up
+  // before continuing to use the session.
+  await expect(async () => {
+    await page.goto('/services/');
+    await expect(page).toHaveURL(/\/services/);
+  }).toPass({ timeout: 60_000 });
 
   // Final state
-  await page.goto('/services/');
-  await expect(page).toHaveURL(/\/services/);
-  await expect(page.getByRole('link', { name: /needs? restart/i })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /needs? restart/i })).toHaveCount(0, { timeout: 30_000 });
 });

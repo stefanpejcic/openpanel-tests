@@ -20,18 +20,24 @@ test('domain access logs table loads with search/columns for a real domain', asy
   const domain = parts[3];
 
   await page.goto(`/domains/log/${domain}`);
-  await expect(page).toHaveURL(new RegExp(`domains/log/${domain}`));
 
-  const table = page.locator('#databases-table');
-  const notFoundFlash = page.getByText(/Log file not found/);
+  // when no log file exists yet, the route redirects back to the selector
+  // page (/domains/log) with a flash instead of staying on the domain URL
+  if (page.url().includes(`/domains/log/${domain}`)) {
+    const table = page.locator('#databases-table');
 
-  if (await table.isVisible().catch(() => false)) {
-    await expect(page.locator('#showAllCheckbox')).toHaveCount(await page.locator('#showAllCheckbox').count());
-    await expect(page.locator('#dropdownToggleButton')).toBeVisible();
-    console.log(`domain access logs table loaded for ${domain}`);
+    if (await table.isVisible().catch(() => false)) {
+      await expect(page.locator('#showAllCheckbox')).toHaveCount(await page.locator('#showAllCheckbox').count());
+      await expect(page.locator('#dropdownToggleButton')).toBeVisible();
+      console.log(`domain access logs table loaded for ${domain}`);
+    } else {
+      await expect(page.getByText(/Log file (not found|for domain .* is empty)/)).toBeVisible();
+      console.log(`no access log file found for ${domain} (expected on environments without traffic yet)`);
+    }
   } else {
-    await expect(notFoundFlash).toBeVisible();
-    console.log(`no access log file found for ${domain} (expected on environments without traffic yet)`);
+    await expect(page).toHaveURL(/domains\/log\/?$/);
+    await expect(page.getByText(/Log file (not found|for domain .* is empty)/)).toBeVisible();
+    console.log(`no access log file found for ${domain}, redirected with flash`);
   }
 });
 

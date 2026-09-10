@@ -50,20 +50,24 @@ test('a module toggle switch responds to click without saving', async ({ page })
   const count = await cards.count();
   test.skip(count === 0, 'No modules registered on this environment');
 
+  // the visible control is a button that mirrors its state onto a hidden
+  // checkbox via x-model; toggling must go through the button, since the
+  // checkbox itself is hidden and never receives real user interaction.
+  const toggle = cards.first().locator('button[aria-checked]');
   const checkbox = cards.first().locator('input[type="checkbox"]');
   const lockedCard = await cards.first().getAttribute('data-locked');
   test.skip(lockedCard !== null, 'First module is a locked plugin card with no toggle');
 
-  await expect(checkbox).toBeAttached();
+  await expect(toggle).toBeVisible();
 
   const initial = await checkbox.isChecked();
 
-  // toggle ON
-  await checkbox.check({ force: true });
+  // toggle
+  await toggle.click();
   expect(await checkbox.isChecked()).toBe(!initial);
 
-  // toggle OFF (restore original state)
-  await checkbox.check({ force: true });
+  // toggle back (restore original state)
+  await toggle.click();
   expect(await checkbox.isChecked()).toBe(initial);
 
   console.log('module toggle switch responded to toggles (not saved)');
