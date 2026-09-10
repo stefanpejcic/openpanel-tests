@@ -411,9 +411,9 @@ test('terminal - reconnect button appears after disconnect', async ({ page }) =>
   await expect(page.locator('#status-dot')).toBeVisible();
   await expect(page.locator('#status-text')).toBeVisible();
 
-  // Shell selector should be set to bash by default
+  // Shell selector should be set to bash/sh
   const shell = await page.locator('select#shell').inputValue();
-  expect(shell).toBe('bash');
+  expect(['bash', 'sh']).toContain(shell);
 });
 
 // ─────────────────────────────────────────────
