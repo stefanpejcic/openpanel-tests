@@ -75,8 +75,8 @@ pruned after 30 days). The README below only ever shows the *latest* run.
 <!-- AUTOMATED-RESULTS:START -->
 ### Latest OpenPanel run
 
-**Last run:** 2026-09-11 22:00:04 UTC  
-**Result:** ✅ All passed — 0 passed, 0 failed, 580 skipped (580 total) in 2.3s
+**Last run:** 2026-09-12 22:00:09 UTC  
+**Result:** ✅ All passed — 0 passed, 0 failed, 580 skipped (580 total) in 6.6s
 
 <details>
 <summary>Full results (580 tests)</summary>
