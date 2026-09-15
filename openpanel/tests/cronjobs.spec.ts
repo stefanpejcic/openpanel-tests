@@ -141,6 +141,7 @@ test('edit job', async ({ page }) => {
 
 
 
+
 test('delete job', async ({ page }) => {
   await page.goto('/cronjobs?view=table');
   await expect(page).toHaveURL(/\/cronjobs\?view=table/);
@@ -148,8 +149,12 @@ test('delete job', async ({ page }) => {
   const tableRow = page.locator('tr', { hasText: /curl job|updated description/ });
   await expect(tableRow).toBeVisible();
 
+  // First click - Delete
   await tableRow.getByRole('button', { name: /Delete/i }).click();
-  
+
+  // Second click - Confirm
+  await tableRow.getByRole('button', { name: /Confirm/i }).click();
+
   await expect(page.getByText('Cron job was successfully deleted.')).toBeVisible();
 
   const remainingRows = page.locator('tbody tr');
