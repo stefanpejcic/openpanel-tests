@@ -52,7 +52,7 @@ test('fix permissions', async ({ page }) => {
   await page.goto(`/files`);
   await selectItem(page, 'test.txt');
   await page.getByRole('button', { name: ' Permissions' }).click();
-  await expect(page.locator('#c-oct')).toHaveValue('644');
+  await expect(page.locator('#c-oct')).toHaveValue('664');
 
   // cleanup
   await page.goto(`/files`);
