@@ -73,12 +73,11 @@ test('change password', async ({ page }) => {
 
 test('assign user to database', async ({ page }) => {
   await page.goto('/mongodb/users');
-  await page.getByRole('link', { name: 'Assign User to Database' }).click();
-  await expect(page).toHaveURL(/mongodb\/assign/);
   await Promise.all([
     page.waitForResponse(resp => resp.url().includes('/mongodb/info') && resp.status() === 200),
     page.getByRole('link', { name: 'Assign User to Database' }).click(),
   ]);
+  await expect(page).toHaveURL(/mongodb\/assign/);
   await page.locator('select[name="db_user"]').selectOption('stefan_mongo_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_mongo');
   await page.locator('select[name="role"]').selectOption('readWrite');
@@ -90,12 +89,11 @@ test('assign user to database', async ({ page }) => {
 
 test('revoke user from database', async ({ page }) => {
   await page.goto('/mongodb/users');
-  await page.getByRole('link', { name: 'Remove User from DB' }).click();
-  await expect(page).toHaveURL(/mongodb\/remove/);
   await Promise.all([
     page.waitForResponse(resp => resp.url().includes('/mongodb/info') && resp.status() === 200),
-    page.getByRole('link', { name: 'Remove User from DB' }).click(),
+    page.getByRole('link', { name: 'Remove User from Database' }).click(),
   ]);
+  await expect(page).toHaveURL(/mongodb\/remove/);
   await page.locator('select[name="db_user"]').selectOption('stefan_mongo_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_mongo');
   await page.locator('select[name="role"]').selectOption('readWrite');
@@ -123,23 +121,30 @@ test('database wizard', async ({ page }) => {
 
 // IMPORT
 // Unlike MySQL/PostgreSQL, a real MongoDB dump is a binary mongodump archive
-// (not a plain-text SQL file), so it can't be hand-written here the way the
-// SQL import tests do. This only exercises the page/form itself - the
-// selector populating from /mongodb/info and the file input's extension
-// filter - not a full mongorestore round trip.
-test('import page loads and rejects wrong file type', async ({ page }) => {
+// (not a plain-text SQL file), so a full successful mongorestore round trip
+// can't be faked here the way the SQL import tests fake a .sql file. Instead
+// this verifies the page loads with the right database pre-selected, and
+// that the server genuinely rejects a non-.archive upload (exercises the
+// real extension check in handleMongoImportDB, not just the client-side
+// accept="" filter).
+test('import page rejects wrong file type', async ({ page }) => {
   const tempFilePath = path.join(os.tmpdir(), 'test-mongo-import.sql');
   fs.writeFileSync(tempFilePath, 'not a mongodump archive');
 
-  await page.goto('/mongodb/import/stefan_mongo');
-  await expect(page).toHaveURL(/mongodb\/import\/stefan_mongo/);
   await Promise.all([
     page.waitForResponse(resp => resp.url().includes('/mongodb/info') && resp.status() === 200),
-    page.getByRole('link', { name: 'Import' }).click(),
+    page.goto('/mongodb/import/stefan_mongo'),
   ]);
+  await expect(page).toHaveURL(/mongodb\/import\/stefan_mongo/);
   await expect(page.locator('select[name="database_name"]')).toHaveValue('stefan_mongo');
-  await expect(page.locator('input[name="db_file"]')).toHaveAttribute('accept', '.archive,.gz');
-  console.log('mongodb import page working');
+
+  await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
+  const [response] = await Promise.all([
+    page.waitForResponse(resp => resp.url().includes('/mongodb/import') && resp.request().method() === 'POST'),
+    page.getByRole('button', { name: 'Upload & Import' }).click(),
+  ]);
+  expect(response.status()).toBe(400);
+  console.log('mongodb import correctly rejected a non-archive file');
 });
 
 
