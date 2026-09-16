@@ -2,7 +2,8 @@
 
 GITHUB_REPO="stefanpejcic/OpenPanel"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="/root/playwright-test"
 
 # read shared secrets -- see ../.env.template for the full list
 # (GITHUB_TOKEN, SSH_PRIVATE_KEY, VIRTUALIZOR_API, API_KEY, API_HASH,
