@@ -8,7 +8,7 @@ SCRIPT_DIR="/root/playwright-test"
 # read shared secrets -- see ../.env.template for the full list
 # (GITHUB_TOKEN, SSH_PRIVATE_KEY, VIRTUALIZOR_API, API_KEY, API_HASH,
 # VPSID, VPS_IP, TEST_PASS, DOCKER_HUB_TOKEN, DISCORD_WEBHOOK)
-SECRETS_FILE="$SCRIPT_DIR/../.env"
+SECRETS_FILE="$SCRIPT_DIR/opencli/.env"
 
 if [ -f "$SECRETS_FILE" ]; then
     set -a
