@@ -520,7 +520,7 @@ test('recreate user', async ({ page }) => {
 
   await page.click('#CreateUserButton');
 
-  const successMessage = page.getByText('user created successfully');
+  const successMessage = page.getByText('Successfully added user');
   await expect(successMessage).toBeVisible({ timeout: 120_000 });
 
   console.log('User recreated successfully');
