@@ -458,17 +458,17 @@ test('emails reports page loads', async ({ page }) => {
   await expect(page).toHaveURL(/emails\/reports/);
 
   const notInstalled = page.getByText('opencli email-server install');
-  const noReports    = page.getByText(/no reports yet/i);
-  const heading      = page.getByRole('heading', { name: /email reports/i });
+  const noReports = page.getByText(/no reports yet/i);
 
-  const isNotInstalled = await notInstalled.isVisible().catch(() => false);
-  const isNoReports    = await noReports.isVisible().catch(() => false);
+  const reportsFrame = page.frameLocator('iframe');
+  const heading = reportsFrame.getByRole('heading', { name: 'Mail Reports' });
 
-  if (isNotInstalled) {
-    await expect(notInstalled).toBeVisible();
-  } else if (isNoReports) {
-    await expect(noReports).toBeVisible();
-  } else {
-    await expect(heading).toBeVisible();
-  }
+  await expect(async () => {
+    const visible =
+      await notInstalled.isVisible() ||
+      await noReports.isVisible() ||
+      await heading.isVisible();
+
+    expect(visible).toBe(true);
+  }).toPass();
 });
