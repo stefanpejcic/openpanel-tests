@@ -232,6 +232,11 @@ test.describe('version change', () => {
       }).toPass({ timeout: 30000, intervals: [500] }); // 30s max, every 0.5s
 
       console.log(`php ${versionShort} is working`);
+
+      // ioncube loader is enabled
+      await expect(page.locator('body')).toContainText(/with the ionCube PHP Loader/i);
+
+      console.log(`ioncube is enabled on php ${versionShort}`);
     });
   }
 });
