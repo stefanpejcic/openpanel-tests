@@ -366,35 +366,114 @@ test.describe('version change', () => {
 
 test('change default php version', async ({ page }) => {
   await page.goto('/php/default');
-  await expect(page.getByText(/Current default version/i)).toBeVisible();
-  
-  const oldVersion = await page.locator('#current_default_version').innerText();
+
+  // Page loaded correctly
+  await expect(
+    page.getByRole('heading', { name: 'Default PHP version' })
+  ).toBeVisible();
+
+  const radios = page.locator('input[name="new_php_version"]');
+
+  await expect(radios.first()).toBeVisible();
+
+  // Current default is the checked + disabled radio
+  const currentRadio = radios.filter({ has: page.locator(':checked') });
+  const oldVersion = await page
+    .locator('input[name="new_php_version"]:checked')
+    .getAttribute('value');
+
+  if (!oldVersion) {
+    throw new Error('Could not determine current default PHP version.');
+  }
+
   console.log(`Starting version: ${oldVersion}`);
 
-  const dropdown = page.locator('#new_php_version');
-  const values = await dropdown.locator('option').evaluateAll(options => 
-    options
-      .map(opt => opt.value)
-      .filter(val => val !== "" && val !== "oldVersionValueHere") 
+  // Get all selectable versions, excluding the current disabled/default one
+  const availableVersions = await radios.evaluateAll(inputs =>
+    inputs
+      .filter(input => !(input as HTMLInputElement).disabled)
+      .map(input => (input as HTMLInputElement).value)
+      .filter(Boolean)
   );
-  
-  if (values.length === 0) {
+
+  if (availableVersions.length === 0) {
     throw new Error('No alternative PHP versions available to select.');
   }
 
-  const randomVersion = values[Math.floor(Math.random() * values.length)];
-  await dropdown.selectOption(randomVersion);
-  await page.click('#change-php-version');
+  const randomVersion =
+    availableVersions[Math.floor(Math.random() * availableVersions.length)];
 
-  const successRegex = new RegExp(`PHP version ${randomVersion} set as default for new domains`, 'i');
-  await expect(page.getByText(successRegex)).toBeVisible();
-  await expect(page.locator('#current_default_version')).toHaveText(randomVersion);
+  console.log(`Changing default PHP version to: ${randomVersion}`);
 
-  console.log(`Default PHP version switch to ${randomVersion} is working`);
-  // TODO: test if used on a new domain!
+  // Select new version
+  await page
+    .locator(`input[name="new_php_version"][value="${randomVersion}"]`)
+    .check();
+
+  // Submit button changes from:
+  // "Choose a PHP version"
+  // to:
+  // "Set PHP X as default"
+  const submitButton = page.getByRole('button', {
+    name: new RegExp(`Set PHP ${randomVersion} as default`, 'i')
+  });
+
+  await expect(submitButton).toBeEnabled();
+
+  await submitButton.click();
+
+  // Verify the selected version became the default
+  await expect(
+    page.locator(
+      `input[name="new_php_version"][value="${randomVersion}"]`
+    )
+  ).toBeChecked();
+
+  await expect(
+    page.locator(
+      `input[name="new_php_version"][value="${randomVersion}"]`
+    )
+  ).toBeDisabled();
+
+  await expect(
+    page.locator(
+      `input[name="new_php_version"][value="${randomVersion}"]`
+    ).locator('xpath=..')
+  ).toContainText('Default');
+
+  console.log(
+    `Default PHP version switch from ${oldVersion} to ${randomVersion} is working`
+  );
+
+  // Restore original default version
+  const oldVersionRadio = page.locator(
+    `input[name="new_php_version"][value="${oldVersion}"]`
+  );
+
+  await oldVersionRadio.check();
+
+  const restoreButton = page.getByRole('button', {
+    name: new RegExp(`Set PHP ${oldVersion} as default`, 'i')
+  });
+
+  await expect(restoreButton).toBeEnabled();
+
+  await restoreButton.click();
+
+  // Verify original version is default again
+  const restoredRadio = page.locator(
+    `input[name="new_php_version"][value="${oldVersion}"]`
+  );
+
+  await expect(restoredRadio).toBeChecked();
+  await expect(restoredRadio).toBeDisabled();
+
+  await expect(
+    restoredRadio.locator('xpath=..')
+  ).toContainText('Default');
+
+  console.log(`Restored default PHP version to ${oldVersion}`);
 });
-
-
 
 test('edit php options', async ({ page }) => {
   await page.goto('/php/options');  
