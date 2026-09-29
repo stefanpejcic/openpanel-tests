@@ -41,24 +41,35 @@ const { test, expect } = require('@playwright/test');
   });
 
   test('Right-click to remove', async ({ page }) => {
-      await page.goto(`/dashboard`);
-
-      const starBtn = page.locator('#addFavoriteBtn');
-      await expect(starBtn).toBeVisible();
-
-      // Right-click to remove
-      await starBtn.click({ button: 'right' });
-
-      // Expect success toast
-      await expect(page.locator('text=Successfully removed from favorites')).toBeVisible({ timeout: 5000 });
-
-      // Expect the item to disappear from the left sidebar
-      await expect(page.getByText('Dashboard')).toHaveCount(0);
-
-      await page.goto(`/account/favorites`);
-      const table = page.locator('table tbody');
-      await expect(table).not.toContainText('Dashboard', { timeout: 5000 });
-
+    await page.goto('/dashboard');
+  
+    const starBtn = page.locator('#addFavoriteBtn');
+    await expect(starBtn).toBeVisible();
+  
+    // Confirm Dashboard is currently in favorites
+    const dashboardFavorite = page.locator(
+      '#favorites-list a[href="/dashboard"]'
+    );
+    await expect(dashboardFavorite).toBeVisible();
+  
+    // Right-click to remove Dashboard from favorites
+    await starBtn.click({ button: 'right' });
+  
+    // Expect success toast
+    await expect(
+      page.getByText('Successfully removed from favorites')
+    ).toBeVisible({ timeout: 5000 });
+  
+    // Expect Dashboard to disappear from the Favorites section in sidebar
+    await expect(dashboardFavorite).toHaveCount(0, { timeout: 5000 });
+  
+    // Open Favorites management page
+    await page.goto('/account/favorites');
+    await expect(page).toHaveURL(/\/account\/favorites/);
+  
+    // Expect Dashboard to no longer be listed in the favorites table
+    const table = page.locator('table tbody');
+    await expect(table).not.toContainText('Dashboard', { timeout: 5000 });
   });
 
   test('search table', async ({ page }) => {
