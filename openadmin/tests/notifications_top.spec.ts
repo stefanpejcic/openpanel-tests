@@ -37,7 +37,7 @@ test('search filters the notifications table', async ({ page }) => {
   // 4 = Actions
   const firstTitle = (
     await rows.first().locator('td').nth(2).innerText()
-  ).trim();
+  ).split('\n')[0].trim();
 
   expect(firstTitle).not.toBe('');
 
