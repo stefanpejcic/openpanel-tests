@@ -6,52 +6,151 @@ test('server info page', async ({ page }) => {
   await page.waitForLoadState('networkidle');
 
   const [planData, portsData, infoData] = await Promise.all([
-    page.request.get('/json/system/hosting/plan').then((res) => { expect(res.status()).toBe(200); return res.json(); }),
-    page.request.get('/json/system/hosting/ports').then((res) => { expect(res.status()).toBe(200); return res.json(); }),
-    page.request.get('/json/system/hosting/info').then((res) => { expect(res.status()).toBe(200); return res.json(); }),
+    page.request.get('/json/system/hosting/plan').then((res) => {
+      expect(res.status()).toBe(200);
+      return res.json();
+    }),
+    page.request.get('/json/system/hosting/ports').then((res) => {
+      expect(res.status()).toBe(200);
+      return res.json();
+    }),
+    page.request.get('/json/system/hosting/info').then((res) => {
+      expect(res.status()).toBe(200);
+      return res.json();
+    }),
   ]);
 
   // 1. /json/system/hosting/plan
-  for (const field of ['context', 'ns1', 'ns2', 'ns3', 'ns4', 'plan_description',
-    'plan_disk_limit', 'plan_max_email_quota', 'plan_mysql', 'plan_ram_limit', 'plan_webserver']) {
-    expect(typeof planData[field], `plan.${field} should be a string`).toBe('string');
+  for (const field of [
+    'context',
+    'ns1',
+    'ns2',
+    'ns3',
+    'ns4',
+    'plan_description',
+    'plan_disk_limit',
+    'plan_max_email_quota',
+    'plan_mysql',
+    'plan_ram_limit',
+    'plan_webserver',
+  ]) {
+    expect(
+      typeof planData[field],
+      `plan.${field} should be a string`
+    ).toBe('string');
   }
-  for (const field of ['plan_bandwidth', 'plan_db_limit', 'plan_domains_limit',
-    'plan_email_limit', 'plan_ftp_limit', 'plan_inodes_limit', 'plan_websites_limit']) {
-    expect(typeof planData[field], `plan.${field} should be a string`).toBe('string');
-    expect(Number(planData[field]), `plan.${field} should be parseable as a number >= 0`)
-    .toBeGreaterThanOrEqual(0);
+
+  for (const field of [
+    'plan_bandwidth',
+    'plan_db_limit',
+    'plan_domains_limit',
+    'plan_email_limit',
+    'plan_ftp_limit',
+    'plan_inodes_limit',
+    'plan_websites_limit',
+  ]) {
+    expect(
+      typeof planData[field],
+      `plan.${field} should be a string`
+    ).toBe('string');
+
+    expect(
+      Number(planData[field]),
+      `plan.${field} should be parseable as a number >= 0`
+    ).toBeGreaterThanOrEqual(0);
   }
-  expect(typeof planData['plan_cpu_limit'], 'plan.plan_cpu_limit should be a string').toBe('string');
-  expect(Number(planData['plan_cpu_limit']), 'plan_cpu_limit should be parseable as a positive number')
-    .toBeGreaterThan(0);
-  expect(['apache', 'nginx', 'litespeed', 'openlitespeed']).toContain(planData.plan_webserver);
-  expect(['mariadb', 'mysql', 'percona']).toContain(planData.plan_mysql);
+
+  expect(
+    typeof planData['plan_cpu_limit'],
+    'plan.plan_cpu_limit should be a string'
+  ).toBe('string');
+
+  expect(
+    Number(planData['plan_cpu_limit']),
+    'plan_cpu_limit should be parseable as a positive number'
+  ).toBeGreaterThan(0);
+
+  expect(['apache', 'nginx', 'litespeed', 'openlitespeed'])
+    .toContain(planData.plan_webserver);
+
+  expect(['mariadb', 'mysql', 'percona'])
+    .toContain(planData.plan_mysql);
 
   // 2. /json/system/hosting/ports
   for (const field of ['remote_mysql_port', 'remote_postgres_port']) {
-    expect(typeof portsData[field], `ports.${field} should be a string`).toBe('string');
+    expect(
+      typeof portsData[field],
+      `ports.${field} should be a string`
+    ).toBe('string');
+
     const port = Number(portsData[field]);
-    expect(Number.isInteger(port), `ports.${field} should be parseable as an integer`).toBe(true);
-    expect(port, `ports.${field} should be a valid port (1–65535)`).toBeGreaterThanOrEqual(1);
-    expect(port, `ports.${field} should be a valid port (1–65535)`).toBeLessThanOrEqual(65535);
+
+    expect(
+      Number.isInteger(port),
+      `ports.${field} should be parseable as an integer`
+    ).toBe(true);
+
+    expect(
+      port,
+      `ports.${field} should be a valid port (1–65535)`
+    ).toBeGreaterThanOrEqual(1);
+
+    expect(
+      port,
+      `ports.${field} should be a valid port (1–65535)`
+    ).toBeLessThanOrEqual(65535);
   }
 
   // 3. /json/system/hosting/info
-  for (const field of ['ip', 'load_avg', 'machine', 'node', 'processor',
-    'release', 'system', 'uptime', 'version']) {
-    expect(typeof infoData[field], `info.${field} should be a string`).toBe('string');
+  for (const field of [
+    'ip',
+    'load_avg',
+    'machine',
+    'node',
+    'processor',
+    'release',
+    'system',
+    'uptime',
+    'version',
+  ]) {
+    expect(
+      typeof infoData[field],
+      `info.${field} should be a string`
+    ).toBe('string');
   }
-  expect(infoData.ip, 'info.ip should be a valid IPv4 address')
-    .toMatch(/^\d{1,3}(\.\d{1,3}){3}$/);
-  expect(infoData.load_avg, 'info.load_avg should be 3 comma-separated numbers')
-    .toMatch(/^[\d.]+,\s*[\d.]+,\s*[\d.]+$/);
-  expect(infoData.uptime.trim().length, 'info.uptime should not be empty').toBeGreaterThan(0);
+
+  expect(
+    infoData.ip,
+    'info.ip should be a valid IPv4 address'
+  ).toMatch(/^\d{1,3}(\.\d{1,3}){3}$/);
+
+  expect(
+    infoData.load_avg,
+    'info.load_avg should be 3 comma-separated numbers'
+  ).toMatch(/^[\d.]+,\s*[\d.]+,\s*[\d.]+$/);
+
+  expect(
+    infoData.uptime.trim().length,
+    'info.uptime should not be empty'
+  ).toBeGreaterThan(0);
+
   expect(['Linux']).toContain(infoData.system);
 
-  // TODO: compare ui with api
-  await expect(page.getByText(infoData.ip)).toBeVisible();
-  await expect(page.getByText(planData.plan_description)).toBeVisible();
+  // Compare Server tab UI with API
+  await expect(page.locator('#ip')).toHaveText(infoData.ip);
 
-  console.log('server info has data', { planData, portsData, infoData });
+  // Switch to Hosting Plan tab
+  await page.getByRole('link', { name: 'Hosting Plan' }).click();
+
+  await expect(page.locator('tbody[data-tab="plan"]')).toBeVisible();
+
+  // Compare Hosting Plan UI with API
+  await expect(page.locator('#plan_description'))
+    .toHaveText(planData.plan_description);
+
+  console.log('server info has data', {
+    planData,
+    portsData,
+    infoData,
+  });
 });
