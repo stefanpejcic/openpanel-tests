@@ -24,21 +24,32 @@ test('notifications page has toggles or settings', async ({ page }) => {
 test('save notification preferences', async ({ page }) => {
   await page.goto('/account/notifications');
 
-  const checkbox = page.locator('input[type="checkbox"]').first();
-  if (await checkbox.isVisible({ timeout: 3000 }).catch(() => false)) {
-    const wasChecked = await checkbox.isChecked();
-    await checkbox.click();
-    await expect(checkbox).toBeChecked({ checked: !wasChecked });
+  const checkbox = page.locator('input[name="notify_account_login"]');
+
+  await expect(checkbox).toBeAttached();
+
+  const wasChecked = await checkbox.isChecked();
+
+  if (wasChecked) {
+    await checkbox.uncheck({ force: true });
+  } else {
+    await checkbox.check({ force: true });
   }
 
-  const saveBtn = page.getByRole('button', { name: /save|update|apply/i });
+  await expect(checkbox).toBeChecked({ checked: !wasChecked });
+
+  const saveBtn = page.getByRole('button', { name: 'Save Preferences' });
   await expect(saveBtn).toBeVisible();
+
   await saveBtn.click();
 
-  await expect(page.locator('body')).toContainText(/saved|updated|success/i, { timeout: 10000 });
+  await expect(page.locator('body')).toContainText(
+    /saved|updated|success/i,
+    { timeout: 10000 }
+  );
+
   console.log('notification preferences saved');
 });
-
 
 test('notification settings persist after reload', async ({ page }) => {
   await page.goto('/account/notifications');
