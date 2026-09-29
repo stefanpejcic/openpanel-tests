@@ -177,7 +177,7 @@ test('add new service form loads', async ({ page }) => {
   await expect(page.locator('input#service_name')).toBeVisible();
   await expect(page.locator('input#image')).toBeVisible();
   await expect(page.locator('input#cpu')).toBeVisible();
-  await expect(page.locator('input#ram')).toBeVisible();
+  await expect(page.locator('input#ram_amount')).toBeVisible();
   await expect(page.locator('button[type="submit"]')).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).locator('a[href="/containers"]')).toBeVisible();
 });
@@ -185,28 +185,38 @@ test('add new service form loads', async ({ page }) => {
 test('add new service - invalid name shows error', async ({ page }) => {
   await page.goto('/containers/new');
 
-  await page.locator('input#image').fill('nginx:latest');
-  const field = page.locator('input#service_name');
-  await field.clear();
-  await field.fill('ab'); //too short
-  await page.locator('input#cpu').fill('0.5');
-  await page.locator('input#ram').fill('1G');
-  await page.locator('button[type="submit"]').click();
+  const image = page.locator('#image');
+  const serviceName = page.locator('#service_name');
+  const cpu = page.locator('#cpu');
+  const ram = page.locator('#ram_amount');
+  const submit = page.locator('button[type="submit"]');
 
-  await page.waitForLoadState('networkidle');
-  // Should stay on the form page (not redirect to /containers)
-  expect(page.url()).toContain('/containers/new');
+  // Invalid service name
+  await image.fill('nginx:latest');
 
-  //create real test container that will be deleted in another task
-  await page.locator('input#image').fill('nginx:latest');
-  
-  await field.clear();
-  await field.fill('testapp'); //to short
-  await page.locator('input#cpu').fill('0.5');
-  await page.locator('input#ram').fill('1G');
-  await page.locator('button[type="submit"]').click();
+  await serviceName.clear();
+  await serviceName.fill('ab'); // too short
+
+  await cpu.fill('0.5');
+  await ram.fill('1');
+
+  // Name is invalid, so the form should not be submittable.
+  // The HTML requires at least 3 characters:
+  // pattern="[a-z][a-z0-9]{2,}"
+  await expect(submit).toBeDisabled();
+
+  // Should remain on the form page
+  await expect(page).toHaveURL(/\/containers\/new/);
+
+  // Now create the real test container that will be deleted
+  // in another test/task.
+  await serviceName.clear();
+  await serviceName.fill('testapp');
+
+  await expect(submit).toBeEnabled();
+
+  await submit.click();
 });
-
 test('add new service - image blur suggests service name', async ({ page }) => {
   await page.goto('/containers/new');
 
@@ -225,21 +235,27 @@ test('add new service - image blur suggests service name', async ({ page }) => {
 test('add new service - add and remove volume entry', async ({ page }) => {
   await page.goto('/containers/new');
 
-  // Click the Add button to add a volume row
-  await page.getByRole('button', { name: 'Add' }).click();
-  await page.waitForTimeout(100);
+  const volumeEntries = page.locator('select[name="volume_name"]');
+  const countBeforeAdd = await volumeEntries.count();
 
-  const volumeEntries = page.locator('.volume-entry');
+  // Add a volume
+  await page.getByRole('button', { name: /Add volume/i }).click();
+
+  await expect(volumeEntries).toHaveCount(countBeforeAdd + 1);
+
   const countAfterAdd = await volumeEntries.count();
   expect(countAfterAdd).toBeGreaterThan(0);
 
-  // Remove it
-  const removeBtn = volumeEntries.last().locator('button[type="button"]');
-  await removeBtn.click();
-  await page.waitForTimeout(100);
+  // Find the generated volume row
+  const volumeRow = page
+    .locator('div.mb-2.flex')
+    .filter({ has: page.locator('select[name="volume_name"]') })
+    .last();
 
-  const countAfterRemove = await page.locator('.volume-entry').count();
-  expect(countAfterRemove).toBeLessThan(countAfterAdd);
+  // Remove the volume
+  await volumeRow.locator('button[title="Remove"]').click();
+
+  await expect(volumeEntries).toHaveCount(countAfterAdd - 1);
 });
 
 test('add new service - Back to Containers link works', async ({ page }) => {
@@ -255,26 +271,52 @@ test('add new service - Back to Containers link works', async ({ page }) => {
 // ─────────────────────────────────────────────
 
 test('delete confirm page loads for a custom service', async ({ page }) => {
-  // Only run if a deletable (non-core) service exists; use a known test service name
-  const testService = 'testapp'; // adjust to a service that exists and is deletable
-  await page.goto(`/containers/delete/${testService}`);
+  const testService = 'testapp';
 
-  const status = page.url();
+  const response = await page.goto(`/containers/delete/${testService}`);
 
-  if (status.includes('/containers/delete/')) {
-    await expect(page.locator('h1')).toContainText('Delete container');
-    await expect(page.locator('text=Are you sure')).toBeVisible();
+  expect(response).not.toBeNull();
+  expect(response!.status()).toBe(200);
 
-    // Cancel button should go back to containers
-    const cancelLink = page.getByRole('link', { name: 'Cancel', exact: true });
-    await expect(cancelLink).toBeVisible();
-    await cancelLink.click();
-    await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/containers');
-  } else {
-    console.log('Delete confirm page not accessible (service may not exist), skipping.');
-  }
+  // Verify correct delete page
+  await expect(page).toHaveURL(
+    new RegExp(`/containers/delete/${testService}$`)
+  );
+
+  // Verify heading
+  await expect(
+    page.getByRole('heading', {
+      name: `Delete container ${testService}`,
+      exact: true,
+    })
+  ).toBeVisible();
+
+  // Verify confirmation message
+  await expect(
+    page.getByText(
+      `Are you sure you want to permanently delete the service ${testService}?`,
+      { exact: true }
+    )
+  ).toBeVisible();
+
+  // Verify delete button exists
+  await expect(
+    page.getByRole('button', { name: /Delete Service/i })
+  ).toBeVisible();
+
+  // Cancel and return to containers
+  const cancelLink = page.getByRole('link', {
+    name: 'Cancel',
+    exact: true,
+  });
+
+  await expect(cancelLink).toBeVisible();
+  await cancelLink.click();
+
+  await expect(page).toHaveURL(/\/containers\/?$/);
 });
+
+
 
 test('delete confirm - core service returns 403', async ({ page }) => {
   const response = await page.request.get('/containers/delete/nginx');
@@ -292,22 +334,79 @@ test('delete confirm - php-fpm service returns 403', async ({ page }) => {
 
 test('change mysql page loads', async ({ page }) => {
   await page.goto('/containers/mysql');
-  await expect(page.locator('h1')).toBeVisible();
-  // Should show current mysql type
-  await expect(page.locator('text=Current:')).toBeVisible();
-  // Should mention conditions
-  await expect(page.locator('text=All existing databases')).toBeVisible();
-});
 
+  // Scope everything to the database server section
+  const section = page.getByRole('region', {
+    name: 'Change Database Server',
+  });
+
+  // Page heading
+  await expect(
+    section.getByRole('heading', {
+      name: 'Database Server',
+      exact: true,
+    })
+  ).toBeVisible();
+
+  // Current database server should be indicated
+  await expect(
+    section.getByText('Current', { exact: true })
+  ).toBeVisible();
+
+  // All available database server options should be present
+  await expect(
+    section.getByText('MySQL', { exact: true })
+  ).toBeVisible();
+
+  await expect(
+    section.getByText('MariaDB', { exact: true })
+  ).toBeVisible();
+
+  await expect(
+    section.getByText('Percona', { exact: true })
+  ).toBeVisible();
+
+  // Account currently has databases, so switching should be blocked
+  await expect(
+    section.getByText(
+      /To switch the database server, first remove all databases from your account/i
+    )
+  ).toBeVisible();
+});
 // ─────────────────────────────────────────────
 // /containers/webserver  (change webserver)
 // ─────────────────────────────────────────────
 
 test('change webserver page loads', async ({ page }) => {
   await page.goto('/containers/webserver');
-  await expect(page.locator('h1')).toBeVisible();
-  await expect(page.locator('text=Current:')).toBeVisible();
-  await expect(page.locator('text=All existing domains must be removed')).toBeVisible();
+
+  // Page heading
+  await expect(
+    page.getByRole('heading', { name: 'Webserver', exact: true })
+  ).toBeVisible();
+
+  // Page description
+  await expect(
+    page.getByText('Choose the webserver that will power your websites.')
+  ).toBeVisible();
+
+  // Available webserver options
+  await expect(page.getByText('Apache', { exact: true })).toBeVisible();
+  await expect(page.getByText('Nginx', { exact: true })).toBeVisible();
+  await expect(page.getByText('OpenLiteSpeed', { exact: true })).toBeVisible();
+  await expect(page.getByText('OpenResty', { exact: true })).toBeVisible();
+
+  // Current webserver should be indicated
+  await expect(
+    page.getByText('Current', { exact: true })
+  ).toBeVisible();
+
+  // Switching is blocked while domains exist
+  await expect(
+    page.getByText(
+      /To switch the webserver, first remove all domains from your account/i
+    )
+  ).toBeVisible();
 });
 
 // ─────────────────────────────────────────────
