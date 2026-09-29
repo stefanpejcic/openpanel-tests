@@ -77,7 +77,7 @@ async function verifyPlanRow(page: Page, planName: string) {
 }
 
 async function navigateToUserPackages(page: any) {
-  await page.getByRole('button', { name: 'Hosting Plans' }).click();
+  await page.getByRole('link', { name: 'Hosting Plans' }).click();
   await page.getByRole('link', { name: 'User Packages' }).click();
 }
 
@@ -131,7 +131,10 @@ test('create new hosting plan and verify all fields', async ({ page }) => {
   await expect(row).toHaveCount(1);
   await expect(row).toBeVisible();
 
-  const cells = row.getByRole('cell');
+  const cells = row
+    .getByRole('cell', { name: 'probni', exact: true })
+    .locator('xpath=self::td | following-sibling::td')
+    .and(page.locator(':visible'));
 
   // Verify displayed values.
   await expect(cells.nth(0)).toHaveText('probni');
@@ -144,7 +147,7 @@ test('create new hosting plan and verify all fields', async ({ page }) => {
   await expect(cells.nth(7)).toHaveText('55');
   await expect(cells.nth(8)).toHaveText('88');
   await expect(cells.nth(9)).toHaveText('99');
-  await expect(cells.nth(10)).toHaveText('∞');
+  await expect(cells.nth(10)).toHaveText('77G');
   await expect(cells.nth(11)).toHaveText('22');
 
   // Verify feature set.
@@ -240,7 +243,10 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
   await expect(editedRow).toHaveCount(1);
   await expect(editedRow).toBeVisible();
 
-  const cells = editedRow.getByRole('cell');
+  const cells = editedRow
+    .getByRole('cell', { name: 'probniRenamed', exact: true })
+    .locator('xpath=self::td | following-sibling::td')
+    .and(page.locator(':visible'));
 
   // Verify edited plan values in table.
   await expect(cells.nth(0)).toHaveText('probniRenamed');
@@ -253,7 +259,7 @@ test('edit hosting plan and verify all fields', async ({ page }) => {
   await expect(cells.nth(7)).toHaveText('55');
   await expect(cells.nth(8)).toHaveText('88');
   await expect(cells.nth(9)).toHaveText('99');
-  await expect(cells.nth(10)).toHaveText('∞');
+  await expect(cells.nth(10)).toHaveText('77G');
   await expect(cells.nth(11)).toHaveText('22');
 
   await expect(
