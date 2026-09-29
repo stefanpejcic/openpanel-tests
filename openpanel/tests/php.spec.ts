@@ -87,17 +87,26 @@ test.describe('search filter', () => {
 
     const rows = domainRows(page);
     const totalRows = await rows.count();
+
     if (totalRows < 2) return;
 
-    const firstDomainText = (await rows.first().locator('td').first().textContent()) ?? '';
+    // 0 = checkbox
+    // 1 = domain
+    const firstDomainText =
+      (await rows.first().locator('td').nth(1).textContent()) ?? '';
+
     const searchTerm = firstDomainText.trim().split('.')[0];
 
     await page.locator('input[x-model="searchQuery"]').fill(searchTerm);
 
     await page.waitForTimeout(300);
 
-    const visibleRows = rows.filter({ hasNot: page.locator('[style*="display: none"]') });
+    const visibleRows = rows.filter({
+      hasNot: page.locator('[style*="display: none"]')
+    });
+
     const visibleCount = await visibleRows.count();
+
     expect(visibleCount).toBeGreaterThanOrEqual(1);
     expect(visibleCount).toBeLessThanOrEqual(totalRows);
   });
@@ -107,13 +116,16 @@ test.describe('search filter', () => {
 
     const counterLink = page.locator('dl a').first();
     const count = await counterLink.count();
+
     if (count === 0) return;
 
     await counterLink.click();
 
     await page.waitForTimeout(300);
 
-    const searchValue = await page.locator('input[x-model="searchQuery"]').inputValue();
+    const searchValue =
+      await page.locator('input[x-model="searchQuery"]').inputValue();
+
     expect(searchValue).toMatch(/\d+\.\d+/);
   });
 
@@ -122,21 +134,24 @@ test.describe('search filter', () => {
 
     const rows = domainRows(page);
     const totalRows = await rows.count();
+
     if (totalRows < 1) return;
 
     const searchInput = page.locator('input[x-model="searchQuery"]');
+
     await searchInput.fill('xyznonexistent999');
     await page.waitForTimeout(300);
 
     await searchInput.fill('');
     await page.waitForTimeout(300);
 
-    const hiddenRows = page.locator('tbody tr[style*="display: none"]');
+    const hiddenRows = page.locator(
+      'tbody tr[style*="display: none"]'
+    );
+
     await expect(hiddenRows).toHaveCount(0);
   });
 });
-
-
 
 test.describe('version change', () => {
   let originalVersion: string | null = null;
@@ -144,13 +159,25 @@ test.describe('version change', () => {
   async function findDomainRow(page: Page) {
     await page.goto('/php/domains');
     await expect(page.locator('table')).toBeVisible();
+
     const rows = page.locator('tbody tr');
     const rowCount = await rows.count();
+
     for (let i = 0; i < rowCount; i++) {
       const row = rows.nth(i);
-      const domainCell = await row.locator('td').first().textContent();
-      if (domainCell?.trim() && domain.includes(domainCell.trim())) return row;
+
+      // 0 = checkbox
+      // 1 = domain
+      const domainCell = await row.locator('td').nth(1).textContent();
+
+      if (
+        domainCell?.trim() &&
+        domain.includes(domainCell.trim())
+      ) {
+        return row;
+      }
     }
+
     return null;
   }
 
@@ -159,40 +186,77 @@ test.describe('version change', () => {
 
     // remember current version so we can restore after the loop
     const row = await findDomainRow(page);
+
     if (row) {
-      originalVersion = (await row.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? null;
+      // 0 = checkbox
+      // 1 = domain
+      // 2 = current PHP version
+      originalVersion =
+        (await row.locator('td').nth(2).textContent())
+          ?.match(/\d+\.\d+/)?.[0] ?? null;
+
       console.log(`original php version: ${originalVersion}`);
     }
 
     // Ensure info.php exists
-    await page.goto(`/file-manager/edit-file/${domain}/info.php?editor=text&new=true`);
+    await page.goto(
+      `/file-manager/edit-file/${domain}/info.php?editor=text&new=true`
+    );
+
     await page.locator('#editor-text').fill('<?php phpinfo();');
+
     await page.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByText(/saved|success/i).first()).toBeVisible();
+
+    await expect(
+      page.getByText(/saved|success/i).first()
+    ).toBeVisible();
 
     await page.close();
   });
 
   test.afterAll(async ({ browser }) => {
     if (!originalVersion) return;
+
     const page = await browser.newPage();
 
     const row = await findDomainRow(page);
+
     if (row) {
-      const current = (await row.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0];
+      const current =
+        (await row.locator('td').nth(2).textContent())
+          ?.match(/\d+\.\d+/)?.[0];
+
       if (current !== originalVersion) {
-        await row.locator('select[name="new_php_version"]').selectOption(originalVersion);
+        await row
+          .locator('select[name="new_php_version"]')
+          .selectOption(originalVersion);
+
         await Promise.all([
           page.waitForResponse(
-            res => res.request().method() === 'POST' && res.status() === 200,
+            res =>
+              res.request().method() === 'POST' &&
+              res.status() === 200,
             { timeout: 90_000 }
           ),
+
           row.getByRole('button', { name: /change/i }).click(),
         ]);
-        await expect(page.getByText(new RegExp(`updated from ${current} to ${originalVersion}`, 'i'))).toBeVisible();
-        console.log(`restored php ${originalVersion} for ${domain}`);
+
+        await expect(
+          page.getByText(
+            new RegExp(
+              `updated from ${current} to ${originalVersion}`,
+              'i'
+            )
+          )
+        ).toBeVisible();
+
+        console.log(
+          `restored php ${originalVersion} for ${domain}`
+        );
       }
     }
+
     await page.close();
   });
 
@@ -206,10 +270,19 @@ test.describe('version change', () => {
       const rowCount = await rows.count();
 
       let targetRow = null;
+
       for (let i = 0; i < rowCount; i++) {
         const row = rows.nth(i);
-        const domainCell = await row.locator('td').first().textContent();
-        if (domainCell?.trim() && domain.includes(domainCell.trim())) {
+
+        // 0 = checkbox
+        // 1 = domain
+        const domainCell =
+          await row.locator('td').nth(1).textContent();
+
+        if (
+          domainCell?.trim() &&
+          domain.includes(domainCell.trim())
+        ) {
           targetRow = row;
           break;
         }
@@ -220,42 +293,76 @@ test.describe('version change', () => {
         return;
       }
 
+      // 0 = checkbox
+      // 1 = domain
+      // 2 = current PHP version
       const currentVersion =
-        (await targetRow.locator('td').nth(1).textContent())?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
-      
+        (await targetRow.locator('td').nth(2).textContent())
+          ?.match(/\d+\.\d+/)?.[0] ?? 'unknown';
+
       if (currentVersion === version) {
-        test.skip(true, `domain already on php ${version}`);
+        test.skip(
+          true,
+          `domain already on php ${version}`
+        );
       }
-      
-      const select = targetRow.locator('select[name="new_php_version"]');
+
+      const select =
+        targetRow.locator('select[name="new_php_version"]');
+
       await select.selectOption(version);
 
       await Promise.all([
         page.waitForResponse(
-          res => res.request().method() === 'POST' && res.status() === 200,
+          res =>
+            res.request().method() === 'POST' &&
+            res.status() === 200,
           { timeout: 90_000 }
         ),
-        targetRow.getByRole('button', { name: /change/i }).click(),
+
+        targetRow
+          .getByRole('button', { name: /change/i })
+          .click(),
       ]);
 
-      await expect(page.getByText(new RegExp(`updated from ${currentVersion} to ${version}`, 'i'))).toBeVisible();
-      const versionShort = version.match(/\d+\.\d+/)?.[0] ?? version;
+      await expect(
+        page.getByText(
+          new RegExp(
+            `updated from ${currentVersion} to ${version}`,
+            'i'
+          )
+        )
+      ).toBeVisible();
+
+      const versionShort =
+        version.match(/\d+\.\d+/)?.[0] ?? version;
 
       await expect(async () => {
-        await page.goto(`https://${domain}/info.php?nocache=${Date.now()}`);
-        await expect(page.locator('body')).toContainText(`PHP Version ${versionShort}`);
-      }).toPass({ timeout: 30000, intervals: [500] }); // 30s max, every 0.5s
+        await page.goto(
+          `https://${domain}/info.php?nocache=${Date.now()}`
+        );
+
+        await expect(page.locator('body')).toContainText(
+          `PHP Version ${versionShort}`
+        );
+      }).toPass({
+        timeout: 30000,
+        intervals: [500]
+      });
 
       console.log(`php ${versionShort} is working`);
 
       // ioncube loader is enabled
-      await expect(page.locator('body')).toContainText(/with the ionCube PHP Loader/i);
+      await expect(page.locator('body')).toContainText(
+        /with the ionCube PHP Loader/i
+      );
 
-      console.log(`ioncube is enabled on php ${versionShort}`);
+      console.log(
+        `ioncube is enabled on php ${versionShort}`
+      );
     });
   }
 });
-
 
 test('change default php version', async ({ page }) => {
   await page.goto('/php/default');
