@@ -73,35 +73,74 @@ test('change password', async ({ page }) => {
 
 test('assign user to database', async ({ page }) => {
   await page.goto('/postgresql/users');
+
   await page.getByRole('link', { name: 'Assign User to Database' }).click();
+
   await expect(page).toHaveURL(/postgresql\/assign/);
-  const [response] = await Promise.all([
-    page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
-    page.getByRole('link', { name: 'Assign User to Database' }).click(),
-  ]);
-  await page.locator('select[name="db_user"]').selectOption('stefan_psql_user');
-  await page.locator('select[name="database_name"]').selectOption('stefan_psql');
-  await page.getByRole('button', { name: 'Assign' }).click();
-  await expect(page.locator('body')).toContainText(/Successfully added a user/i);
+  await expect(
+    page.getByRole('heading', { name: 'Assign User to Database' })
+  ).toBeVisible();
+
+  const userSelect = page.locator('select[name="db_user"]');
+  const databaseSelect = page.locator('select[name="database_name"]');
+
+  // Wait until the required options are available
+  await expect(
+    userSelect.locator('option[value="stefan_psql_user"]')
+  ).toHaveCount(1);
+
+  await expect(
+    databaseSelect.locator('option[value="stefan_psql"]')
+  ).toHaveCount(1);
+
+  await userSelect.selectOption('stefan_psql_user');
+  await databaseSelect.selectOption('stefan_psql');
+
+  await page.getByRole('button', { name: 'Assign User to Database' }).click();
+
+  await expect(page.locator('body')).toContainText(
+    /Successfully added a user/i
+  );
+
   console.log('postgresql user assigned to database');
 });
 
-
 test('revoke user from database', async ({ page }) => {
   await page.goto('/postgresql/users');
-  await page.getByRole('link', { name: 'Remove User from DB' }).click();
+
+  await page.getByRole('link', { name: /Remove User/i }).click();
+
   await expect(page).toHaveURL(/postgresql\/remove/);
-  const [response] = await Promise.all([
-    page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
-    page.getByRole('link', { name: 'Remove User from DB' }).click(),
-  ]);
-  await page.locator('select[name="db_user"]').selectOption('stefan_psql_user');
-  await page.locator('select[name="database_name"]').selectOption('stefan_psql');
-  await page.getByRole('button', { name: 'Remove User from Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully revoked|removed/i);
+
+  await expect(
+    page.getByRole('heading', { name: 'Remove User access from Database' })
+  ).toBeVisible();
+
+  const userSelect = page.locator('select[name="db_user"]');
+  const databaseSelect = page.locator('select[name="database_name"]');
+
+  // Wait for refreshData() to populate the selects
+  await expect(
+    userSelect.locator('option[value="stefan_psql_user"]')
+  ).toHaveCount(1);
+
+  await expect(
+    databaseSelect.locator('option[value="stefan_psql"]')
+  ).toHaveCount(1);
+
+  await userSelect.selectOption('stefan_psql_user');
+  await databaseSelect.selectOption('stefan_psql');
+
+  await page
+    .getByRole('button', { name: 'Remove User from Database' })
+    .click();
+
+  await expect(page.locator('body')).toContainText(
+    /successfully revoked|removed/i
+  );
+
   console.log('postgresql user revoked from database');
 });
-
 
 
 test('database wizard', async ({ page }) => {
