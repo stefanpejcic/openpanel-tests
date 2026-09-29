@@ -272,25 +272,29 @@ test('grant ALL PRIVILEGES', async ({ page }) => {
 test('revoke privileges', async ({ page }) => {
   await page.goto('/mysql/users');
 
-  await Promise.all([
-    page.waitForResponse(resp =>
-      resp.url().includes('/mysql/info') && resp.status() === 200
-    ),
-    page.getByRole('link', { name: 'Remove User from DB' }).click(),
-  ]);
+  // Open Remove User from Database page
+  await page.locator('a[href="/mysql/remove"]').click();
 
-  await expect(page).toHaveURL(/.*mysql\/remove/);
+  await expect(page).toHaveURL(/\/mysql\/remove/);
 
+  // Select user and database
   await page.locator('select[name="db_user"]').selectOption('stefan_user');
   await page.locator('select[name="database_name"]').selectOption('stefan_baza');
 
-  await page.getByRole('button', { name: 'Remove User from Database' }).click();
+  // Remove user from database
+  await page.getByRole('button', {
+    name: 'Remove User from Database'
+  }).click();
 
+  // Verify success message
   await expect(page.locator('body')).toContainText(
     /successfully revoked all privileges for user/i
   );
 
-  await expect(page.locator('#databases-table')).not.toContainText('stefan_user');
+  // Verify user is no longer associated with the database
+  await expect(page.locator('#databases-table')).not.toContainText(
+    'stefan_user'
+  );
 });
 
 
