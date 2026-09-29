@@ -19,14 +19,22 @@ test('list versions', async ({ page }) => {
   await openPhpPage(page);
 
   // header is ok
-  await expect(page.getByRole('heading', { name: /PHP version for domains/i })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /PHP version for domains/i })
+  ).toBeVisible();
 
   // table is ok
-  const headers = page.locator('thead th');
-  await expect(headers).toHaveCount(3);
-  await expect(headers.nth(0)).toContainText(/domain/i);
-  await expect(headers.nth(1)).toContainText(/current php version/i);
-  await expect(headers.nth(2)).toContainText(/change version/i);
+  const headers = page.locator('#php-domains-table thead th');
+  await expect(headers).toHaveCount(4);
+
+  // first column is bulk-selection checkbox
+  await expect(
+    headers.nth(0).getByRole('checkbox', { name: 'Select all' })
+  ).toBeVisible();
+
+  await expect(headers.nth(1)).toContainText(/domain/i);
+  await expect(headers.nth(2)).toContainText(/current php version/i);
+  await expect(headers.nth(3)).toContainText(/change version/i);
 
   // versions are shown in the table
   const rows = domainRows(page);
@@ -35,6 +43,7 @@ test('list versions', async ({ page }) => {
   if (rowCount === 1) {
     const empty = rows.first();
     const text = await empty.textContent();
+
     if (text?.includes('No domains')) {
       test.skip();
       return;
@@ -42,26 +51,32 @@ test('list versions', async ({ page }) => {
   }
 
   expect(rowCount).toBeGreaterThan(0);
+
   for (let i = 0; i < rowCount; i++) {
     const row = rows.nth(i);
-    const versionCell = row.locator('td').nth(1);
+
+    // 0 = checkbox
+    // 1 = domain
+    // 2 = current PHP version
+    // 3 = change version
+    const versionCell = row.locator('td').nth(2);
 
     // version format is ok
     const text = await versionCell.textContent();
     expect(text?.trim()).toMatch(/\d+\.\d+/);
-  
+
     // status indicators are ok
     const bars = versionCell.locator('div.flex.gap-0\\.5 > div');
-    await expect(bars).toHaveCount(3);   
+    await expect(bars).toHaveCount(3);
   }
 
   // summary per version
   const counters = page.locator('dl > div');
   const count = await counters.count();
+
   if (rowCount > 0) {
     expect(count).toBeGreaterThan(0);
-  }  
-
+  }
 });
 
 
