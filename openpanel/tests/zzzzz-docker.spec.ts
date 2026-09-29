@@ -173,7 +173,7 @@ test('edit cpu, ram and toggle container state for all rows', async ({ page }) =
 
 test('add new service form loads', async ({ page }) => {
   await page.goto('/containers/new');
-  await expect(page.locator('h1')).toContainText('Add service');
+  await expect(page.locator('h1')).toContainText('Add a container');
   await expect(page.locator('input#service_name')).toBeVisible();
   await expect(page.locator('input#image')).toBeVisible();
   await expect(page.locator('input#cpu')).toBeVisible();
