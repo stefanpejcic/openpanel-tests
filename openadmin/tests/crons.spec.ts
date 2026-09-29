@@ -7,7 +7,9 @@ test('manage crons', async ({ page }) => {
   const saveButton = page.getByRole('button', { name: /save/i });
   const successToast = page.getByText('Cron jobs updated successfully');
 
-  const rows = page.locator('tbody tr');
+  const rows = page.locator('tbody tr').filter({
+    has: page.locator('input[name$="_schedule_0"]'),
+    });
   const rowCount = await rows.count();
 
   const nextValue = (val: string) => {
@@ -20,7 +22,7 @@ test('manage crons', async ({ page }) => {
   for (let i = 0; i < rowCount; i++) {
     const row = rows.nth(i);
 
-    const firstInput = row.locator('td:first-child input[type="text"]').first();
+    const firstInput = row.locator('input[name$="_schedule_0"]');
 
     const originalValue = await firstInput.inputValue();
     const updatedValue = nextValue(originalValue);
