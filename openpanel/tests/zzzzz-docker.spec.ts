@@ -76,7 +76,7 @@ test('containers page New Service button navigates to add form', async ({ page }
   await page.getByRole('link', { name: 'New Service' }).click();
   await page.waitForLoadState('networkidle');
   expect(page.url()).toContain('/containers/new');
-  await expect(page.locator('h1')).toContainText('Add service');
+  await expect(page.locator('h1')).toContainText('Add a container');
 });
 
 test('edit cpu, ram and toggle container state for all rows', async ({ page }) => {
