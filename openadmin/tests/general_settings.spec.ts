@@ -1,55 +1,73 @@
 import { test, expect } from '@playwright/test';
 
 test('update proxy and test restart needed msg', async ({ page }) => {
-  // this test restarts both the openpanel container and the OpenAdmin
-  // service itself and waits for each to come back, which together can
-  // comfortably exceed the default 30s test timeout.
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
 
   const randomNum = Math.floor(Math.random() * 100000);
   const randomLink = `newlink${randomNum}`;
 
+  // --- Update setting ---
   await page.goto('/settings/general');
   await expect(page).toHaveURL(/\/settings\/general/);
 
-  // Update setting
   const redirectInput = page.getByRole('textbox', { name: /openpanel/i });
   await redirectInput.fill(randomLink);
-
   await page.getByRole('button', { name: /save settings/i }).click();
 
-  // Toast — scope it so it can't match sidebar/nav text
   await expect(page.getByRole('alert')).toContainText(/settings updated/i);
-
-  // Input value, not text content
   await expect(redirectInput).toHaveValue(randomLink);
 
-  // Restart banner is a link; assert on the role, tolerate 1 or 2
-  const restartLink = page.getByRole('link', { name: /services? needs? restart/i });
-  await expect(restartLink).toBeVisible();
-
-  await restartLink.click();
+  // --- Restart banner appears (only OpenAdmin is flagged) ---
+  const restartBanner = page.getByRole('link', { name: /services? needs? restart/i });
+  await expect(restartBanner).toBeVisible();
+  await restartBanner.click();
   await expect(page).toHaveURL(/\/services/);
 
-  await page.getByRole('row', { name: 'OpenPanel UI' }).getByRole('button', { name: 'Restart openpanel', exact: true }).click();
-  // restarting the openpanel container is async, so the banner count updates
-  // only once the restart actually completes -- can take a while
-  await expect(page.getByRole('link', { name: /1 service needs restart/i })).toBeVisible({ timeout: 60_000 });
+  // --- Restart OpenPanel: wait for the completion toast, not the banner ---
+  const openpanelBtn = page
+    .getByRole('row', { name: 'OpenPanel UI' })
+    .getByRole('button', { name: 'Restart openpanel', exact: true });
 
-  // the page-level "actions in progress" lock only clears on a fresh page
-  // load, so the other action buttons stay disabled until we reload
+  const openpanelStart = Date.now();
+  await openpanelBtn.click();
+
+  await expect(
+    page.getByRole('alert').filter({ hasText: /successfully restarted service .openpanel./i })
+  ).toBeVisible({ timeout: 120_000 });
+
+  console.log(`OpenPanel restart took ${Math.round((Date.now() - openpanelStart) / 1000)}s`);
+
+  await expect(async () => {
+    await page.reload({ timeout: 5_000 });
+    await expect(
+      page.getByRole('row', { name: 'OpenAdmin UI' })
+    ).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 60_000, intervals: [1_000, 2_000, 3_000] });
+
+  // The action lock only clears on a fresh page load
   await page.reload();
 
-  await page.getByRole('row', { name: 'OpenAdmin UI' }).getByRole('button', { name: 'Restart admin', exact: true }).click();
+  // --- Restart OpenAdmin ---
+  // Precondition: OpenAdmin is still flagged, so the banner disappearing
+  // later can only mean the restart took effect.
+  await expect(page.getByRole('link', { name: /1 service needs restart/i })).toBeVisible();
+
+  await page
+    .getByRole('row', { name: 'OpenAdmin UI' })
+    .getByRole('button', { name: 'Restart admin', exact: true })
+    .click();
   await expect(page.getByRole('alert')).toContainText(/openadmin is restarting/i);
 
-  // OpenAdmin restarts itself here, so give it a moment to come back up
-  // before continuing to use the session.
-  await expect(async () => {
-    await page.goto('/services/');
-    await expect(page).toHaveURL(/\/services/);
-  }).toPass({ timeout: 60_000 });
+  await page.waitForTimeout(5_000)
 
-  // Final state
-  await expect(page.getByRole('link', { name: /needs? restart/i })).toHaveCount(0, { timeout: 30_000 });
+  // Poll with reloads until OpenAdmin is back AND the flag has cleared.
+  // While the service is down, reload/goto throws and toPass retries.
+  const openadminStart = Date.now();
+  await expect(async () => {
+    await page.reload({ timeout: 5_000 });
+    await expect(page.getByRole('row', { name: 'OpenAdmin UI' })).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByRole('link', { name: /needs? restart/i })).toHaveCount(0, { timeout: 1_000 });
+  }).toPass({ timeout: 150_000, intervals: [2_000, 3_000, 5_000] });
+
+  console.log(`OpenAdmin restart took ${Math.round((Date.now() - openadminStart) / 1000)}s`);
 });
