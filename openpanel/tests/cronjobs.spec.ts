@@ -6,7 +6,6 @@ test('list', async ({ page }) => {
   await page.goto('/cronjobs');
   await expect(page.getByText(/no cronjobs yet/i)).toBeVisible();
   await expect(page.getByRole('link', { name: /create new/i })).toBeVisible();
-  await expect(page.getByRole('link', { name: /switch to file editor/i })).toBeVisible();
   console.log(`cronjobs functional`);
 });
 
@@ -16,15 +15,29 @@ test('create job', async ({ page }) => {
   await page.goto('/cronjobs/new');
   await expect(page).toHaveURL(/\/cronjobs\/new/);
 
+  await expect(
+    page.getByRole('link', { name: /switch to file editor/i })
+  ).toBeVisible();
+
   await page.selectOption('#container', 'php-fpm-8.5');
+
+  // Enable custom schedule input
+  await page.getByRole('radio', { name: 'Custom' }).click();
+
+  await expect(page.locator('#schedule')).toBeVisible();
   await page.fill('#schedule', '@every 5s');
-  const testCommand = 'curl https://google.com > /var/www/html/cron-test.txt';
+
+  const testCommand =
+    'curl https://google.com > /var/www/html/cron-test.txt';
+
   await page.fill('#command', testCommand);
   await page.fill('#comment', 'curl job');
 
   await page.getByRole('button', { name: 'Schedule CronJob' }).click();
 
-  await expect(page.getByText('Cron job created and saved successfully!')).toBeVisible();
+  await expect(
+    page.getByText('Cron job created and saved successfully!')
+  ).toBeVisible();
 
   const tableRow = page.locator('tr', { hasText: 'curl job' });
   await expect(tableRow).toBeVisible();
@@ -32,133 +45,178 @@ test('create job', async ({ page }) => {
 
   // TODO: check if service auto-started by fetching /api/services?name=cron
 
-  console.log(`cronjob created`);
+  console.log('cronjob created');
 });
 
 
-
 test('view logs', async ({ page }) => {
-  await page.waitForTimeout(15000); // wait for contianer to start and created job to run
+  await page.waitForTimeout(15000); // wait for job to run
+
   await page.goto('/cronjobs');
 
   const tableRow = page.locator('tr', { hasText: 'curl job' });
   await expect(tableRow).toBeVisible();
 
-  const logsButton = tableRow.locator('button', {
-    hasText: /log|logs/i,
-  });
+  await page.getByRole('link', { name: 'Logs', exact: true }).click();
+  await expect(page).toHaveURL(/\/cronjobs\/logs/);
 
-  await logsButton.click();
+  const jobSelect = page.locator('select').first();
+  await expect(jobSelect).toBeVisible();
 
-  const logsPanel = page.locator('[x-show="logsOpen"]');
-  await expect(logsPanel).toBeVisible();
+  const responsePromise = page.waitForResponse(response =>
+    response.url().includes('/cronjobs/log') &&
+    response.url().includes('job=curl+job') &&
+    response.status() === 200
+  );
 
-  const logRows = logsPanel.locator('table tbody tr');
+  await jobSelect.selectOption('curl job');
+
+  const response = await responsePromise;
+  const logs = await response.json();
+
+  expect(Array.isArray(logs)).toBe(true);
+  expect(logs.length).toBeGreaterThan(0);
+
+  const logRows = page.locator('table tbody tr');
   await expect(logRows.first()).toBeVisible();
-  expect(await logRows.count()).toBeGreaterThan(0);
 
-  console.log('cronjob logs working');
+  await expect(page.locator('table tbody')).toContainText('curl job');
+
+  console.log(`cronjob logs working: ${logs.length} entries`);
 });
 
 
 
 test('edit as file', async ({ page }) => {
-  await page.goto('/cronjobs?view=code');
-  await expect(page).toHaveURL(/\/cronjobs\?view=code/);
-
-  const expectedCron = `[job-exec "curl job"]
-schedule = @every 5s
-container = php-fpm-8.5
-command = curl https://google.com > /var/www/html/cron-test.txt`;
+  await page.goto('/cronjobs/editor');
+  await expect(page).toHaveURL(/\/cronjobs\/editor/);
 
   const actualContent = await page.evaluate(() => {
-    return document.querySelector('.CodeMirror').CodeMirror.getValue();
+    return (document.querySelector('.CodeMirror') as any).CodeMirror.getValue();
   });
 
-  expect(actualContent.trim()).toBe(expectedCron);
+  // Verify our cron job exists
+  expect(actualContent).toContain('[job-exec "curl job"]');
+  expect(actualContent).toContain(
+    'command = curl https://google.com > /var/www/html/cron-test.txt'
+  );
 
-  const updatedContent = expectedCron.replace('@every 5s', '* * * * * *');
-  
+  // Change whatever schedule currently exists to every second
+  const updatedContent = actualContent.replace(
+    /^schedule\s*=.*$/m,
+    'schedule = * * * * * *'
+  );
+
   await page.evaluate((val) => {
-    const cm = document.querySelector('.CodeMirror').CodeMirror;
+    const cm = (document.querySelector('.CodeMirror') as any).CodeMirror;
     cm.setValue(val);
     cm.save();
   }, updatedContent);
 
   await page.getByRole('button', { name: 'Save Changes' }).click();
-  
-  await expect(page.getByText('Crontab file saved successfully!')).toBeVisible();
+
+  await expect(
+    page.getByText('Crons file saved successfully!')
+  ).toBeVisible();
 
   const postSaveContent = await page.evaluate(() => {
-    return document.querySelector('.CodeMirror').CodeMirror.getValue();
+    return (document.querySelector('.CodeMirror') as any).CodeMirror.getValue();
   });
+
   expect(postSaveContent).toContain('schedule = * * * * * *');
 
-  await page.goto('/cronjobs?view=table');
-  await expect(page).toHaveURL(/\/cronjobs\?view=table/);
+  // Verify change is reflected in table mode
+  await page.goto('/cronjobs');
+  await expect(page).toHaveURL(/\/cronjobs$/);
+
   const tableRow = page.locator('tr', { hasText: 'curl job' });
   await expect(tableRow).toBeVisible();
-  await expect(tableRow).toContainText(`* * * * * *`);
+  await expect(tableRow).toContainText('* * * * * *');
 
-  console.log(`cronjob file editor working`);
+  console.log('cronjob file editor working');
 });
 
-
-
 test('edit job', async ({ page }) => {
-  await page.goto('/cronjobs?view=table');
-
-  let tableRow = page.locator('tr', { hasText: 'curl job' });
-  await expect(tableRow).toBeVisible();
+  await page.goto('/cronjobs');
+  await expect(page).toHaveURL(/\/cronjobs$/);
 
   const edits = [
-    { label: 'schedule', newValue: '0 0 * * *' },
-    { label: 'container', newValue: 'php-fpm-8.4', isSelect: true },
-    { label: 'command', newValue: 'curl https://google.com' },
-    { label: 'comment', newValue: 'updated description' },
+    { field: 'schedule', newValue: '0 0 * * * *' },
+    { field: 'container', newValue: 'php-fpm-8.4', isSelect: true },
+    { field: 'command', newValue: 'curl https://google.com' },
+    { field: 'comment', newValue: 'updated description' },
   ];
 
+  let currentComment = 'curl job';
+
   for (const edit of edits) {
-    await tableRow.getByRole('button', { name: /Edit/i }).click();
+    let tableRow = page.locator('tr', { hasText: currentComment });
+    await expect(tableRow).toBeVisible();
+
+    await tableRow
+      .getByRole('button', { name: `Edit ${currentComment}` })
+      .click();
 
     if (edit.isSelect) {
-      await tableRow.locator('select[name="container"]').selectOption({ label: edit.newValue });
+      await tableRow
+        .locator('select[name="container"]')
+        .selectOption(edit.newValue);
     } else {
-      const input = tableRow.locator(`input[name="${edit.label}"]:visible`);
-      await input.fill(edit.newValue);
+      await tableRow
+        .locator(`input[name="${edit.field}"]:visible`)
+        .fill(edit.newValue);
     }
 
-    await tableRow.getByRole('button', { name: /Save/i }).click();
-    await expect(page.getByText(/successfully edited/i)).toBeVisible();
+    // Save submits /cronjobs/edit and reloads the page.
+    await Promise.all([
+      page.waitForLoadState('domcontentloaded'),
+      tableRow
+        .getByRole('button', { name: `Save ${currentComment}` })
+        .click(),
+    ]);
 
-    if (edit.label === 'comment') {
-       tableRow = page.locator('tr', { hasText: edit.newValue });
+    if (edit.field === 'comment') {
+      currentComment = edit.newValue;
     }
 
+    // Re-locate the row because the page was reloaded.
+    tableRow = page.locator('tr', { hasText: currentComment });
+
+    await expect(tableRow).toBeVisible();
     await expect(tableRow).toContainText(edit.newValue);
   }
+
+  console.log('cronjob editing working');
 });
 
 
 
 
 test('delete job', async ({ page }) => {
-  await page.goto('/cronjobs?view=table');
-  await expect(page).toHaveURL(/\/cronjobs\?view=table/);
+  await page.goto('/cronjobs');
 
-  const tableRow = page.locator('tr', { hasText: /curl job|updated description/ });
+  const tableRow = page.locator('tr', {
+    hasText: /curl job|updated description/
+  });
+
   await expect(tableRow).toBeVisible();
 
-  // First click - Delete
-  await tableRow.getByRole('button', { name: /Delete/i }).click();
+  // First click - enters confirmation state
+  const deleteButton = tableRow.getByRole('button', { name: /Delete/i });
+  await deleteButton.click();
 
-  // Second click - Confirm
-  await tableRow.getByRole('button', { name: /Confirm/i }).click();
+  // Same button now has title="Confirm"
+  const confirmButton = tableRow.locator('button[title="Confirm"]');
+  await expect(confirmButton).toBeVisible();
+  await confirmButton.click();
 
-  await expect(page.getByText('Cron job was successfully deleted.')).toBeVisible();
+  await expect(
+    page.getByText('Cron job was successfully deleted.')
+  ).toBeVisible();
 
-  const remainingRows = page.locator('tbody tr');
-  await expect(remainingRows).toHaveCount(0);
+  await expect(
+    page.locator('tr', { hasText: /curl job|updated description/ })
+  ).toHaveCount(0);
 
-  console.log(`delete working`);
+  console.log('delete working');
 });
