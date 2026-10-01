@@ -335,7 +335,6 @@ test('delete confirm - php-fpm service returns 403', async ({ page }) => {
 test('change mysql page loads', async ({ page }) => {
   await page.goto('/containers/mysql');
 
-  // Scope everything to the database server section
   const section = page.getByRole('region', {
     name: 'Change Database Server',
   });
@@ -366,13 +365,22 @@ test('change mysql page loads', async ({ page }) => {
     section.getByText('Percona', { exact: true })
   ).toBeVisible();
 
-  // Account currently has databases, so switching should be blocked
+  // Warning about what happens when switching database servers
   await expect(
     section.getByText(
-      /To switch the database server, first remove all databases from your account/i
+      /Switching stops the current database server, deletes its data and starts the new one/i
     )
   ).toBeVisible();
+
+  // No server selected yet, so submit button should be disabled
+  const switchButton = section.getByRole('button', {
+    name: 'Choose a database server',
+  });
+
+  await expect(switchButton).toBeVisible();
+  await expect(switchButton).toBeDisabled();
 });
+
 // ─────────────────────────────────────────────
 // /containers/webserver  (change webserver)
 // ─────────────────────────────────────────────
