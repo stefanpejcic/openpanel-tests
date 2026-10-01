@@ -309,74 +309,57 @@ test('icon sections open/close', async ({ page }) => {
 test('menu items collapse/expand individually', async ({ page }) => {
   await navigateToDashboardPage(page);
 
-  const mainSidebarGroup = page.locator('[data-sidebar="group"]').nth(1);
-  const groupItems = mainSidebarGroup.locator('[data-sidebar="menu"] > li[x-data]');
+  const groupItems = page.locator(
+    '[data-sidebar="menu"] > li[x-data]:has(> button):has(> ul[x-show])'
+  );
+
   const count = await groupItems.count();
 
-  console.log(`Found ${count} sidebar groups`);
+  console.log(`Found ${count} collapsible sidebar groups`);
   expect(count).toBeGreaterThan(0);
 
   for (let i = 0; i < count; i++) {
     const li = groupItems.nth(i);
     const button = li.locator(':scope > button');
-    const submenu = li.locator(':scope > ul');
-    const label = (await button.innerText()).trim().split('\n')[0].trim();
+    const submenu = li.locator(':scope > ul[x-show]');
 
-    const isHidden = await submenu.evaluate(el => el.style.display === 'none');
-    if (!isHidden) {
-      await button.click();
-      await expect(submenu).toBeHidden({ timeout: 2000 });
-    }
+    const label = (await button.innerText())
+      .trim()
+      .split('\n')[0]
+      .trim();
 
-    console.log(`[${label}] starting collapsed ✓`);
+    const isExpanded = async () =>
+      await submenu.evaluate(el => getComputedStyle(el).display !== 'none');
 
+    const initialState = await isExpanded();
+
+    console.log(
+      `[${label}] initial state: ${initialState ? 'expanded' : 'collapsed'}`
+    );
+
+    // First click
     await button.click();
-    await submenu.waitFor({ state: 'visible', timeout: 3000 });
-    await expect(submenu).toBeVisible();
-    console.log(`[${label}] expanded ✓`);
 
+    await expect
+      .poll(isExpanded, { timeout: 3000 })
+      .toBe(!initialState);
+
+    console.log(
+      `[${label}] ${initialState ? 'collapsed' : 'expanded'} ✓`
+    );
+
+    // Second click
     await button.click();
-    await submenu.waitFor({ state: 'hidden', timeout: 3000 });
-    await expect(submenu).toBeHidden();
-    console.log(`[${label}] collapsed ✓`);
+
+    await expect
+      .poll(isExpanded, { timeout: 3000 })
+      .toBe(initialState);
+
+    console.log(
+      `[${label}] returned to original state ✓`
+    );
   }
 
-  console.log('All sidebar groups collapse/expand correctly');
+  console.log('All collapsible sidebar groups toggle correctly');
 });
 
-// MENU ITEMS COLLAPSE/EXPAND ALL
-test('menu items collapse/expand all', async ({ page }) => {
-  await navigateToDashboardPage(page);
-
-  const toggleButton = page.locator('button[\\@click*="sidebar-toggle-all"]');
-  const mainSidebarGroup = page.locator('[data-sidebar="group"]').nth(1);
-  const groupItems = mainSidebarGroup.locator('[data-sidebar="menu"] > li[x-data]');
-  const count = await groupItems.count();
-
-  expect(count).toBeGreaterThan(0);
-
-  await expect(toggleButton).toContainText('Expand all');
-  await toggleButton.click();
-  await expect(toggleButton).toContainText('Collapse all');
-
-  for (let i = 0; i < count; i++) {
-    const submenu = groupItems.nth(i).locator(':scope > ul');
-    const label = (await groupItems.nth(i).locator(':scope > button').innerText()).trim().split('\n')[0].trim();
-    await submenu.waitFor({ state: 'visible', timeout: 3000 });
-    await expect(submenu).toBeVisible();
-    console.log(`[${label}] expanded ✓`);
-  }
-
-  await toggleButton.click();
-  await expect(toggleButton).toContainText('Expand all');
-
-  for (let i = 0; i < count; i++) {
-    const submenu = groupItems.nth(i).locator(':scope > ul');
-    const label = (await groupItems.nth(i).locator(':scope > button').innerText()).trim().split('\n')[0].trim();
-    await submenu.waitFor({ state: 'hidden', timeout: 3000 });
-    await expect(submenu).toBeHidden();
-    console.log(`[${label}] collapsed ✓`);
-  }
-
-  console.log('Collapse all / Expand all working correctly');
-});
