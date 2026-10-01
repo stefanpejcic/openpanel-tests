@@ -5,11 +5,17 @@ const domain = 'wp.tests.openpanel.org';
 
 test('traffic stats page loads', async ({ page }) => {
   await page.goto('/domains/stats');
-  await expect(page).toHaveURL(/domains\/stats/);
-  await expect(page.locator('body')).toContainText(/stats|traffic|goaccess|analytics|visits/i);
+
+  await expect(page).toHaveURL(/\/domains\/stats\/?$/);
+
+  await expect(
+    page.getByRole('heading', { name: 'Visitor Statistics', exact: true })
+  ).toBeVisible();
+
+  await expect(page.locator('#domains')).toBeVisible();
+
   console.log('traffic stats page accessible');
 });
-
 
 test('traffic stats shows domain list', async ({ page }) => {
   await page.goto('/domains/stats');
