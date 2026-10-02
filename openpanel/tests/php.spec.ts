@@ -502,7 +502,7 @@ test('edit php options', async ({ page }) => {
 
   // 2. disable_functions
   const disableFuncs = page.locator('input[name="disable_functions"]');
-  await disableFuncs.fill('exec,passthru,shell_exec,system');
+  await disableFuncs.fill('passthru,system');
 
   // 3. post_max_size
   const postMaxSizeContainer = page.locator('div[data-key="post_max_size"]');
@@ -513,7 +513,7 @@ test('edit php options', async ({ page }) => {
   await expect(page.getByText(/Configuration edited successfully and PHP-FPM service restarted/i)).toBeVisible();
 
   await expect(maxExecTime).toHaveValue('600');
-  await expect(disableFuncs).toHaveValue('exec,passthru,shell_exec,system');
+  await expect(disableFuncs).toHaveValue('passthru,system');
   await expect(postMaxSizeContainer.locator('input.numeric-part')).toHaveValue('2');
   await expect(postMaxSizeContainer.locator('select.unit-part')).toHaveValue('G');
   
