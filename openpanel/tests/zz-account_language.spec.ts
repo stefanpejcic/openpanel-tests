@@ -47,8 +47,8 @@ const localesToTest = [
     'tr',
     'uk',
     'zh',
-    'en',
     'sv',
+    'en',
 ];
 
 test.describe('Change and use locale', () => {
