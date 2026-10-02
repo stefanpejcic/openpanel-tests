@@ -295,8 +295,8 @@ test('add dns record', async ({ page }) => {
   // 2. validate on page
   const newRow = page.locator('tr.domain_row', { hasText: recordValue });
   await expect(newRow).toBeVisible();
-  await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
-  await expect(newRow.locator('td').nth(3)).toContainText(recordValue);
+  await expect(newRow.locator('td').nth(3)).toHaveText('TXT');
+  await expect(newRow.locator('td').nth(4)).toContainText(recordValue);
 
   // 3. validate using dig tools
   await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
