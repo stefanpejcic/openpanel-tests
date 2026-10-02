@@ -405,8 +405,8 @@ test('edit zone file', async ({ page }) => {
   await page.goto(`/domains/edit-dns-zone/${domain}`);
   const newRow = page.locator('tr.domain_row', { hasText: `added via zone editor` });
   await expect(newRow).toBeVisible();
-  await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
-  await expect(newRow.locator('td').nth(3)).toContainText(`added via zone editor`);
+  await expect(newRow.locator('td').nth(3)).toHaveText('TXT');
+  await expect(newRow.locator('td').nth(4)).toContainText(`added via zone editor`);
 
   // 3. validate using dig tools
   await page.goto(`https://digwebinterface.com/?hostnames=${domain}&type=TXT&useresolver=9.9.9.10&ns=self&nameservers=ns1.openpanel.org`);
@@ -436,8 +436,8 @@ test('reset dns zone', async ({ page }) => {
   // 2. validate on page
   const newRow = page.locator('tr.domain_row', { hasText: tmprecordValue });
   await expect(newRow).toBeVisible();
-  await expect(newRow.locator('td').nth(2)).toHaveText('TXT');
-  await expect(newRow.locator('td').nth(3)).toContainText(tmprecordValue);
+  await expect(newRow.locator('td').nth(3)).toHaveText('TXT');
+  await expect(newRow.locator('td').nth(4)).toContainText(tmprecordValue);
 
   // 3. restart
   await page.locator('#dropdownHoverButton').click();
