@@ -5,18 +5,18 @@ function randomSuffix() {
 }
 
 const suffix = randomSuffix();
-const FILE_NAME = `radovanfajl_${suffix}`;
+const FILE_NAME = `radovanfajl_${suffix}.txt`;
 const FOLDER_NAME = `radovanfolder_${suffix}`;
 const TXT_FILE = `petarfajl_${suffix}.txt`;
 const TXT_FILE_BAK = `petarfajl_${suffix}.txt_bak`;
-const ZIP_FILE = `radozip_${suffix}`;
+const ZIP_FILE = `radozip_${suffix}.txt`;
 const ZIP_FOLDER = `radofol_${suffix}`;
 const ZIP_ARCHIVE = `/rasizip_${suffix}`;
 const ZIP_ARCHIVE_NAME = `rasizip_${suffix}.zip`;
 
 // Subdirectory used for tests that need cleanup, to avoid deleting docroots
 const TEST_SUBDIR = `test_subdir_${suffix}`;
-const TEST_FILE = `test_file_${suffix}`;
+const TEST_FILE = `test_file_${suffix}.txt`;
 const TEST_DIR = `test_dir_${suffix}`;
 
 
@@ -68,20 +68,22 @@ async function verifyOwnerUids(page: any) {
 async function createFileInRoot(page: any, fileName: string, openAfterCreate = false) {
   await navigateToFiles(page);
   await page.getByRole('button', { name: ' New File' }).click();
-  await page.getByRole('textbox', { name: 'File Name*' }).fill(fileName);
+  await expect(page.locator('#newfiDrawer')).toBeVisible();
+  await page.locator('#newfiDrawer #filename').fill(fileName);
   if (openAfterCreate) {
     await page.locator('#open').check();
   }
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.locator('#newfiDrawer button[type=submit]').click();
 }
 
 async function createFile(page: any, fileName: string, openAfterCreate = false) {
   await page.getByRole('button', { name: ' New File' }).click();
-  await page.getByRole('textbox', { name: 'File Name*' }).fill(fileName);
+  await expect(page.locator('#newfiDrawer')).toBeVisible();
+  await page.locator('#newfiDrawer #filename').fill(fileName);
   if (openAfterCreate) {
     await page.locator('#open').check();
   }
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.locator('#newfiDrawer button[type=submit]').click();
 }
 
 
@@ -89,42 +91,61 @@ async function createFolderInRoot(page: any, folderName: string) {
   await navigateToFiles(page);
   await page.getByRole('button', { name: ' New Folder' }).click();
   await page.locator('#foldername').fill(folderName);
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.locator('#newfoDrawer button[type=submit]').click();
 }
 
 async function createFolder(page: any, folderName: string) {
   await page.getByRole('button', { name: ' New Folder' }).click();
   await page.locator('#foldername').fill(folderName);
-  await page.getByRole('button', { name: 'Create' }).click();
+  await page.locator('#newfoDrawer button[type=submit]').click();
 }
 
 async function selectItem(page: any, name: string, multiSelect = false) {
-  await page.locator('#filemanager_table div').filter({ hasText: name }).click(
-    multiSelect ? { modifiers: ['ControlOrMeta'] } : undefined
-  );
+  const row = page.locator('#filemanager_table tbody tr[data-file]').filter({
+    has: page.locator('td:first-child').getByText(name, { exact: true }),
+  });
+  await expect(row).toBeVisible();
+  await row.click(multiSelect ? { modifiers: ['ControlOrMeta'] } : {});
 }
 
+
+
 async function deleteSelected(page: any, skipTrash = false) {
+  // Open inline delete confirmation
   await page.locator('#deleteButton').click();
+
+  // Find the active inline delete editor
+  const deleteEditor = page.locator('.fm-inline-editor')
+    .filter({ has: page.locator('button[data-act="save"]') });
+
+  await expect(deleteEditor).toBeVisible();
+
+  // Enable permanent deletion if requested
+  const skipTrashCheckbox = deleteEditor.locator('.fm-inline-skip-trash');
+
   if (skipTrash) {
-    await page.getByRole('checkbox', { name: 'Skip the trash and' }).check();
+    await skipTrashCheckbox.check();
+  } else {
+    await expect(skipTrashCheckbox).not.toBeChecked();
   }
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+
+  // Confirm deletion (works for single or multiple items)
+  await deleteEditor.locator('button[data-act="save"]').click();
 }
 
 // Cleanup scoped to TEST_SUBDIR only, to avoid deleting docroots
 async function cleanupSubdir(page: any) {
 	await createFolderInRoot(page, TEST_SUBDIR);
-	await page.waitForTimeout(5000);
+	
 	await navigateToSubdir(page);
 	await createFile(page, TEST_FILE);
-	await page.waitForTimeout(5000);
+	
 	await createFolder(page, TEST_DIR);
-	await page.getByRole('button', { name: ' Select all' }).click();
+	await page.locator('#SelectAll-button').click();
 	await page.locator('#deleteButton').click();
 	await page.getByText('Skip the trash and').click();
 	await page.getByRole('button', { name: 'Delete', exact: true }).click();
-	await expect(page.locator('body')).toContainText(/No items found/i);
+	await expect(page.locator('#filemanager_table tbody tr[data-file]')).toHaveCount(0);
 }
 // TODO: test toggle column names makes them visible in the table
 	
@@ -160,70 +181,151 @@ test('create folder', async ({ page }) => {
   console.log('Folder created successfully');
 });
 
+
+
 test('copy file to folder', async ({ page }) => {
   await navigateToFiles(page);
 
+  // Select file
   await selectItem(page, FILE_NAME);
-  await page.getByRole('button', { name: ' Copy' }).click();
-  await page.locator('#copyfiletree').getByText(FOLDER_NAME).click();
-  await page.getByRole('button', { name: 'Copy', exact: true }).click();
 
-  await expect(page.locator('body')).toContainText(/Copy complete/i);
-  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
+  // Open copy dialog
+  await page.locator('#copyButton').click();
+
+  // Select destination folder using the new folder picker
+  await page.locator('#fmPickerList')
+    .locator('button[data-path]', { hasText: FOLDER_NAME })
+    .click();
+
+  // Verify destination
+  await expect(page.locator('#fmPickerDest'))
+    .toHaveValue(`/${FOLDER_NAME}`);
+
+  // Confirm copy
+  await page.locator('#fmPickerConfirm').click();
+
+  // Verify file was copied successfully
+  await expect(page.locator('body'))
+    .toContainText(/Done! Reloading.../i);
+
+  // Navigate to destination folder
+  await page.goto(`/files/${FOLDER_NAME}`);
+
+  // Verify copied file exists inside folder
+  await expect(page.locator(`[data-file="${FILE_NAME}"]`))
+    .toBeVisible();
 
   console.log('File copied into folder successfully');
 });
 
 
+
+
 test('move file', async ({ page }) => {
-  await page.goto(`/files`);
+  await navigateToFiles(page);
 
-  await page.getByRole('link', { name: FOLDER_NAME }).click();
+  // Open destination folder
+  await page.locator(
+    `#filemanager_table tbody tr[data-file="${FOLDER_NAME}"] td:first-child a`
+  ).click();
+
   await expect(page).toHaveURL(/files\/radovanfolder/);
-  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
+
+  // Verify file exists inside the folder
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${FILE_NAME}"]`)
+  ).toBeVisible();
+
+  // Select file
   await selectItem(page, FILE_NAME);
-  await page.getByRole('button', { name: ' Move' }).click();
-  await page.getByRole('textbox', { name: 'Where to:*' }).click();
-  await page.getByRole('textbox', { name: 'Where to:*' }).fill('/');
-  await page.getByRole('button', { name: 'Move', exact: true }).click();
 
-  await expect(page.locator('body')).toContainText(/Move complete/i);
-  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
-  await expect(page.locator('body')).toContainText(/No items found/i);
+  // Open move dialog
+  await page.locator('#moveButton').click();
 
-  await page.getByRole('link', { name: '/var/www/html/' }).click();
-  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
+  // Set destination to root directory
+  await page.locator('#fmPickerDest').fill('/');
+
+  // Confirm move
+  await expect(page.locator('#fmPickerConfirm')).toBeEnabled();
+  await page.locator('#fmPickerConfirm').click();
+
+  // Verify move succeeded
+  await expect(page.locator('body'))
+    .toContainText(/Done! Reloading.../i);
+
+  // Verify file no longer exists in source folder
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${FILE_NAME}"]`)
+  ).toHaveCount(0);
+
+  // Navigate to root
+  await navigateToFiles(page);
+
+  // Verify file exists in root directory
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${FILE_NAME}"]`)
+  ).toBeVisible();
 
   console.log('File moved out of folder successfully');
 });
 
 
+
 test('delete file to trash', async ({ page }) => {
   await navigateToFiles(page);
 
+  // Select file
   await selectItem(page, FILE_NAME);
+
+  // Open inline delete confirmation
   await page.locator('#deleteButton').click();
-  await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
+
+  // Confirm deletion (leave "Skip the trash" unchecked)
+  await expect(page.locator('.fm-inline-skip-trash')).not.toBeChecked();
+  await page.locator('button[data-act="save"]').click();
+
+  // Verify file disappeared from File Manager
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${FILE_NAME}"]`)
+  ).toHaveCount(0);
 
   console.log('File moved to trash successfully');
 });
 
+
 test('restore file from trash', async ({ page }) => {
   await navigateToFiles(page);
-  await page.getByRole('link', { name: 'Trash' }).click();
-  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
+
+  // Navigate to Trash
+  await page.locator('#page-tabs a[href="/files.trash"]').click();
+
+  const trashRow = page.locator(
+    `#filemanager_table tbody tr[data-file="${FILE_NAME}"]`
+  );
+
+  // Verify file is in Trash
+  await expect(trashRow).toBeVisible();
+
+  // Select file
   await selectItem(page, FILE_NAME);
-  await page.click('#restoreButton');
-  await page.getByRole('button', { name: 'Restore', exact: true }).click();
 
-  // Refresh before verifying file is no longer in trash
-  await page.waitForTimeout(5000);
-  await page.reload();
-  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
+  // Open inline restore confirmation
+  await page.locator('#restoreButton').click();
 
-  await page.getByRole('link', { name: 'File Manager' }).click();
-  await expect(page.locator('body')).toContainText(new RegExp(FILE_NAME, 'i'));
+  // Confirm restore within the selected file row
+  await trashRow.locator('button[data-act="ok"]').click();
+
+  // Verify file disappeared from Trash
+  await expect(trashRow).toHaveCount(0);
+
+  // Navigate back to File Manager
+  await page.locator('#page-tabs a[href="/files"]').click();
+
+  // Verify restored file exists in root directory
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${FILE_NAME}"]`)
+  ).toBeVisible();
+
   console.log('File restored from trash successfully');
 });
 
@@ -234,8 +336,8 @@ test('delete multiple items permanently', async ({ page }) => {
   await selectItem(page, FILE_NAME, true);
   await deleteSelected(page, true);
 
-  await expect(page.locator('body')).not.toContainText(new RegExp(FILE_NAME, 'i'));
-  await expect(page.locator('body')).not.toContainText(new RegExp(FOLDER_NAME, 'i'));
+  await expect(page.locator('#filemanager_table tbody tr[data-file="' + FILE_NAME + '"]')).toHaveCount(0);
+  await expect(page.locator('#filemanager_table tbody tr[data-file="' + FOLDER_NAME + '"]')).toHaveCount(0);
 
   console.log('Multiple items permanently deleted successfully');
 });
@@ -252,29 +354,69 @@ async function createFileWithEditor(page: any, fileName: string) {
   console.log('File created with editor successfully');
 }
 
+
 async function viewFile(page: any, fileName: string, expectedContent: string) {
   await navigateToFiles(page);
-  await expect(page.locator('body')).toContainText(new RegExp(fileName, 'i'));
 
+  // Verify file exists
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${fileName}"]`)
+  ).toBeVisible();
+
+  // Select file
   await selectItem(page, fileName);
-  const popupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' View' }).click();
-  const popup = await popupPromise;
-  await expect(popup.locator('body')).toContainText(new RegExp(expectedContent, 'i'));
+
+  // Open file in new tab
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.locator('#viewButton').click()
+  ]);
+
+  // Verify correct file was opened
+  await expect(popup).toHaveURL(/\/file-manager\/view-file\//);
+
+  // Verify file contents
+  await expect(popup.locator('pre')).toContainText(expectedContent);
+
+  await popup.close();
+
   console.log('File viewed successfully');
 }
+
+
 
 async function editFile(page: any, fileName: string, newContent: string) {
   await navigateToFiles(page);
   await selectItem(page, fileName);
-  const popupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' Edit' }).click();
-  const popup = await popupPromise;
-  await popup.locator('div').filter({ hasText: /^nekitext$/ }).nth(2).click();
-  await popup.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill(newContent);
-  await popup.getByRole('button', { name: 'Save' }).click();
+
+  // Open editor in new tab
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.locator('#editButton').click()
+  ]);
+
+  await expect(popup).toHaveURL(/\/file-manager\/edit-file\//);
+
+  // Wait for Monaco editor
+  const editor = popup.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+
+  // Focus editor and replace ALL existing content
+  await popup.locator('.monaco-editor .view-lines').click();
+  await popup.keyboard.press('ControlOrMeta+A');
+  await popup.keyboard.insertText(newContent);
+
+  // Verify Monaco displays only the new content
+  await expect(
+    popup.locator('.monaco-editor .view-lines')
+  ).toHaveText(newContent);
+
+  // Save file
+  await popup.locator('#editorcontentvalue').click();
+
   console.log('File edited successfully');
 }
+
 
 test('create file with editor', async ({ page }) => {
   await createFileWithEditor(page, TXT_FILE);
@@ -284,52 +426,117 @@ test('view file content', async ({ page }) => {
   await viewFile(page, TXT_FILE, 'nekitext');
 });
 
+
 test('edit file content', async ({ page }) => {
   await editFile(page, TXT_FILE, 'nekitext2');
 
-  // Verify updated content is visible after edit
-  const verifyPopupPromise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' View' }).click();
-  const verifyPopup = await verifyPopupPromise;
-  await expect(verifyPopup.locator('body')).toContainText(/nekitext2/i);
+  // Select the edited file again
+  await navigateToFiles(page);
+  await selectItem(page, TXT_FILE);
+
+  // Open file viewer in a new tab
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.locator('#viewButton').click()
+  ]);
+
+  // Verify the correct file was opened
+  await expect(popup).toHaveURL(/\/file-manager\/view-file\//);
+
+  // Verify updated content
+  await expect(popup.locator('pre')).toHaveText('nekitext2');
+
+  await popup.close();
 
   console.log('File content updated and verified successfully');
 });
 
 
+
 test('rename file', async ({ page }) => {
   await navigateToFiles(page);
 
+  // Select file
   await selectItem(page, TXT_FILE);
-  await page.getByRole('button', { name: ' Rename' }).click();
-  await page.locator('#renameInput').click();
-  await page.locator('#renameInput').fill(TXT_FILE_BAK);
-  await page.getByRole('button', { name: 'Rename', exact: true }).click();
 
-  // Verify old filename is gone and new filename is present
-  await expect(page.locator('body')).not.toContainText(new RegExp(`^${TXT_FILE}$`, 'i'));
-  await expect(page.locator('body')).toContainText(new RegExp(TXT_FILE_BAK, 'i'));
-  await expect(page.locator('body')).toContainText(/File renamed successfully/i);
+  // Open inline rename editor
+  await page.locator('#renameButton').click();
+
+  // Locate the rename editor for this specific file
+  const renameEditor = page.locator(
+    `#filemanager_table tbody tr[data-file="${TXT_FILE}"] .fm-inline-editor`
+  );
+
+  await expect(renameEditor).toBeVisible();
+
+  // Enter new filename
+  await renameEditor.locator('.fm-inline-input').fill(TXT_FILE_BAK);
+
+  // Save new filename
+  await renameEditor.locator('button[data-act="save"]').click();
+
+  // Verify old filename is gone
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${TXT_FILE}"]`)
+  ).toHaveCount(0);
+
+  // Verify new filename exists
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${TXT_FILE_BAK}"]`)
+  ).toBeVisible();
+
+  // Verify success message
+  await expect(page.locator('body'))
+    .toContainText(/File renamed successfully/i);
 
   console.log('File renamed successfully');
 });
 
 
+
 test('change file permissions', async ({ page }) => {
   await navigateToFiles(page);
 
+  // Select file
   await selectItem(page, TXT_FILE_BAK);
-  await page.getByRole('button', { name: ' Permissions' }).click();
-  await page.getByPlaceholder('775').fill('755');
-  await page.getByRole('button', { name: 'Confirm' }).click();
 
-  await expect(page.locator('body')).toContainText(/Permissions changed/i);
-  await expect(page.locator('body')).toContainText(/-rwxr-xr-x/i);
+  // Open inline permissions editor
+  await page.locator('#permButton').click();
+
+  const fileRow = page.locator(
+    `#filemanager_table tbody tr[data-file="${TXT_FILE_BAK}"]`
+  );
+
+  const permissionsEditor = fileRow.locator('.fm-inline-editor');
+
+  await expect(permissionsEditor).toBeVisible();
+
+  // Set permissions to 755
+  await permissionsEditor.locator('.fm-inline-input').fill('755');
+
+  // Save permissions
+  await permissionsEditor.locator('button[data-act="save"]').click();
+
+  // Verify success message
+  await expect(page.locator('body'))
+    .toContainText(/Permissions changed/i);
+
+  // Verify symbolic permissions
+  await expect(fileRow).toHaveAttribute(
+    'data-permissions',
+    '-rwxr-xr-x'
+  );
+
+  // Verify owner IDs
   await verifyOwnerUids(page);
 
+  // Reopen permissions editor to verify saved numeric value
   await selectItem(page, TXT_FILE_BAK);
-  await page.getByRole('button', { name: ' Permissions' }).click();
-  await expect(page.getByPlaceholder('775')).toHaveValue('755');
+  await page.locator('#permButton').click();
+
+  await expect(
+    fileRow.locator('.fm-inline-editor .fm-inline-input')
+  ).toHaveValue('755');
 
   console.log('File permissions changed successfully');
 });
@@ -339,20 +546,13 @@ test('upload file from URL', async ({ page }) => {
 
   await navigateToFiles(page);
 
-  const page5Promise = page.waitForEvent('popup');
-  await page.getByRole('button', { name: ' Upload' }).click();
-  const page5 = await page5Promise;
-
-  await page5.getByRole('button', { name: 'Download from URL instead' }).click();
-  await page5.getByRole('textbox', { name: 'https://' }).fill('http://ipv4.download.thinkbroadband.com/20MB.zip');
-  await page5.getByRole('button', { name: 'Download' }).click();
-  await expect(page5.locator('body')).toContainText(/downloaded from URL successfully/i, { timeout: 20_000 });
-
-  await page5.getByRole('link', { name: 'File Manager' }).click();
-  await page5.getByRole('heading', { name: '20MB.zip', exact: true }).click();
+  await page.goto('/file-manager/upload?method=download');
+  await page.getByRole('textbox', { name: 'https://' }).fill('http://ipv4.download.thinkbroadband.com/20MB.zip');
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
+  await expect(page.locator('body')).toContainText(/downloaded from URL successfully/i, { timeout: 120_000 });
 
   await navigateToFiles(page);
-  await expect(page.locator('body')).toContainText(/20MB.zip/i);
+  await expect(page.locator('#filemanager_table tbody tr[data-file="20MB.zip"]')).toBeVisible();
   await verifyOwnerUids(page);
   console.log('File uploaded from URL successfully');
 });
@@ -379,8 +579,8 @@ async function extractFiles(page: any) {
   await selectItem(page, ZIP_FILE);
   await selectItem(page, ZIP_FOLDER, true);
   await deleteSelected(page);
-  await expect(page.locator('body')).not.toContainText(new RegExp(ZIP_FILE, 'i'));
-  await expect(page.locator('body')).not.toContainText(new RegExp(ZIP_FOLDER, 'i'));
+  await expect(page.locator('#filemanager_table tbody tr[data-file="' + ZIP_FILE + '"]')).toHaveCount(0);
+  await expect(page.locator('#filemanager_table tbody tr[data-file="' + ZIP_FOLDER + '"]')).toHaveCount(0);
 
   await selectItem(page, ZIP_ARCHIVE_NAME);
   await page.getByRole('button', { name: ' Extract' }).click();
