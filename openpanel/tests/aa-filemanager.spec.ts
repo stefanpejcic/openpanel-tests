@@ -134,18 +134,39 @@ async function deleteSelected(page: any, skipTrash = false) {
 }
 
 // Cleanup scoped to TEST_SUBDIR only, to avoid deleting docroots
+
 async function cleanupSubdir(page: any) {
-	await createFolderInRoot(page, TEST_SUBDIR);
-	
-	await navigateToSubdir(page);
-	await createFile(page, TEST_FILE);
-	
-	await createFolder(page, TEST_DIR);
-	await page.locator('#SelectAll-button').click();
-	await page.locator('#deleteButton').click();
-	await page.getByText('Skip the trash and').click();
-	await page.getByRole('button', { name: 'Delete', exact: true }).click();
-	await expect(page.locator('#filemanager_table tbody tr[data-file]')).toHaveCount(0);
+  // Create test subdirectory
+  await createFolderInRoot(page, TEST_SUBDIR);
+
+  // Navigate into test subdirectory
+  await navigateToSubdir(page);
+
+  // Create test file and folder
+  await createFile(page, TEST_FILE);
+  await createFolder(page, TEST_DIR);
+
+  // Verify both items exist
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${TEST_FILE}"]`)
+  ).toBeVisible();
+
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${TEST_DIR}"]`)
+  ).toBeVisible();
+
+  // Select all items inside test subdirectory
+  await page.locator('#SelectAll-button').click();
+
+  // Permanently delete selected items (skip Trash)
+  await deleteSelected(page, true);
+
+  // Verify directory is empty
+  await expect(
+    page.locator('#filemanager_table tbody tr[data-file]')
+  ).toHaveCount(0);
+
+  console.log('Test subdirectory cleaned up successfully');
 }
 // TODO: test toggle column names makes them visible in the table
 	
@@ -558,36 +579,84 @@ test('upload file from URL', async ({ page }) => {
 });
 
 
+
 async function compressFiles(page: any) {
   await navigateToFiles(page);
 
+  // Create test file and folder
   await createFileInRoot(page, ZIP_FILE);
   await createFolderInRoot(page, ZIP_FOLDER);
 
+  // Select both items
   await selectItem(page, ZIP_FOLDER);
   await selectItem(page, ZIP_FILE, true);
-  await page.getByRole('button', { name: ' Compress' }).click();
-  await page.getByRole('textbox', { name: 'Archive path*' }).fill(ZIP_ARCHIVE);
-  await page.getByRole('button', { name: 'Compress', exact: true }).click();
-  await expect(page.locator('body')).toContainText(new RegExp(ZIP_ARCHIVE_NAME, 'i'));
+
+  // Open compression dialog
+  await page.locator('#compressButton').click();
+
+  // Set archive name (without .zip extension)
+  await page.locator('#fmPickerArchiveName')
+    .fill(ZIP_ARCHIVE.replace(/^\//, ''));
+
+  // Select ZIP format
+  await page.locator('#fmPickerExt').selectOption('zip');
+
+  // Verify archive name
+  await expect(page.locator('#fmPickerArchiveName'))
+    .toHaveValue(ZIP_ARCHIVE.replace(/^\//, ''));
+
+  // Confirm compression
+  await expect(page.locator('#fmPickerConfirm')).toBeEnabled();
+  await page.locator('#fmPickerConfirm').click();
+
+  // Verify archive was created
+  await expect(
+    page.locator(
+      `#filemanager_table tbody tr[data-file="${ZIP_ARCHIVE_NAME}"]`
+    )
+  ).toBeVisible();
+
   console.log('Files compressed successfully');
 }
+
+
 
 async function extractFiles(page: any) {
   await navigateToFiles(page);
 
+  // Delete original file and folder before extraction
   await selectItem(page, ZIP_FILE);
   await selectItem(page, ZIP_FOLDER, true);
   await deleteSelected(page);
-  await expect(page.locator('#filemanager_table tbody tr[data-file="' + ZIP_FILE + '"]')).toHaveCount(0);
-  await expect(page.locator('#filemanager_table tbody tr[data-file="' + ZIP_FOLDER + '"]')).toHaveCount(0);
 
+  // Verify originals were removed
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${ZIP_FILE}"]`)
+  ).toHaveCount(0);
+
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${ZIP_FOLDER}"]`)
+  ).toHaveCount(0);
+
+  // Select ZIP archive
   await selectItem(page, ZIP_ARCHIVE_NAME);
-  await page.getByRole('button', { name: ' Extract' }).click();
-  await page.getByRole('button', { name: 'Extract', exact: true }).click();
-  await expect(page.locator('body')).toContainText(/File extracted successfully/i);
-  await expect(page.locator('body')).toContainText(new RegExp(ZIP_FILE, 'i'));
-  await expect(page.locator('body')).toContainText(new RegExp(ZIP_FOLDER, 'i'));
+
+  // Open extraction dialog
+  await page.locator('#extractButton').click();
+
+  // Extract into current directory
+  await expect(page.locator('#fmPickerConfirm')).toBeEnabled();
+  await page.locator('#fmPickerConfirm').click();
+
+  // Verify extracted file and folder appear
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${ZIP_FILE}"]`)
+  ).toBeVisible({ timeout: 15000 });
+
+  await expect(
+    page.locator(`#filemanager_table tbody tr[data-file="${ZIP_FOLDER}"]`)
+  ).toBeVisible({ timeout: 15000 });
+
   console.log('Files extracted successfully');
 }
 
