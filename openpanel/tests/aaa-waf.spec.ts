@@ -2,8 +2,11 @@ import { test, expect, Page } from '@playwright/test';
 
 // Toggle lives on the list page, one per domain row → must be scoped
 function wafToggle(page: Page, domain: string) {
-  return page.getByRole('row').filter({ hasText: domain })
-             .locator('button[aria-checked]');
+  return page.locator('#waf-domains-table tbody tr')
+    .filter({
+      has: page.locator(`input[name="domain_name"][value="${domain}"]`)
+    })
+    .locator('button[aria-checked]');
 }
 
 async function setWaf(page: Page, domain: string, desiredOn: boolean) {
@@ -23,7 +26,12 @@ async function openDomainPage(page: Page, domain: string) {
 
 test('waf status', async ({ page }) => {
   await page.goto('/server/waf');
-  await expect(page.getByRole('heading', { name: 'WAF', level: 1 })).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Web Firewall', level: 1 })
+  ).toBeVisible();
+
+  await expect(page.locator('#waf-domains-table')).toBeVisible();
 });
 
 test('waf on/off and disabled rules for domain', async ({ page }) => {
