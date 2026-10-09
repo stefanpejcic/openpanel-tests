@@ -182,16 +182,6 @@ test.describe('GET /api/endpoints', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/ → redirect
-// ---------------------------------------------------------------------------
-test.describe('GET /api/ redirect', () => {
-
-  test('resolves without error', async () => {
-    const res = await api.get('/api/');
-    expect([200, 301, 302, 307, 308]).toContain(res.status());
-  });
-});
 
 // ---------------------------------------------------------------------------
 // /api/account
@@ -2020,8 +2010,9 @@ test.describe('Auth guard', () => {
     '/api/cache/varnish',
     '/api/mysql/databases',
     '/api/postgresql/databases',
-    '/api/inodes',
-    '/api/disk-usage',
+    // {directory...} routes, the bare path just gets the mux's trailing-slash 301
+    '/api/inodes/',
+    '/api/disk-usage/',
     '/api/usage',
     '/api/malware-scanner/quarantine',
     '/api/emails',

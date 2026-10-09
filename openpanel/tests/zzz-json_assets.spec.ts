@@ -44,7 +44,8 @@ test('screenshot endpoint rejects a domain the user does not own', async ({ page
 
 test('screenshot can be force-regenerated via POST', async ({ page }) => {
   test.setTimeout(60_000);
-  await page.goto(`/website?domain=${domain}`);
+  // any panel page works for the csrf token, /website 404s once the wordpress spec has removed the site
+  await page.goto('/dashboard');
 
   const status = await page.evaluate(async (d) => {
     const res = await fetch(`/json/screenshot/${d}`, {

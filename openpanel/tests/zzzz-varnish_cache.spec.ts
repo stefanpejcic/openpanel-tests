@@ -2,6 +2,23 @@ import { test, expect, type Page } from '@playwright/test';
 
 const DOMAIN = 'wp.tests.openpanel.org';
 
+// toggling varnish recreates caddy/webserver, so 443 refuses connections for a few seconds right after
+async function varnishHeaders(page: Page, path: string): Promise<boolean | null> {
+  try {
+    const response = await page.request.get(`https://${DOMAIN}/${path}?${Date.now()}`, { timeout: 10_000 });
+    const headers = response.headers();
+    const xCache = headers['x-cache']?.toLowerCase() || '';
+    const via = headers['via']?.toLowerCase() || '';
+    return 'x-varnish' in headers || xCache.includes('hit') || xCache.includes('miss') || via.includes('varnish');
+  } catch {
+    return null;
+  }
+}
+
+function domainRow(page: Page) {
+  return page.locator('tbody tr.domain_row').filter({ has: page.locator('td', { hasText: new RegExp(`^\\s*${DOMAIN.replace(/\./g, '\\.')}\\s*$`) }) });
+}
+
 test('enable varnish', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('/cache/varnish');
@@ -14,15 +31,13 @@ test('enable varnish', async ({ page }) => {
 });
 
 test('should show domains table and enable Varnish', async ({ page }) => {
+  test.setTimeout(120_000);
   await page.goto('/cache/varnish');
   const table = page.locator('table');
   await expect(table).toBeVisible();
-  const firstRow = page.locator('tbody tr.domain_row').first();
+  const firstRow = domainRow(page);
   await expect(firstRow).toBeVisible();
-  const domainCell = firstRow.locator('td').first();
-  const domainName = (await domainCell.textContent())?.trim();
-  expect(domainName).toBeTruthy();
-  expect(domainName).toBe(DOMAIN);
+  const domainName = DOMAIN;
   const toggleButton = firstRow.locator('button[type="submit"]');
   await expect(toggleButton).toHaveAttribute('aria-checked', 'false');
   await toggleButton.click();
@@ -40,12 +55,7 @@ test('should show domains table and enable Varnish', async ({ page }) => {
 
 
   
-  const response = await page.request.get(`https://${DOMAIN}/test.txt`);
-  const headers = response.headers();
-  const isVarnishActive = 'x-varnish' in headers
-    || headers['x-cache']?.toLowerCase().includes('hit')
-    || headers['x-cache']?.toLowerCase().includes('miss');
-  expect(isVarnishActive).toBe(true);
+  await expect.poll(() => varnishHeaders(page, 'test.txt'), { timeout: 60_000, intervals: [2000] }).toBe(true);
 });
 
 test('should display container log and show Varnish Cache & Container stats', async ({ page }) => {
@@ -96,18 +106,15 @@ test('should display container log and show Varnish Cache & Container stats', as
 });
 
 test('should disable Varnish for domain', async ({ page }) => {
+  test.setTimeout(120_000);
   await page.goto('/cache/varnish');
   
   const table = page.locator('table');
   await expect(table).toBeVisible();
   
-  const firstRow = page.locator('tbody tr.domain_row').first();
+  const firstRow = domainRow(page);
   await expect(firstRow).toBeVisible();
-  
-  const domainCell = firstRow.locator('td').first();
-  const domainName = (await domainCell.textContent())?.trim();
-  expect(domainName).toBeTruthy();
-  expect(domainName).toBe(DOMAIN);
+  const domainName = DOMAIN;
   
   const toggleButton = firstRow.locator('button[type="submit"]');
   await expect(toggleButton).toHaveAttribute('aria-checked', 'true');
@@ -118,21 +125,7 @@ test('should disable Varnish for domain', async ({ page }) => {
   const alert = page.locator('#alert-stack .ms-3');
   await expect(alert).toContainText(`Varnish cache is now Off for domain ${domainName}`, { timeout: 10_000 });
   
-  const response = await page.request.get(`https://${DOMAIN}/test2.txt`);
-  const headers = response.headers();
-  
-  const xCache = headers['x-cache']?.toLowerCase() || '';
-  const via = headers['via']?.toLowerCase() || '';
-  
-  const isVarnishActive = Boolean(
-  'x-varnish' in headers ||
-  xCache.includes('hit') ||
-  xCache.includes('miss') ||
-  via.includes('varnish')
-);
-
-  expect(isVarnishActive).toBe(false);
-
+  await expect.poll(() => varnishHeaders(page, 'test2.txt'), { timeout: 60_000, intervals: [2000] }).toBe(false);
 });
 test('disable varnish', async ({ page }) => {
   test.setTimeout(60_000);

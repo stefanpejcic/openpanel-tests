@@ -158,7 +158,7 @@ if ($res === false) {
 
 for (const service of services) {
   test(service.name, async ({ page }) => {
-    test.setTimeout(60_000); // 60s so we also do the healthcheck
+    test.setTimeout(3 * 60_000); // room for the 90s Running wait plus the healthcheck, elasticsearch is slow to boot
 
     // PRE-CLEANUP: ensure service is disabled before starting
     await navigateToPage(page, service.name);
