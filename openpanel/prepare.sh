@@ -80,6 +80,13 @@ else
   cd /root && podman-compose up -d openadmin_ftp
 fi
 
+# ENABLE MALWARE SCANNER
+if podman container exists clamav; then
+  podman start clamav >/dev/null 2>&1 || cd /root && podman-compose up -d --force-recreate clamav
+else
+  cd /root && podman-compose up -d clamav
+fi
+
 csf -r
 
 # RESTART USER-PANEL TO APPLY ALL CHANGES!
@@ -91,7 +98,7 @@ BASE_URL=$(opencli user-login testinguser | sed -E 's#(https?://[^/]+).*#\1#')
 
 # CHANGE A RECORD ON CLOUDFLARE TO THIS SERVER (its ip restricted!)
 IP=$(curl -s -4 https://ip.openpanel.com) && curl -s -o /dev/null -w "" -X PUT "https://api.cloudflare.com/client/v4/zones/576d997a15f8e381f18b8b39363b4023/dns_records/1a13b4f40e8751e8d848b4a49ba460ed" -H "Authorization: Bearer cfat_NmJr954LPMZYkJ9TTTQS2loWh9tIA2z1NvgpjyRPd4aa4c06" -H "Content-Type: application/json" --data "{\"type\":\"A\",\"name\":\"*.tests.openpanel.org\",\"content\":\"$IP\",\"ttl\":120,\"proxied\":true}" >/dev/null 2>&1
-podman-compose up -d clamav
+
 # PRINT INFO for /root/playwright-test/openpanel/.env
 echo "BASE_URL=$BASE_URL"
 echo "PANEL_USERNAME=$PANEL_USERNAME"
