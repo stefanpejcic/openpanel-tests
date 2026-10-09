@@ -178,7 +178,7 @@ test('wordpress security hardening page', async ({ page }) => {
 
 test('wordpress vulnerability scan', async ({ page }) => {
   test.setTimeout(3 * 60 * 1000);
-  await page.goto('/json/wp_vulnerability/${domain}');
+  await page.goto(`/json/wp_vulnerability/${domain}`);
   await expect(page.locator('body')).toContainText(/core_version_|plugin_|theme_/i, { timeout: 30000 });
   console.log('wordpress vulnerability scan page working');
 });
