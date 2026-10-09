@@ -24,6 +24,24 @@ async function openDomainPage(page: Page, domain: string) {
   await expect(page).toHaveURL(new RegExp(`/server/waf/${domain.replace(/\./g, '\\.')}$`));
 }
 
+// rule exceptions sit in a collapsed <details> that's only open by default when some are set
+async function openExceptions(page: Page) {
+  const details = page.locator('details', { has: page.locator('#removed_rules') });
+  if (!(await details.evaluate(el => (el as HTMLDetailsElement).open))) {
+    await details.locator('summary').click();
+  }
+  await expect(page.locator('#removed_rules')).toBeVisible();
+}
+
+async function saveExceptions(page: Page, field: '#removed_rules' | '#removed_tags', value: string) {
+  await openExceptions(page);
+  await page.locator(field).fill(value);
+  await page.getByRole('button', { name: 'Save exceptions' }).click();
+  await page.waitForLoadState('load');
+  await openExceptions(page);
+  await expect(page.locator(field)).toHaveValue(value);
+}
+
 test('waf status', async ({ page }) => {
   await page.goto('/server/waf');
 
@@ -65,12 +83,7 @@ test('waf on/off and disabled rules for domain', async ({ page }) => {
   await openDomainPage(page, domain);
 
   const ruleId = '941100 941110 941160 941390 949110';
-  const removedRules = page.locator('#removed_rules');
-  const saveButton = page.getByRole('button', { name: 'Save' });
-
-  await removedRules.fill(ruleId);
-  await saveButton.click();
-  await expect(removedRules).toHaveValue(ruleId);
+  await saveExceptions(page, '#removed_rules', ruleId);
 
   blocked = await page.request.get(blockedUrl, { failOnStatusCode: false });
   clean = await page.request.get(cleanUrl, { failOnStatusCode: false });
@@ -78,20 +91,14 @@ test('waf on/off and disabled rules for domain', async ({ page }) => {
   expect(clean.status()).toBe(200);
 
   // Clear disabled rule IDs
-  await removedRules.fill('');
-  await saveButton.click();
-  await expect(removedRules).toHaveValue('');
+  await saveExceptions(page, '#removed_rules', '');
 
   blocked = await page.request.get(blockedUrl, { failOnStatusCode: false });
   expect([403, 406, 409, 422]).toContain(blocked.status());
 
   // ── 4. WAF ON + disable rule by TAG → previously blocked request now passes ─
   const ruleTag = 'attack-xss';
-  const removedTags = page.locator('#removed_tags');
-
-  await removedTags.fill(ruleTag);
-  await saveButton.click();
-  await expect(removedTags).toHaveValue(ruleTag);
+  await saveExceptions(page, '#removed_tags', ruleTag);
 
   blocked = await page.request.get(blockedUrl, { failOnStatusCode: false });
   clean = await page.request.get(cleanUrl, { failOnStatusCode: false });
@@ -99,9 +106,7 @@ test('waf on/off and disabled rules for domain', async ({ page }) => {
   expect(clean.status()).toBe(200);
 
   // ── 5. Cleanup – clear disabled tags, confirm blocking restored ────────────
-  await removedTags.fill('');
-  await saveButton.click();
-  await expect(removedTags).toHaveValue('');
+  await saveExceptions(page, '#removed_tags', '');
 
   blocked = await page.request.get(blockedUrl, { failOnStatusCode: false });
   expect([403, 406, 409, 422]).toContain(blocked.status());

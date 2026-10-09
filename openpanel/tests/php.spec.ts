@@ -262,7 +262,7 @@ test.describe('version change', () => {
 
   for (const version of versions) {
     test(`php ${version}`, async ({ page }) => {
-      test.setTimeout(120_000);
+      test.setTimeout(240_000);
 
       await openPhpPage(page);
 
@@ -310,6 +310,10 @@ test.describe('version change', () => {
       const select =
         targetRow.locator('select[name="new_php_version"]');
 
+      // only versions the server actually offers
+      const offered = await select.locator('option').evaluateAll(opts => opts.map(o => (o as HTMLOptionElement).value));
+      test.skip(!offered.includes(version), `php ${version} not offered on this server`);
+
       await select.selectOption(version);
 
       await Promise.all([
@@ -346,11 +350,15 @@ test.describe('version change', () => {
           `PHP Version ${versionShort}`
         );
       }).toPass({
-        timeout: 30000,
-        intervals: [500]
+        // first switch to an older version may pull its php-fpm image
+        timeout: 120000,
+        intervals: [1000]
       });
 
       console.log(`php ${versionShort} is working`);
+
+      // ionCube never shipped a loader for php 8.0
+      if (versionShort === '8.0') return;
 
       // ioncube loader is enabled
       await expect(page.getByRole('heading', { level: 2, name: 'ionCube Loader' })).toBeVisible();

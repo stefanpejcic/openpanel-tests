@@ -3,8 +3,10 @@ import { test, expect, type Page } from '@playwright/test';
 // These tests intentionally share a cron job. Run in order, in one worker.
 test.describe.configure({ mode: 'serial' });
 
-const JOB = 'curl job';
-const UPDATED_JOB = 'updated description';
+// unique per run so a leftover job from an aborted run can't make the row lookups ambiguous
+const RUN = process.env.TEST_RUN_ID || Math.random().toString(36).slice(2, 8);
+const JOB = `curl job ${RUN}`;
+const UPDATED_JOB = `updated description ${RUN}`;
 const COMMAND = 'curl https://google.com > /var/www/html/cron-test.txt';
 const INITIAL_SCHEDULE = '@every 5s';
 
@@ -19,13 +21,33 @@ async function jobTable(page: Page) {
   await expect(page.locator('#cronjobs-table')).toBeVisible();
 }
 
+// table isn't rendered at all when the account has no jobs yet
+async function jobList(page: Page) {
+  await page.goto('/cronjobs');
+  await expect(page.locator('#cronjobs-table').or(page.getByText('No cronjobs yet', { exact: false }))).toBeVisible();
+}
+
 async function editorText(page: Page) {
   await expect(page.locator('.CodeMirror')).toBeVisible();
   return page.locator('.CodeMirror').evaluate((el: any) => el.CodeMirror.getValue() as string);
 }
 
 test('list', async ({ page }) => {
-  await jobTable(page);
+  await jobList(page);
+
+  // drop jobs left behind by earlier aborted runs
+  const stale = page.locator('#cronjobs-table tbody tr').filter({
+    has: page.locator('[data-sort-col="comment"]', { hasText: /^\s*(curl job|updated description)/ }),
+  });
+  while (await stale.count()) {
+    const row = stale.first();
+    const name = (await row.locator('[data-sort-col="comment"]').innerText()).trim();
+    await row.getByRole('button', { name: `Delete ${name}` }).click();
+    await row.locator('button[title="Confirm"]').click();
+    await expect(page.getByText('Cron job was successfully deleted.')).toBeVisible();
+    await jobList(page);
+  }
+
   await expect(page.locator('a[href="/cronjobs/new"]')).toBeVisible();
   await expect(page.locator('#page-tabs a[href="/cronjobs/editor"]')).toBeVisible();
   await expect(page.locator('#page-tabs a[href="/cronjobs/logs"]')).toBeVisible();
@@ -62,10 +84,11 @@ test('view logs', async ({ page }) => {
   await row.locator('a[href^="/cronjobs/logs?job="]').click();
   await expect(page).toHaveURL(/\/cronjobs\/logs(?:\?|$)/);
 
-  // The logs endpoint returns an array. Poll instead of sleeping a fixed 15s.
+  // container logs are cached 60s per `lines` value, so bump it each poll to always get a fresh read
+  let lines = 1000;
   await expect.poll(async () => {
     const response = await page.request.get('/cronjobs/log', {
-      params: { job: JOB, lines: '1000' },
+      params: { job: JOB, lines: String(lines++) },
     });
     if (!response.ok()) return 0;
     const body: unknown = await response.json();
@@ -152,6 +175,6 @@ test('delete job', async ({ page }) => {
   await expect(confirm).toBeVisible();
   await confirm.click();
   await expect(page.getByText('Cron job was successfully deleted.')).toBeVisible();
-  await jobTable(page);
+  await jobList(page);
   await expect(jobRow(page, UPDATED_JOB)).toHaveCount(0);
 });

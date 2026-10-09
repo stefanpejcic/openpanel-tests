@@ -3,9 +3,15 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+// after the config test restarts postgres the page shows an "initializing" row and refreshes itself until it's back
+async function waitForPostgres(page: any) {
+  await expect(page.getByText(/still initializing/i)).toHaveCount(0, { timeout: 90000 });
+}
+
 async function navigateToPostgreSQLPage(page: any) {
   await page.goto('/postgresql');
   await expect(page).toHaveURL(/postgresql/);
+  await waitForPostgres(page);
 }
 
 async function expectDatabaseInTable(page: any, dbName: string) {
@@ -17,16 +23,30 @@ async function expectDatabaseNotInTable(page: any, dbName: string) {
   await expect(page.locator('tr', { hasText: dbName })).toHaveCount(0);
 }
 
+// drop a row (db or user) left behind by an earlier aborted run
+async function deleteRowIfExists(page: any, url: string, name: string) {
+  await page.goto(url);
+  await waitForPostgres(page);
+  const row = page.locator('tr').filter({ has: page.getByText(name, { exact: true }) });
+  if (!(await row.count())) return;
+  await row.locator('button.btn-danger').click();
+  const confirmButton = page.locator('button.btn-dark:visible');
+  await expect(confirmButton.first()).toBeVisible();
+  await confirmButton.first().click();
+  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+}
+
 
 // ACCESS
 test('list databases', async ({ page }) => {
   await navigateToPostgreSQLPage(page);
-  await expect(page.locator('body')).toContainText(/create your first database|no databases/i, { timeout: 25000 });
+  await expect(page.locator('body')).toContainText(/create your first database|no databases|total databases:\s*\d+/i, { timeout: 25000 });
   console.log('postgresql initialized');
 });
 
 
 test('create database', async ({ page }) => {
+  await deleteRowIfExists(page, '/postgresql', 'stefan_psql');
   await navigateToPostgreSQLPage(page);
   await page.getByRole('link', { name: 'New Database' }).click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_psql');
@@ -46,6 +66,7 @@ test('list users', async ({ page }) => {
 
 
 test('create user', async ({ page }) => {
+  await deleteRowIfExists(page, '/postgresql/users', 'stefan_psql_user');
   await page.goto('/postgresql/user');
   await expect(page).toHaveURL(/postgresql\/user/);
   await page.getByRole('textbox', { name: 'Username*' }).fill('stefan_psql_user');
@@ -144,6 +165,8 @@ test('revoke user from database', async ({ page }) => {
 
 
 test('database wizard', async ({ page }) => {
+  await deleteRowIfExists(page, '/postgresql', 'psql_proba');
+  await deleteRowIfExists(page, '/postgresql/users', 'psql_novi_user');
   await page.goto('/postgresql/wizard');
   await expect(page).toHaveURL(/postgresql\/wizard/);
   await page.locator('input[name="database_name"]').fill('psql_proba');
@@ -228,14 +251,13 @@ INSERT INTO users VALUES (1, 'John');
 
 test('delete user', async ({ page }) => {
   await page.goto('/postgresql/users');
-  const deleteButtons = page.locator('button.btn-danger');
-  const count = await deleteButtons.count();
-  expect(count).toBeGreaterThan(0);
-  await deleteButtons.first().click();
-  const confirmButton = page.locator('button.btn-dark');
-  await expect(confirmButton.first()).toBeVisible();
-  await confirmButton.first().click();
-  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  await expect(page.locator('tr').filter({ has: page.getByText('stefan_psql_user', { exact: true }) })).toBeVisible();
+  await deleteRowIfExists(page, '/postgresql/users', 'stefan_psql_user');
+  await page.goto('/postgresql/users');
+  await expect(page.locator('tr').filter({ has: page.getByText('stefan_psql_user', { exact: true }) })).toHaveCount(0);
+
+  // wizard leftovers
+  await deleteRowIfExists(page, '/postgresql/users', 'psql_novi_user');
   console.log('postgresql delete user is working');
 });
 
@@ -252,5 +274,8 @@ test('delete database', async ({ page }) => {
   await confirmButton.click();
   await expect(page.locator('body')).toContainText(/successfully deleted/i);
   await expectDatabaseNotInTable(page, dbName);
+
+  // wizard leftovers
+  await deleteRowIfExists(page, '/postgresql', 'psql_proba');
   console.log('postgresql database deleted');
 });

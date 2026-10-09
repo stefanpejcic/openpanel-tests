@@ -103,6 +103,47 @@ test.describe('Node.js autoinstaller', () => {
     console.log('Node.js autoinstaller is fully working');
   });
 
-  // TODO: cover manager actions
+  test('5. stop, start and restart app', async ({ page }) => {
+    test.setTimeout(4 * 60 * 1000);
+
+    const siteUp = async () => {
+      const res = await page.request.get(`https://${DOMAIN}/`, { failOnStatusCode: false });
+      return res.status() === 200 && (await res.text()).includes('Hello World');
+    };
+
+    await page.goto(`/website?domain=${DOMAIN}`);
+    await page.getByRole('button', { name: /\bStop$/ }).click();
+    await expect(page.getByText('Application stopped successfully.')).toBeVisible({ timeout: 60000 });
+    await expect.poll(siteUp, { timeout: 60000 }).toBe(false);
+
+    await page.goto(`/website?domain=${DOMAIN}`);
+    await page.getByRole('button', { name: /\bStart$/ }).click();
+    await expect(page.getByText('Application started successfully.')).toBeVisible({ timeout: 60000 });
+    await expect.poll(siteUp, { timeout: 90000 }).toBe(true);
+
+    await page.goto(`/website?domain=${DOMAIN}`);
+    await page.locator('#restartButton').click();
+    await expect(page.getByText('Application restarted successfully.')).toBeVisible({ timeout: 60000 });
+    await expect.poll(siteUp, { timeout: 90000 }).toBe(true);
+  });
+
+  test('6. app logs', async ({ page }) => {
+    await page.goto(`/website?domain=${DOMAIN}`);
+    // route takes the service name, not the domain
+    const res = await page.request.get(`/pm2/logs/${APP_NAME}`);
+    expect(res.status()).toBe(200);
+    expect((await res.text()).trim().length).toBeGreaterThan(0);
+  });
+
+  test('7. remove app', async ({ page }) => {
+    await page.goto(`/website?domain=${DOMAIN}`);
+    await page.locator('#remove-tab').click();
+
+    await page.getByRole('button', { name: 'Delete Application' }).click();
+    await page.getByRole('button', { name: 'Confirm delete' }).click();
+
+    await page.waitForURL('/sites', { timeout: 60000 });
+    await expect(page.getByRole('row').filter({ hasText: DOMAIN })).toHaveCount(0);
+  });
 
 });

@@ -29,9 +29,17 @@ test('table, clipboard, activity link, search filter and dashboard IP', async ({
     .textContent())?.trim();
   expect(ipText).toContain(expectedIp);
 
+  // panel copies via execCommand on a temp textarea, and navigator.clipboard doesn't exist on plain http, so grab it from the copy event
+  await page.evaluate(() => {
+    (window as any).__copied = '';
+    document.addEventListener('copy', () => {
+      const el = document.activeElement as HTMLTextAreaElement;
+      (window as any).__copied = el?.value?.slice(el.selectionStart, el.selectionEnd) || String(document.getSelection());
+    });
+  });
   await firstRow.locator('.copy-ip-icon').click();
-  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText).toBe(expectedIp);
+  await expect(firstRow.locator('.bi-clipboard-check-fill')).toBeVisible();
+  expect(await page.evaluate(() => (window as any).__copied)).toBe(expectedIp);
 
   const activityLink = firstRow.locator('a', { hasText: 'View activity log' });
   await expect(activityLink).toHaveAttribute('href', `/account/activity?search=${expectedIp}`);

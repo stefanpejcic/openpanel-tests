@@ -21,7 +21,8 @@ async function expectDatabaseNotInTable(page: any, dbName: string) {
 // ACCESS
 test('list databases', async ({ page }) => {
   await navigateToMongoDBPage(page);
-  await expect(page.locator('body')).toContainText(/create your first database|no databases/i, { timeout: 25000 });
+  // empty state on a fresh account, otherwise the table with its counter
+  await expect(page.locator('body')).toContainText(/create your first database|no databases|total databases:\s*\d+/i, { timeout: 25000 });
   console.log('mongodb initialized');
 });
 
@@ -150,14 +151,16 @@ test('import page rejects wrong file type', async ({ page }) => {
 
 test('delete user', async ({ page }) => {
   await page.goto('/mongodb/users');
-  const deleteButtons = page.locator('button.btn-danger');
-  const count = await deleteButtons.count();
-  expect(count).toBeGreaterThan(0);
-  await deleteButtons.first().click();
-  const confirmButton = page.locator('button.btn-dark');
+  // scope to our user, the wizard test adds others and the first row isn't necessarily ours
+  const row = page.locator('tr', { hasText: 'stefan_mongo_user' });
+  await expect(row).toBeVisible();
+  await row.locator('button.btn-danger').click();
+  const confirmButton = page.locator('button.btn-dark:visible');
   await expect(confirmButton.first()).toBeVisible();
   await confirmButton.first().click();
   await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  await page.goto('/mongodb/users');
+  await expect(page.locator('tr', { hasText: 'stefan_mongo_user' })).toHaveCount(0);
   console.log('mongodb delete user is working');
 });
 

@@ -2,6 +2,20 @@ import { test, expect } from '@playwright/test';
 
 const domain = 'website-builder.tests.openpanel.org';
 
+// detach keeps the site files and the installer refuses to run over an existing index.html
+async function removeIndexHtml(page) {
+  await page.goto(`/files/${domain}`);
+  const row = page.locator('#filemanager_table tbody tr[data-file="index.html"]');
+  if (!(await row.count())) return;
+  await row.click();
+  await page.locator('#deleteButton').click();
+  const deleteEditor = page.locator('.fm-inline-editor').filter({ has: page.locator('button[data-act="save"]') });
+  await expect(deleteEditor).toBeVisible();
+  await deleteEditor.locator('.fm-inline-skip-trash').check();
+  await deleteEditor.locator('button[data-act="save"]').click();
+  await expect(row).toHaveCount(0);
+}
+
 test('website builder install page loads', async ({ page }) => {
   await page.goto('/website-builder/install');
   await expect(page).toHaveURL(/website-builder\/install/);
@@ -24,10 +38,17 @@ test('install form has domain selector', async ({ page }) => {
 
 
 test('website builder', async ({ page }) => {
+  test.setTimeout(3 * 60 * 1000);
+  await removeIndexHtml(page);
+
   // 1. install
   await page.goto('/website-builder/install');
   await page.locator('#domain_id').selectOption('website-builder.tests.openpanel.org');
+  const installResponse = page.waitForResponse(r => r.url().includes('/website-builder/install') && r.request().method() === 'POST', { timeout: 60000 });
   await page.locator('#installButton').click();
+  // the stream carries the real error, so fail with it instead of a missing toast
+  const installLog = await (await installResponse).text();
+  expect(installLog, installLog).toContain('Website creation completed!');
   await expect(page.locator('text=Website creation completed!')).toBeVisible({ timeout: 60000 });
   await expect(page).toHaveURL(url => url.pathname === '/website-builder/edit' && url.searchParams.get('domain') === domain);
 
@@ -83,5 +104,6 @@ test('website builder', async ({ page }) => {
   await page.goto('/sites');
   await expect(page.locator('tr#site-row-website-builder.tests.openpanel.org')).not.toBeVisible();
   console.log('website detach is working');
-  // TODO: remove files
+
+  await removeIndexHtml(page);
 });

@@ -32,6 +32,18 @@ async function expectDatabaseNotInTable(page: Page, dbName: string) {
   await expect(page.locator('tr', { hasText: dbName })).toHaveCount(0);
 }
 
+// drop a row (db or user) left behind by an earlier aborted run
+async function deleteRowIfExists(page: Page, url: string, name: string) {
+  await page.goto(url);
+  const row = page.locator('tr', { hasText: name });
+  if (!(await row.count())) return;
+  await row.locator('button.btn-danger').click();
+  const confirmButton = page.locator('button.btn-dark:visible');
+  await expect(confirmButton.first()).toBeVisible();
+  await confirmButton.first().click();
+  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+}
+
 
 
 
@@ -39,20 +51,23 @@ async function expectDatabaseNotInTable(page: Page, dbName: string) {
 // ACCESS
 test('list databases', async ({ page }) => {
   await navigateToMySQLPage(page);
-  await expect(page.locator('body')).toContainText(/create your first database/i, { timeout: 20000 });
+  // app installs earlier in the suite create databases, so the empty state isn't guaranteed
+  await expect(page.locator('body')).toContainText(/create your first database|total databases:\s*\d+/i, { timeout: 20000 });
   console.log('mysql initialized');
 });
 
 
 
 test('create database', async ({ page }) => {
+  await deleteRowIfExists(page, '/mysql', 'stefan_baza');
+
   // 1. Check dashboard count FIRST, before going anywhere else
   const initialCount = await getDatabaseCount(page);
   let expectedCount = initialCount;
 
   // 2. Now navigate to MySQL and perform the action
   await navigateToMySQLPage(page);
-  await page.getByRole('link', { name: 'Create your first database' }).click();
+  await page.locator('a[href="/mysql/new"]').first().click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_baza');
   await page.getByRole('button', { name: 'Create Database' }).click();
   await expect(page.locator('body')).toContainText(/successfully created a database/i);
@@ -107,7 +122,7 @@ test('phpmyadmin auto-login', async ({ page }) => {
 test('list users', async ({ page }) => {
   await page.goto(`/mysql/users`);
   await expect(page).toHaveURL(/.*mysql\/users/);
-  await expect(page.locator('body')).toContainText(/no users yet/i);
+  await expect(page.locator('body')).toContainText(/no users yet|total users:\s*\d+/i);
 
   console.log('users page accessible');
 });
@@ -125,9 +140,10 @@ test('show system users', async ({ page }) => {
 
 
 test('create user', async ({ page }) => {
+  await deleteRowIfExists(page, '/mysql/users', 'stefan_user');
   await page.goto(`/mysql/users`);
 
-  await page.getByRole('link', { name: 'Create your first user' }).click();
+  await page.locator('a[href="/mysql/user"]').first().click();
   await expect(page).toHaveURL(/.*mysql\/user/);
 
   await page.getByRole('textbox', { name: 'Username*' }).fill('stefan_user');
@@ -460,9 +476,8 @@ INSERT INTO users VALUES (1, 'John');
   
   const row = page.locator('#databases-table tr', { hasText: 'proba' });
   const sizeCell = row.locator('td.db_size_cell');
-  const sizeText = await sizeCell.textContent();
-  const sizeValue = Number(sizeText?.trim());
-  expect(sizeValue).toBeGreaterThan(0);
+  // sizes are fetched after the checkbox is ticked
+  await expect.poll(async () => parseFloat((await sizeCell.textContent())?.trim() || ''), { timeout: 30000 }).toBeGreaterThan(0);
 
   console.log('mysql import working');
 });
@@ -612,18 +627,18 @@ test('export', async ({ page }) => {
 test('delete user', async ({ page }) => {
   await page.goto(`/mysql/users`);
 
-  const deleteButtons = page.locator('button.btn-danger');
-  const count = await deleteButtons.count();
-  expect(count).toBeGreaterThan(0);
+  // scope to our user, the wizard adds others
+  const row = page.locator('tr', { hasText: 'stefan_user' });
+  await expect(row).toBeVisible();
+  await row.locator('button.btn-danger').click();
 
-  await deleteButtons.first().click();
-
-  const confirmButton = page.locator('button.btn-dark');
+  const confirmButton = page.locator('button.btn-dark:visible');
   await expect(confirmButton.first()).toBeVisible();
-
   await confirmButton.first().click();
 
-  await expect(page.locator('body')).toContainText(/successfully deleted/i);  
+  await expect(page.locator('body')).toContainText(/successfully deleted/i);
+  await page.goto(`/mysql/users`);
+  await expect(page.locator('tr', { hasText: 'stefan_user' })).toHaveCount(0);
   console.log('delete user is working');
 });
 

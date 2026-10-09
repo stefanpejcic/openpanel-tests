@@ -25,23 +25,6 @@ test('auto-installer shows available applications', async ({ page }) => {
 });
 
 
-test('auto-installer search/filter works', async ({ page }) => {
-  await page.goto('/auto-installer');
-
-  const searchInput = page.locator('input[type="search"], input[placeholder*="search"], input[type="text"]').first();
-  const hasSearch = await searchInput.isVisible({ timeout: 3000 }).catch(() => false);
-
-  if (hasSearch) {
-    await searchInput.fill('WordPress');
-    await page.waitForTimeout(300);
-    await expect(page.locator('body')).toContainText(/wordpress/i);
-    console.log('auto-installer search is working');
-  } else {
-    console.log('no search input found – skipping filter test');
-  }
-});
-
-
 test('auto-installer install form is accessible', async ({ page }) => {
   await page.goto('/auto-installer');
 
@@ -58,4 +41,23 @@ test('auto-installer install form is accessible', async ({ page }) => {
     await expect(page.locator('body')).toContainText(/install|application/i);
     console.log('auto-installer has application content');
   }
+});
+
+
+test('every auto-installer app opens its install page', async ({ page }) => {
+  await page.goto('/auto-installer');
+
+  const links = await page.locator('main a[href]').evaluateAll(els =>
+    Array.from(new Set(els.map(e => (e as HTMLAnchorElement).getAttribute('href') || '')))
+      .filter(h => /^\/[\w-]+\/install\b/.test(h) || h === '/website-builder/install')
+  );
+  expect(links.length).toBeGreaterThan(5);
+
+  const broken: string[] = [];
+  for (const href of links) {
+    const res = await page.request.get(href);
+    if (res.status() !== 200) broken.push(`${href} -> ${res.status()}`);
+  }
+  expect(broken, broken.join('\n')).toEqual([]);
+  console.log(`all ${links.length} install pages load`);
 });

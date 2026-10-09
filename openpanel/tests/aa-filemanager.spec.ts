@@ -4,7 +4,7 @@ function randomSuffix() {
   return Math.random().toString(36).slice(2, 8);
 }
 
-const suffix = randomSuffix();
+const suffix = process.env.TEST_RUN_ID || randomSuffix();
 const FILE_NAME = `radovanfajl_${suffix}.txt`;
 const FOLDER_NAME = `radovanfolder_${suffix}`;
 const TXT_FILE = `petarfajl_${suffix}.txt`;
@@ -263,8 +263,9 @@ test('move file', async ({ page }) => {
   // Open move dialog
   await page.locator('#moveButton').click();
 
-  // Set destination to root directory
-  await page.locator('#fmPickerDest').fill('/');
+  // Set destination to root directory via the picker's home crumb
+  await page.locator('#fmPickerCrumbs button[data-path=""]').click();
+  await expect(page.locator('#fmPickerDest')).toHaveValue('/');
 
   // Confirm move
   await expect(page.locator('#fmPickerConfirm')).toBeEnabled();
@@ -566,6 +567,14 @@ test('upload file from URL', async ({ page }) => {
   test.setTimeout(180_000);
 
   await navigateToFiles(page);
+
+  // wget refuses to overwrite, so drop a leftover copy from an earlier run
+  const leftover = page.locator('#filemanager_table tbody tr[data-file="20MB.zip"]');
+  if (await leftover.count()) {
+    await selectItem(page, '20MB.zip');
+    await deleteSelected(page, true);
+    await expect(leftover).toHaveCount(0);
+  }
 
   await page.goto('/file-manager/upload?method=download');
   await page.getByRole('textbox', { name: 'https://' }).fill('http://ipv4.download.thinkbroadband.com/20MB.zip');

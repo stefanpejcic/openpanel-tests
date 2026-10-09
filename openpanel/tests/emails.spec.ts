@@ -288,6 +288,12 @@ test.describe.serial('email quota', () => {
   }
 
   test('create email with 512 MiB quota and verify it in the table', async ({ page }) => {
+    // a leftover account from an earlier run would make the create fail and keep its old quota
+    await page.goto('/emails');
+    if (await page.locator('#email-accounts tbody tr').filter({ hasText: address }).count()) {
+      await deleteEmail(page, username);
+    }
+
     await page.goto('/emails/new');
 
     const domainSelect = page.locator('select[name="domain"]');
@@ -307,11 +313,12 @@ test.describe.serial('email quota', () => {
       page.getByText(new RegExp(`Email ${username}@`, 'i'))
     ).toBeVisible({ timeout: 15000 });
 
-    const quotaCell = await getQuotaCell(page);
-
-    // Example table value:
-    // ( 5.0K / 512.0M ) [0%]
-    await expect(quotaCell).toContainText(/\/\s*512(?:\.0)?M\s*\)/i);
+    // mailserver reports the quota a bit after the account exists, so reload until it shows up
+    // example table value: ( 5.0K / 512.0M ) [0%]
+    await expect(async () => {
+      const quotaCell = await getQuotaCell(page);
+      await expect(quotaCell).toContainText(/\/\s*512(?:\.0)?M\s*\)/i, { timeout: 2000 });
+    }).toPass({ timeout: 60000 });
   });
 
   test('change email quota to unlimited and verify it in the table', async ({ page }) => {
@@ -333,11 +340,11 @@ test.describe.serial('email quota', () => {
     await expect(alert).toBeVisible({ timeout: 10000 });
     await expect(alert).toContainText(/settings saved for email/i);
 
-    const quotaCell = await getQuotaCell(page);
-
-    // Unlimited is displayed as:
-    // ( 5.0K / ~ ) [0%]
-    await expect(quotaCell).toContainText(/\/\s*~\s*\)/);
+    // unlimited is displayed as: ( 5.0K / ~ ) [0%]
+    await expect(async () => {
+      const quotaCell = await getQuotaCell(page);
+      await expect(quotaCell).toContainText(/\/\s*~\s*\)/, { timeout: 2000 });
+    }).toPass({ timeout: 60000 });
   });
 
   test('reject email quota above plan limit', async ({ page }) => {

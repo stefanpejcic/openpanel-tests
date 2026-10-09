@@ -25,29 +25,22 @@ test.describe('Process Manager', () => {
 
         expect(count).toBeGreaterThan(0);
 
-        let targetRow;
-        let killedName = '';
-
-        // Pick a random process that isn't PID 1
-        for (let attempts = 0; attempts < 20; attempts++) {
-            const targetIndex = Math.floor(Math.random() * count);
-            const candidate = rows.nth(targetIndex);
-
-            const pid = (
-                await candidate.locator('td[data-sort-col="pid"]').innerText()
-            ).trim();
-
-            if (pid !== '1') {
-                targetRow = candidate;
-                killedPid = pid;
-
-                killedName = (
-                    await candidate.locator('td[data-sort-col="container"]').innerText()
-                ).trim();
-
-                break;
-            }
+        // a php-fpm pool worker is safe to kill (master respawns it) and the image ships `kill`,
+        // random picks hit minimal images where the exec'd kill binary doesn't exist
+        let targetRow = rows
+            .filter({ has: page.locator('td[data-sort-col="container"]', { hasText: /php-fpm/ }) })
+            .filter({ has: page.locator('td[data-sort-col="cmd"]', { hasText: /pool/ }) })
+            .first();
+        if (!(await targetRow.count())) {
+            targetRow = rows
+                .filter({ has: page.locator('td[data-sort-col="container"]', { hasText: /apache|nginx/ }) })
+                .filter({ has: page.locator('td[data-sort-col="ppid"]', { hasText: /^\s*[1-9]\d*\s*$/ }) })
+                .first();
         }
+        await expect(targetRow).toHaveCount(1);
+
+        killedPid = (await targetRow.locator('td[data-sort-col="pid"]').innerText()).trim();
+        const killedName = (await targetRow.locator('td[data-sort-col="container"]').innerText()).trim();
 
         expect(targetRow).toBeDefined();
         expect(killedPid).toBeTruthy();

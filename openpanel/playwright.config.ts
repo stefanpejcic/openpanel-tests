@@ -6,6 +6,9 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const BASE_URL = process.env.BASE_URL;
 
+// workers inherit this from the main process, so random names survive a worker restart after a failed test
+process.env.TEST_RUN_ID ||= Math.random().toString(36).slice(2, 8);
+
 if (!BASE_URL) {
   throw new Error('BASE_URL must be set in .env');
 }

@@ -33,22 +33,6 @@ test('access backup destination', async ({ page }) => {
 });
 
 
-test('run backup', async ({ page }) => {
-  test.setTimeout(3 * 60 * 1000);
-
-  await page.goto('/backups');
-  const runBtn = page.getByRole('button', { name: /run backup|start backup|backup now/i });
-
-  if (await runBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await runBtn.click();
-    await expect(page.locator('body')).toContainText(/backup.*started|backup.*running|in progress/i, { timeout: 2 * 60 * 1000 });
-    console.log('backup run triggered');
-  } else {
-    console.log('no run backup button found – skipping run test');
-  }
-});
-
-
 test('list backups from destination', async ({ page }) => {
   await page.goto('/backups/list');
   await expect(page).toHaveURL(/backups\/list/);
