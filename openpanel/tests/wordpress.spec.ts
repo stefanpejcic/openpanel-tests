@@ -193,8 +193,19 @@ test('wp-cli check update preferences check', async ({ page }) => {
 
 test('generate backup', async ({ page }) => {
   test.setTimeout(3 * 60 * 1000);
-  await page.goto(`/wordpress/backup/run/${domain}?docroot=/var/www/html/wp.tests.openpanel.org&backup_database=true&backup_files=true`);
-  await expect(page.locator('body')).toContainText(/backup.*complete|successfully.*backup|done/i, { timeout: 2 * 60 * 1000 });
+  await page.goto(`/website?domain=${domain}`);
+
+  // route is POST-only and needs the csrf header
+  const result = await page.evaluate(async (d) => {
+    const res = await fetch(`/wordpress/backup/run/${d}?docroot=/var/www/html/${d}&backup_database=true&backup_files=true`, {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': (window as any).csrf_token },
+    });
+    return { status: res.status, body: await res.text() };
+  }, domain);
+
+  expect(result.status, result.body).toBe(200);
+  expect(result.body).toContain('Backup completed successfully!');
   console.log('wordpress backup generated');
 });
 
