@@ -353,13 +353,11 @@ test.describe('version change', () => {
       console.log(`php ${versionShort} is working`);
 
       // ioncube loader is enabled
-      await expect(page.locator('body')).toContainText(
-        /with the ionCube PHP Loader/i
-      );
-
-      console.log(
-        `ioncube is enabled on php ${versionShort}`
-      );
+      await expect(page.getByRole('heading', { level: 2, name: 'ionCube Loader' })).toBeVisible();
+      
+      await expect(page.getByRole('row', { name: /^Loader version \d+\.\d+/ })).toBeVisible();
+      
+      console.log(`ioncube is enabled on php ${versionShort}`);
     });
   }
 });
