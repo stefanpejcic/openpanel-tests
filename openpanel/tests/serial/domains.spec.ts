@@ -599,14 +599,14 @@ test('unsuspend domain', async ({ page }) => {
   await expect(page.getByText('Domain unsuspended successfully.')).toBeVisible();
   console.log('Unsuspend action confirmed ✓');
 
-  await page.waitForTimeout(2000);
-
-  const response = await page.request.get(`https://${domain}`, { failOnStatusCode: false });
-  console.log(`Unsuspended domain status: ${response.status()}`);
-  expect(response.status()).toBe(200);
-
-  const body = await response.text();
-  console.log(`Unsuspended domain body snippet: ${body.slice(0, 200)}`);
+  // the webserver reload isn't instant and can reset connections, keep asking until the real site is back on both
+  for (const scheme of ['https', 'http']) {
+    await expect.poll(async () => {
+      const res = await page.request.get(`${scheme}://${domain}`, { failOnStatusCode: false }).catch(() => null);
+      if (!res || res.status() !== 200) return 'not ready';
+      return (await res.text()).includes('This website has been suspended') ? 'still suspended' : 'ok';
+    }, { timeout: 30_000, intervals: [2000] }).toBe('ok');
+  }
 
   await page.goto(`http://${domain}`);
   await expect(page.locator('body')).toContainText(/this domain currently has no website\. please check back later\.|litespeed/i);
@@ -726,4 +726,38 @@ test('bulk actions on domains', async ({ page }) => {
     await bulkRun(page, 'delete');
     for (const name of temporary) await expect(row(name)).toHaveCount(0);
   });
+});
+
+// dns_record_types defaults, HTTPS and the others only show up once an admin allows them
+test('dns form offers the allowed record types and refuses others', async ({ page }) => {
+  await page.goto(`/domains/edit-dns-zone/${DOMAIN}`);
+  await page.locator('#AddDNSRecord').click();
+  const options = await page.locator('#addRecordRow select[name="Type"] option').allTextContents();
+  test.skip(options.includes('HTTPS'), 'this server has more record types allowed');
+  expect(options).toEqual(['A', 'AAAA', 'CAA', 'CNAME', 'MX', 'SRV', 'TLSA', 'TXT']);
+
+  const body = await page.evaluate(async (domain) => {
+    const form = new URLSearchParams({ Name: 'pwblocked', TTL: '3600', Type: 'HTTPS', Record: '1 .', Domain: domain, IN: 'IN' });
+    const res = await fetch('/domains/dns/add-record/', {
+      method: 'POST',
+      body: form,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': (window as any).csrf_token },
+    });
+    return res.text();
+  }, DOMAIN);
+  expect(body).toMatch(/not allowed/i);
+  await page.goto(`/domains/edit-dns-zone/${DOMAIN}`);
+  await expect(page.locator('tr', { hasText: 'pwblocked' })).toHaveCount(0);
+});
+
+test('dns form refuses a record the dns server would not load', async ({ page }) => {
+  await page.goto(`/domains/edit-dns-zone/${DOMAIN}`);
+  await page.locator('#AddDNSRecord').click();
+  const addRow = page.locator('#addRecordRow');
+  await addRow.locator('input[name="Name"]').fill('pwbadcaa');
+  await addRow.locator('select[name="Type"]').selectOption('CAA');
+  await addRow.locator('input[name="Record"]').fill('notanumber issue');
+  await page.locator('#save-row').click();
+  await expect(page.locator('body')).toContainText(/DNS server refused this record/i);
+  await expect(page.locator('tr', { hasText: 'pwbadcaa' })).toHaveCount(0);
 });
