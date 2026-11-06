@@ -47,6 +47,10 @@ test.describe('custom container on a domain', () => {
       page.waitForURL(url => !url.pathname.startsWith('/containers/new'), { timeout: 180_000 }),
       page.locator('main button[type="submit"]').click(),
     ]);
+    const created = page.locator('#containerCreated');
+    await expect(created).toContainText(SERVICE);
+    await expect(created).toContainText(DOMAIN);
+    await expect(created.getByRole('link', { name: 'Open site' })).toHaveAttribute('href', `https://${DOMAIN}`);
     // whoami answers with the request it got, the php page is gone while it's attached
     await expect.poll(() => site(page), { timeout: 120_000, intervals: [3000] }).toContain('Hostname:');
   });

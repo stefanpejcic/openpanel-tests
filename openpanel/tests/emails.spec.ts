@@ -38,7 +38,7 @@ async function createEmail(page: Page, username: string, password = PASSWORD) {
   await passwordField.fill(password);
 
   await page.getByRole('button', { name: /create email/i }).click();
-  await expect(page.getByText(new RegExp(`Email ${username}@`, 'i'))).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#emailCreated')).toContainText(`${username}@`, { timeout: 15000 });
   console.log(`Created: ${username}@${DOMAIN}`);
 }
 
@@ -331,9 +331,7 @@ test.describe.serial('email quota', () => {
       name: /create email/i,
     }).click();
 
-    await expect(
-      page.getByText(new RegExp(`Email ${username}@`, 'i'))
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#emailCreated')).toContainText(`${username}@`, { timeout: 15000 });
 
     // Mailserver may take time to update the quota
     await expect(async () => {
@@ -1102,4 +1100,113 @@ test('bulk actions on aliases', async ({ page }) => {
   await bulkSelect(page, sources, '#aliases-table tbody tr');
   await bulkRun(page, 'delete');
   for (const source of sources) await expect(page.getByText(source, { exact: true })).toHaveCount(0);
+});
+
+// ─── New mailbox section ─────────────────────────────────────────────────────
+
+test('new mailbox section shows the server mode and downloads match it', async ({ page }) => {
+  const username = 'connectsection';
+  await page.goto('/emails');
+  if (await page.locator('#email-accounts').getByText(new RegExp(`${username}@`)).count()) {
+    await deleteEmail(page, username);
+  }
+
+  await createEmail(page, username);
+  try {
+    await expect(page).toHaveURL(/\/emails\?created=connectsection%40.+&welcome=1/);
+    const section = page.locator('#emailCreated');
+    await expect(section).toContainText(/welcome email/i);
+    // one mode per server, there's nothing for the user to pick
+    await expect(section).not.toContainText('STARTTLS');
+
+    const ssl = ((await section.textContent()) ?? '').includes('SSL/TLS');
+    const [imap, smtp, security] = ssl ? ['993', '465', 'SSL/TLS'] : ['143', '587', 'No encryption'];
+    await expect(section).toContainText(imap);
+    await expect(section).toContainText(smtp);
+    await expect(section).toContainText(security);
+    if (!ssl) await expect(section).toContainText(/sent unencrypted/i);
+
+    const res = await page.request.get(`/emails/configuration/outlook/${username}@${DOMAIN}`);
+    expect(res.status()).toBe(200);
+    const file = await res.text();
+    expect(file).toContain(`Port: ${imap}`);
+    expect(file).toContain(`Port: ${smtp}`);
+    expect(file).toContain(`Encryption: ${security}`);
+
+    await section.getByRole('button', { name: 'Close' }).click();
+    await expect(section).toBeHidden();
+    await expect(page).toHaveURL(/\/emails$/);
+  } finally {
+    await deleteEmail(page, username);
+  }
+});
+
+test('new mailbox section ignores addresses on other domains', async ({ page }) => {
+  await page.goto('/emails?created=someone%40not-my-domain.example');
+  await expect(page.locator('#email-accounts')).toBeVisible();
+  await expect(page.locator('#emailCreated')).toHaveCount(0);
+});
+
+// ─── Migrate ─────────────────────────────────────────────────────────────────
+
+test('migrate page walks through the steps and quick fill sets the server', async ({ page }) => {
+  const username = 'migratesteps';
+  await page.goto('/emails');
+  if (await page.locator('#email-accounts').getByText(new RegExp(`${username}@`)).count()) {
+    await deleteEmail(page, username);
+  }
+  await createEmail(page, username);
+  try {
+    await page.goto('/emails/migrate');
+    test.skip(await page.locator('#migrateRunning').isVisible(), 'a migration is running');
+
+    const host = page.locator('#source_host');
+    const destPassword = page.locator('#destination_password');
+    const next = page.locator('#migrateNext');
+
+    // can't move on or skip ahead with an empty step
+    await next.click();
+    await expect(host).toBeVisible();
+    await expect(destPassword).toBeHidden();
+    await page.locator('[data-step-nav="3"]').click();
+    await expect(host).toBeVisible();
+
+    await page.locator('#source_security').selectOption('starttls');
+    for (const [name, server] of [
+      ['Gmail', 'imap.gmail.com'],
+      ['Outlook / Microsoft 365', 'outlook.office365.com'],
+      ['Yahoo', 'imap.mail.yahoo.com'],
+      ['iCloud', 'imap.mail.me.com'],
+    ]) {
+      await page.getByRole('button', { name, exact: true }).click();
+      await expect(host).toHaveValue(server);
+      await expect(page.locator('#source_security')).toHaveValue('ssl');
+      await expect(page.locator('#source_port')).toHaveValue('993');
+    }
+
+    await page.getByRole('button', { name: 'Gmail', exact: true }).click();
+    await page.locator('#source_user').fill('someone@gmail.com');
+    await page.locator('#source_password').fill('not-a-real-password');
+    await next.click();
+    await expect(destPassword).toBeVisible();
+    await expect(host).toBeHidden();
+
+    await next.click();
+    await expect(destPassword).toBeVisible();
+    await page.locator('#destination').selectOption(`${username}@${DOMAIN}`);
+    await destPassword.fill(PASSWORD);
+    await next.click();
+
+    await expect(page.locator('#migrateReviewFrom')).toHaveText('someone@gmail.com');
+    await expect(page.locator('#migrateReviewServer')).toHaveText('imap.gmail.com:993 (SSL/TLS)');
+    await expect(page.locator('#migrateReviewTo')).toHaveText(`${username}@${DOMAIN}`);
+    await expect(page.locator('#migrateTest')).toBeVisible();
+    await expect(page.locator('#migrateStart')).toBeVisible();
+    await expect(next).toBeHidden();
+
+    await page.locator('#migrateBack').click();
+    await expect(destPassword).toHaveValue(PASSWORD);
+  } finally {
+    await deleteEmail(page, username);
+  }
 });

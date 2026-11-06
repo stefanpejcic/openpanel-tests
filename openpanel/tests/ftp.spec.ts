@@ -62,7 +62,11 @@ test('create account', async ({ page }) => {
   await page.locator('#password').fill(FTP_PASS);
   await page.locator('#new_user_path').fill(FTP_PATH);
   await page.getByRole('button', { name: /Create Account/i }).click();
-  await expect(page.getByText(/created successfully/i)).toBeVisible();
+  const created = page.locator('#ftpCreated');
+  await expect(created).toContainText(`${FTP_USER}@${FTP_DOMAIN}`);
+  await expect(created).toContainText(FTP_PATH);
+  await expect(created.locator('a[href*="/ftp/configuration/filezilla/"]')).toBeVisible();
+  await expect(created.locator('a[href*="/ftp/configuration/cyberduck/"]')).toBeVisible();
 
   const row = page.locator('tbody tr').filter({ hasText: `${FTP_USER}@${FTP_DOMAIN}` });
   await expect(row).toBeVisible();
@@ -325,7 +329,7 @@ test('bulk actions', async ({ page }) => {
     await page.locator('#password').fill(FTP_PASS);
     await page.locator('#new_user_path').fill(FTP_PATH);
     await page.getByRole('button', { name: /Create Account/i }).click();
-    await expect(page.getByText(/created successfully/i)).toBeVisible();
+    await expect(page.locator('#ftpCreated')).toContainText(account);
   }
 
   await page.goto('/ftp');
@@ -346,4 +350,10 @@ test('bulk actions', async ({ page }) => {
   await bulkSelect(page, accounts);
   await bulkRun(page, 'delete');
   for (const account of accounts) await expect(row(account)).toHaveCount(0);
+});
+
+test('new account section ignores accounts that are not in the list', async ({ page }) => {
+  await page.goto('/ftp?created=nobody%40not-my-domain.example');
+  await expect(page.getByRole('heading', { name: 'FTP Accounts' })).toBeVisible();
+  await expect(page.locator('#ftpCreated')).toHaveCount(0);
 });

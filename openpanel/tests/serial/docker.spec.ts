@@ -239,6 +239,12 @@ test('add new service - invalid name shows error', async ({ page }) => {
     page.waitForURL(url => !url.pathname.startsWith('/containers/new'), { timeout: 120_000 }),
     submit.click(),
   ]);
+  await expect(page).toHaveURL(/\/containers\?created=testapp/);
+  const created = page.locator('#containerCreated');
+  await expect(created).toContainText('testapp');
+  // no domain was picked so it's only saved, not started
+  await expect(created.getByRole('button', { name: 'Start container' })).toBeVisible();
+  await expect(created.getByRole('link', { name: 'View logs' })).toBeVisible();
   await expect.poll(async () => {
     await page.goto('/containers');
     return page.locator('#containers-table tbody input.bulk-select-box[value="testapp"]').count();
@@ -607,4 +613,10 @@ test('bulk actions', async ({ page }) => {
   await bulkSelectKeys(page, services);
   await bulkRun(page, 'delete');
   for (const service of services) await expect(box(service)).toHaveCount(0);
+});
+
+test('created section ignores names that are not in the list', async ({ page }) => {
+  await page.goto('/containers?created=nosuchservice');
+  await expect(page.getByRole('heading', { name: 'Containers' })).toBeVisible();
+  await expect(page.locator('#containerCreated')).toHaveCount(0);
 });

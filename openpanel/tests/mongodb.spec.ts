@@ -42,7 +42,13 @@ test('create database', async ({ page }) => {
   }).toPass({ timeout: 120_000, intervals: [5000] });
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_mongo');
   await page.getByRole('button', { name: 'Create Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 });
+  const created = page.locator('#dbCreated');
+  await expect(created).toContainText('stefan_mongo', { timeout: 25000 });
+  await expect(page).toHaveURL(/mongodb\/new\?created=stefan_mongo/);
+  await expect(created.locator('a[href$="/assign?database_name=stefan_mongo"]')).toBeVisible();
+  await expect(created.locator('a[href="/mongodb/import/stefan_mongo"]')).toBeVisible();
+  await created.getByRole('link', { name: 'View Databases' }).click();
+  await expect(page).toHaveURL(/\/mongodb\/?$/);
   await expectDatabaseInTable(page, 'stefan_mongo');
   console.log('mongodb database created');
 });
@@ -62,8 +68,11 @@ test('create user', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Username' }).fill('stefan_mongo_user');
   await page.getByRole('textbox', { name: 'Password' }).fill('stefan94');
   await page.getByRole('button', { name: 'Create User' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created.*stefan_mongo_user/i);
-  await page.getByRole('link', { name: 'Back to Users' }).click();
+  const created = page.locator('#dbUserCreated');
+  await expect(created).toContainText('stefan_mongo_user');
+  await expect(created.locator('a[href$="/assign?database_user=stefan_mongo_user"]')).toBeVisible();
+  await expect(created.locator('a[href="/mongodb/password/stefan_mongo_user"]')).toBeVisible();
+  await created.getByRole('link', { name: 'View Users' }).click();
   await expect(page).toHaveURL(/mongodb\/users/);
   await expect(page.locator('body')).toContainText(/stefan_mongo_user/i);
   console.log('mongodb user created');
@@ -206,7 +215,7 @@ test('bulk actions', async ({ page }) => {
     await page.getByRole('link', { name: 'New Database' }).click();
     await page.getByRole('textbox', { name: 'Database Name' }).fill(db);
     await page.getByRole('button', { name: 'Create Database' }).click();
-    await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 });
+    await expect(page.locator('#dbCreated')).toContainText(db, { timeout: 25000 });
   }
   for (const user of users) {
     await page.goto('/mongodb/users');
@@ -215,7 +224,7 @@ test('bulk actions', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Username' }).fill(user);
     await page.getByRole('textbox', { name: 'Password' }).fill('stefan94bulk');
     await page.getByRole('button', { name: 'Create User' }).click();
-    await expect(page.locator('body')).toContainText(new RegExp(`successfully created.*${user}`, 'i'));
+    await expect(page.locator('#dbUserCreated')).toContainText(user);
   }
 
   await navigateToMongoDBPage(page);

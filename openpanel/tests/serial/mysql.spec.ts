@@ -71,9 +71,17 @@ test('create database', async ({ page }) => {
   await page.locator('a[href="/mysql/new"]').first().click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_baza');
   await page.getByRole('button', { name: 'Create Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created a database/i);
+  await expect(page).toHaveURL(/mysql\/new\?created=/);
+  const created = page.locator('#dbCreated');
+  await expect(created).toContainText('stefan_baza');
+  await expect(created.locator('a[href$="/assign?database_name=stefan_baza"]')).toBeVisible();
+  await expect(created.locator('a[href="/mysql/user"]')).toBeVisible();
+  await expect(created.locator('a[href="/mysql/import/stefan_baza"]')).toBeVisible();
+  await expect(created.getByRole('link', { name: 'Create Another' })).toHaveAttribute('href', '/mysql/new');
 
-  // 3. Validate in the table (still on MySQL page)
+  // 3. Validate in the table
+  await created.getByRole('link', { name: 'View Databases' }).click();
+  await expect(page).toHaveURL(/\/mysql\/?$/);
   await expectDatabaseInTable(page, 'stefan_baza');
   expectedCount++;
 
@@ -151,9 +159,14 @@ test('create user', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Password*' }).fill('stefan94');
   await page.getByRole('button', { name: 'Create User' }).click();
 
-  await expect(page.locator('body')).toContainText(/successfully created a database user stefan_user/i);
+  await expect(page).toHaveURL(/mysql\/user\?created=/);
+  const created = page.locator('#dbUserCreated');
+  await expect(created).toContainText('stefan_user');
+  await expect(created.locator('a[href$="/assign?database_user=stefan_user"]')).toBeVisible();
+  await expect(created.locator('a[href="/mysql/password/stefan_user"]')).toBeVisible();
+  await expect(created.locator('a[href="/mysql/new"]')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Back to Users' }).click();
+  await created.getByRole('link', { name: 'View Users' }).click();
   await expect(page).toHaveURL(/.*mysql\/users/);
   await expect(page.locator('body')).toContainText(/stefan_user/i);
   
@@ -712,7 +725,7 @@ async function createDatabase(page: Page, name: string) {
   await page.locator('a[href="/mysql/new"]').first().click();
   await page.getByRole('textbox', { name: 'Database Name' }).fill(name);
   await page.getByRole('button', { name: 'Create Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created a database/i);
+  await expect(page.locator('#dbCreated')).toContainText(name);
 }
 
 async function createUser(page: Page, name: string) {
@@ -721,7 +734,7 @@ async function createUser(page: Page, name: string) {
   await page.getByRole('textbox', { name: 'Username*' }).fill(name);
   await page.getByRole('textbox', { name: 'Password*' }).fill('stefan94bulk');
   await page.getByRole('button', { name: 'Create User' }).click();
-  await expect(page.locator('body')).toContainText(new RegExp(`successfully created a database user ${name}`, 'i'));
+  await expect(page.locator('#dbUserCreated')).toContainText(name);
 }
 
 test('bulk actions on databases', async ({ page }) => {
@@ -819,4 +832,25 @@ test('bulk remove remote access hosts', async ({ page }) => {
   }
 
   await deleteRowIfExists(page, '/mysql/users', user);
+});
+
+test('created sections ignore invalid names and keep the form', async ({ page }) => {
+  await page.goto('/mysql/new?created=%3Cscript%3E');
+  await expect(page.locator('#dbCreated')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Database Name' })).toBeVisible();
+  await page.goto('/mysql/user?created=%3Cscript%3E');
+  await expect(page.locator('#dbUserCreated')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Username*' })).toBeVisible();
+});
+
+test('username validation hint sits below the field', async ({ page }) => {
+  await page.goto('/mysql/user');
+  const input = page.getByRole('textbox', { name: 'Username*' });
+  await input.fill('bad name!');
+  await input.blur();
+  const hint = page.locator('.iv-hint.iv-invalid').first();
+  await expect(hint).toBeVisible();
+  const inputBox = (await input.boundingBox())!;
+  const hintBox = (await hint.boundingBox())!;
+  expect(hintBox.y).toBeGreaterThanOrEqual(inputBox.y + inputBox.height - 1);
 });

@@ -65,7 +65,13 @@ test('create database', async ({ page }) => {
   await openNewDatabaseForm(page);
   await page.getByRole('textbox', { name: 'Database Name' }).fill('stefan_psql');
   await page.getByRole('button', { name: 'Create Database' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 });
+  const created = page.locator('#dbCreated');
+  await expect(created).toContainText('stefan_psql', { timeout: 25000 });
+  await expect(page).toHaveURL(/postgresql\/new\?created=stefan_psql/);
+  await expect(created.locator('a[href$="/assign?database_name=stefan_psql"]')).toBeVisible();
+  await expect(created.locator('a[href="/postgresql/import/stefan_psql"]')).toBeVisible();
+  await created.getByRole('link', { name: 'View Databases' }).click();
+  await expect(page).toHaveURL(/\/postgresql\/?$/);
   await expectDatabaseInTable(page, 'stefan_psql');
   console.log('postgresql database created');
 });
@@ -86,8 +92,11 @@ test('create user', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Username*' }).fill('stefan_psql_user');
   await page.getByRole('textbox', { name: 'Password*' }).fill('stefan94');
   await page.getByRole('button', { name: 'Create User' }).click();
-  await expect(page.locator('body')).toContainText(/successfully created.*stefan_psql_user/i);
-  await page.getByRole('link', { name: 'Back to Users' }).click();
+  const created = page.locator('#dbUserCreated');
+  await expect(created).toContainText('stefan_psql_user');
+  await expect(created.locator('a[href$="/assign?database_user=stefan_psql_user"]')).toBeVisible();
+  await expect(created.locator('a[href="/postgresql/password/stefan_psql_user"]')).toBeVisible();
+  await created.getByRole('link', { name: 'View Users' }).click();
   await expect(page).toHaveURL(/postgresql\/users/);
   await expect(page.locator('body')).toContainText(/stefan_psql_user/i);
   console.log('postgresql user created');
@@ -318,7 +327,7 @@ test('bulk actions', async ({ page }) => {
     await page.getByRole('link', { name: 'New Database' }).click();
     await page.getByRole('textbox', { name: 'Database Name' }).fill(db);
     await page.getByRole('button', { name: 'Create Database' }).click();
-    await expect(page.locator('body')).toContainText(/successfully created/i, { timeout: 25000 });
+    await expect(page.locator('#dbCreated')).toContainText(db, { timeout: 25000 });
   }
   for (const user of users) {
     await deleteRowIfExists(page, '/postgresql/users', user);
@@ -326,7 +335,7 @@ test('bulk actions', async ({ page }) => {
     await page.getByRole('textbox', { name: 'Username*' }).fill(user);
     await page.getByRole('textbox', { name: 'Password*' }).fill('stefan94bulk');
     await page.getByRole('button', { name: 'Create User' }).click();
-    await expect(page.locator('body')).toContainText(new RegExp(`successfully created.*${user}`, 'i'));
+    await expect(page.locator('#dbUserCreated')).toContainText(user);
   }
 
   // databases page
