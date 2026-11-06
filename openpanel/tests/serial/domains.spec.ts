@@ -761,3 +761,30 @@ test('dns form refuses a record the dns server would not load', async ({ page })
   await expect(page.locator('body')).toContainText(/DNS server refused this record/i);
   await expect(page.locator('tr', { hasText: 'pwbadcaa' })).toHaveCount(0);
 });
+
+test('editing a cname keeps an external target absolute', async ({ page }) => {
+  const name = `pwcname${Date.now()}`;
+  await page.goto(`/domains/edit-dns-zone/${DOMAIN}`);
+  await page.locator('#AddDNSRecord').click();
+  const addRow = page.locator('#addRecordRow');
+  await addRow.locator('input[name="Name"]').fill(name);
+  await addRow.locator('select[name="Type"]').selectOption('CNAME');
+  await addRow.locator('input[name="Record"]').fill('target.example.net');
+  await page.locator('#save-row').click();
+  await expect(page.getByText(/DNS record added successfully/i)).toBeVisible();
+
+  const row = page.locator('tr[data-type="CNAME"]', { hasText: name });
+  await expect(row).toContainText('target.example.net.');
+
+  const line = await row.locator('.edit-button').getAttribute('data-line-number');
+  await row.locator('.edit-button').click();
+  const editing = page.locator(`tr:has(.save-button[data-line-number="${line}"])`);
+  await editing.locator('input[name="field2"]').fill('7200');
+  await editing.locator('.save-button').click();
+  await expect(row).toContainText('7200');
+  await expect(row).toContainText('target.example.net.');
+
+  await row.locator('.delete-button').click();
+  await row.locator('.delete-button').click();
+  await expect(page.locator('tr[data-type="CNAME"]', { hasText: name })).toHaveCount(0);
+});
