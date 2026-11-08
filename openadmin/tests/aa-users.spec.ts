@@ -6,6 +6,17 @@ async function navigateToUsersPage(page: any) {
   await expect(page).toHaveURL(/users/);
 }
 
+// a full run ends with "recreate user" and a stopped one can end anywhere, so testinguser may already exist
+async function removeTestingUserIfPresent(page: any) {
+  const res = await page.request.get('/users/testinguser', { maxRedirects: 0 });
+  if (res.status() !== 200) return;
+  await page.goto('/users/testinguser#delete');
+  await page.locator('[x-model="confirmationText"]:visible').fill('testinguser');
+  await page.getByRole('button', { name: /delete account permanently/i }).click();
+  await expect(page.getByText("User 'testinguser' deleted successfully", { exact: false })).toBeVisible({ timeout: 60_000 });
+  console.log('removed testinguser left by an earlier run');
+}
+
 
 
 test('view users', async ({ page }) => {
@@ -20,7 +31,8 @@ test('create user', async ({ page }) => {
   // account provisioning through the UI (home dir, docker container, mail,
   // etc.) is noticeably slower than the CLI equivalent and can occasionally
   // take well over a minute under load -- give it plenty of room.
-  test.setTimeout(150_000);
+  test.setTimeout(210_000);
+  await removeTestingUserIfPresent(page);
 
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);

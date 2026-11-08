@@ -57,8 +57,8 @@ test('create, inspect, and delete a new administrator (Enterprise only)', async 
   await expect(row.getByText('Admin', { exact: true })).toBeVisible();
 
   // delete the test administrator we just created
-  // scroll first, account_menu.js closes the menu on any scroll and Playwright scrolls smoothly while clicking
-  await row.locator('button.account-menu-btn').scrollIntoViewIfNeeded();
+  // the new row is last, right under the "created" toast, center it so the click doesn't scroll and close the menu
+  await row.locator('button.account-menu-btn').evaluate(el => el.scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(500);
   await row.locator('button.account-menu-btn').click();
   const dropdown = page.locator('#account-menu');

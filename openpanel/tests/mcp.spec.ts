@@ -28,6 +28,31 @@ test('generate a read-only token', async ({ page }) => {
   await expect(tokenRow(page, name)).toContainText('Read-only');
 });
 
+test('read-only token cannot create or revoke tokens', async ({ page, playwright, baseURL }) => {
+  const name = `pw-mcp-ro2-${RUN}`;
+  await createToken(page, name, true);
+  const raw = (await page.locator('#new-token-value').textContent())!.trim();
+  expect(raw).toMatch(/^op_mcp_/);
+
+  const api = await playwright.request.newContext({
+    baseURL, ignoreHTTPSErrors: true,
+    extraHTTPHeaders: { Authorization: `Bearer ${raw}`, 'Content-Type': 'application/json' },
+  });
+  expect((await api.get('/api/account/mcp')).status()).toBe(200);
+  const mint = await api.post('/api/account/mcp', { data: { name: `pw-mcp-esc-${RUN}`, read_only: false } });
+  expect(mint.status()).toBe(403);
+  const id = await tokenRow(page, name).locator('input.bulk-select-box').getAttribute('value');
+  expect((await api.delete(`/api/account/mcp/${id}`)).status()).toBe(403);
+  const call = await api.post('/mcp', { data: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'account_mcp_post', arguments: { body: { name: `pw-mcp-rpc-${RUN}`, read_only: false } } } } });
+  expect(await call.text()).toContain('read-only');
+  await api.dispose();
+
+  await page.goto('/account/mcp');
+  await expect(tokenRow(page, `pw-mcp-esc-${RUN}`)).toHaveCount(0);
+  await expect(tokenRow(page, `pw-mcp-rpc-${RUN}`)).toHaveCount(0);
+  console.log('read-only MCP token was refused on token create, revoke and tools/call');
+});
+
 test('bulk revoke tokens', async ({ page }) => {
   const names = [`pw-mcp-a-${RUN}`, `pw-mcp-b-${RUN}`];
   for (const name of names) await createToken(page, name);
@@ -41,10 +66,13 @@ test('bulk revoke tokens', async ({ page }) => {
   await bulkRun(page, 'revoke');
   for (const name of names) await expect(tokenRow(page, name)).toHaveCount(0);
 
-  // the read-only token from the test above goes too
-  const leftover = tokenRow(page, `pw-mcp-ro-${RUN}`).locator('input.bulk-select-box');
-  if (await leftover.count()) {
-    await bulkSelectKeys(page, [(await leftover.getAttribute('value'))!]);
-    await bulkRun(page, 'revoke');
+  // the read-only tokens from the tests above go too
+  for (const n of [`pw-mcp-ro-${RUN}`, `pw-mcp-ro2-${RUN}`]) {
+    const leftover = tokenRow(page, n).locator('input.bulk-select-box');
+    if (await leftover.count()) {
+      await bulkSelectAllAndClear(page);
+      await bulkSelectKeys(page, [(await leftover.getAttribute('value'))!]);
+      await bulkRun(page, 'revoke');
+    }
   }
 });

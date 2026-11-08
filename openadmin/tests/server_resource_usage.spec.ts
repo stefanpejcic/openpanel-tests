@@ -4,7 +4,7 @@ test('resource usage page shows drop-cache and clear-swap controls', async ({ pa
   await page.goto('/server/resource-usage');
   await expect(page).toHaveURL(/server\/resource-usage/);
 
-  await page.getByRole('tab', { name: 'RAM' }).click();
+  // every section shows at once now, no tab to pick first
   await expect(page.locator('#human-readable-info')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#swap-human-readable-info')).toBeVisible();
   await expect(page.locator('#clear-cache')).toBeVisible();
@@ -16,7 +16,6 @@ test('resource usage page shows drop-cache and clear-swap controls', async ({ pa
 
 test('drop cache frees the page cache', async ({ page }) => {
   await page.goto('/server/resource-usage');
-  await page.getByRole('tab', { name: 'RAM' }).click();
   const dropped = page.waitForResponse(r => r.url().endsWith('/server/memory_usage/drop'));
   await page.locator('#clear-cache').click();
   const res = await dropped;

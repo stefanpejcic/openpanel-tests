@@ -15,7 +15,8 @@ test('container stats list the running services', async ({ page }) => {
   const stats = (await res.json()).container_stats ?? [];
   for (const c of stats) {
     expect(c.Name).toBeTruthy();
-    expect(c.MemLimit).toBeGreaterThan(0);
+    // 0 is a service without a memory limit, docker-proxy has none
+    expect(c.MemLimit).toBeGreaterThanOrEqual(0);
   }
   console.log(`${USER}: ${stats.length} running containers`);
 });

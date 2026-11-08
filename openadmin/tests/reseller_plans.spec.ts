@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { Locator, test, expect } from '@playwright/test';
 
 // /plans/resellers: limit templates for reseller accounts, the package made here is deleted at the end
 
@@ -20,6 +20,14 @@ async function openCreateForm(page) {
   }).toPass({ timeout: 15_000 });
 }
 
+// cluster masters add a Server column, so cells are found by their header name instead of a fixed position
+async function colIndex(table: Locator, name: string): Promise<number> {
+  const heads = (await table.locator('thead th').allInnerTexts()).map(h => h.trim().toLowerCase());
+  const i = heads.indexOf(name.toLowerCase());
+  if (i < 0) throw new Error(`no "${name}" column in ${heads.join(', ')}`);
+  return i;
+}
+
 test('create, edit and delete a reseller package', async ({ page }) => {
   await page.goto('/plans/resellers');
   await openCreateForm(page);
@@ -31,8 +39,10 @@ test('create, edit and delete a reseller package', async ({ page }) => {
 
   const row = page.locator('tbody tr', { has: page.locator(`a[href="/plans/resellers/${NAME}"]`) });
   await expect(row).toBeVisible();
-  await expect(row.locator('td').nth(1)).toHaveText('3');
-  await expect(row.locator('td').nth(2)).toHaveText('5 GB');
+  const table = page.locator('table', { has: row });
+  const accountsCol = await colIndex(table, 'Max accounts');
+  await expect(row.locator('td').nth(accountsCol)).toHaveText('3');
+  await expect(row.locator('td').nth(await colIndex(table, 'Max disk'))).toHaveText('5 GB');
 
   // a second package with the same name is refused
   await openCreateForm(page);
@@ -44,7 +54,7 @@ test('create, edit and delete a reseller package', async ({ page }) => {
   await page.locator('#rp_max_accounts').fill('4');
   await page.locator('form:has(#rp_name)').getByRole('button', { name: 'Save' }).click();
   await page.goto('/plans/resellers');
-  await expect(row.locator('td').nth(1)).toHaveText('4');
+  await expect(row.locator('td').nth(accountsCol)).toHaveText('4');
 
   page.once('dialog', d => d.accept());
   await row.locator(`#rp-${NAME}`).click();

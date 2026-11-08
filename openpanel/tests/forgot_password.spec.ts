@@ -38,7 +38,7 @@ test('submit invalid email format shows error', async ({ page }) => {
   const emailInput = page.locator('input[type="email"], input[name="email"]');
   const isInvalid = await emailInput.evaluate((el: HTMLInputElement) => !el.validity.valid);
   const hasError = await page.locator('body').textContent().then(t =>
-    /error|invalid|not found|required/i.test(t ?? '')
+    /error|invalid|valid email|not found|required/i.test(t ?? '')
   );
 
   expect(isInvalid || hasError).toBe(true);
@@ -52,8 +52,10 @@ test('submit valid email shows confirmation', async ({ page }) => {
   await page.locator('input[type="email"], input[name="email"]').fill('nonexistent@openpanel.com');
   await page.getByRole('button', { name: /reset|send|submit/i }).click();
 
-  await expect(page.locator('body')).toContainText(/not found/i, { timeout: 10000 });
-  console.log('non-existent email shows not found error');
+  // same answer as for a real account, the form must not tell which emails have one
+  await expect(page.locator('body')).toContainText(/reset link sent|check your email|not configured/i, { timeout: 10000 });
+  await expect(page.locator('body')).not.toContainText(/not found/i);
+  console.log('non-existent email gets the same response as an existing one');
 });
 
 

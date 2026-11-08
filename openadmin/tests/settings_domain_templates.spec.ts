@@ -47,13 +47,13 @@ for (const config of testConfigs) {
 
 // todo: move!
 test('edit zone for a domain', async ({ page }) => {
+  // /domains/dns is a table of zones now, each domain links to its editor
   await page.goto('/domains/dns');
-  const domainSelect = page.locator('#domains');
-  const options = domainSelect.locator('option:not([disabled])');
-  const firstOption = options.first();
-  const domainValue = await firstOption.getAttribute('value');
-  const domainName = (await firstOption.textContent())?.trim();
-  await domainSelect.selectOption(domainValue!);
+  const link = page.locator('tbody a[href^="/domains/dns/"]').first();
+  test.skip(await link.count() === 0, 'No DNS zones on this server');
+  const domainValue = (await link.getAttribute('href'))!.replace('/domains/dns/', '');
+  const domainName = decodeURIComponent(domainValue);
+  await link.click();
   await expect(page).toHaveURL(new RegExp(`/domains/dns/${domainValue}`));
   const textarea = page.locator('[name="bind_content"]');
   await expect(textarea).toBeVisible();

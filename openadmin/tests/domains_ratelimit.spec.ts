@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { Locator, test, expect } from '@playwright/test';
 
 // /domains/ratelimit: server default and per-domain request limits, every change is put back
 
@@ -36,16 +36,26 @@ test('search narrows the domains', async ({ page }) => {
   await expect(page.locator('#ratelimit_table tbody tr:has(button:text("Edit")):visible')).toHaveCount(await rows.count());
 });
 
+// cluster masters add a Server column, so cells are found by their header name instead of a fixed position
+async function colIndex(table: Locator, name: string): Promise<number> {
+  const heads = (await table.locator('thead th').allInnerTexts()).map(h => h.trim().toLowerCase());
+  const i = heads.indexOf(name.toLowerCase());
+  if (i < 0) throw new Error(`no "${name}" column in ${heads.join(', ')}`);
+  return i;
+}
+
 test('custom limits on a domain are saved and then put back', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/domains/ratelimit');
   const row = page.locator('#ratelimit_table tbody tr:has(button:text("Edit"))').first();
   test.skip(await row.count() === 0, 'No domains on this server');
 
-  const domain = (await row.locator('td').nth(1).innerText()).trim();
-  const mode = (await row.locator('td').nth(3).innerText()).trim().toLowerCase();
+  const table = page.locator('#ratelimit_table');
+  const [domainCol, settingCol, ipCol, siteCol] = [await colIndex(table, 'Domain'), await colIndex(table, 'Setting'), await colIndex(table, 'Per IP'), await colIndex(table, 'Per domain')];
+  const domain = (await row.locator('td').nth(domainCol).innerText()).trim();
+  const mode = (await row.locator('td').nth(settingCol).innerText()).trim().toLowerCase();
   const original = mode.startsWith('custom') ? 'custom' : mode.startsWith('off') ? 'off' : 'default';
-  const [perIP, perSite] = [(await row.locator('td').nth(4).innerText()).trim(), (await row.locator('td').nth(5).innerText()).trim()];
+  const [perIP, perSite] = [(await row.locator('td').nth(ipCol).innerText()).trim(), (await row.locator('td').nth(siteCol).innerText()).trim()];
 
   const save = async (m: string, ip?: string, site?: string) => {
     await page.locator('#ratelimit_table tbody tr', { hasText: domain }).getByRole('button', { name: 'Edit' }).click();
@@ -62,8 +72,8 @@ test('custom limits on a domain are saved and then put back', async ({ page }) =
   await save('custom', '123', '4567');
   const changed = page.locator('#ratelimit_table tbody tr', { hasText: domain });
   await expect(changed).toContainText('Custom');
-  await expect(changed.locator('td').nth(4)).toHaveText('123');
-  await expect(changed.locator('td').nth(5)).toHaveText('4567');
+  await expect(changed.locator('td').nth(ipCol)).toHaveText('123');
+  await expect(changed.locator('td').nth(siteCol)).toHaveText('4567');
 
   await save(original, perIP === '-' ? '0' : perIP, perSite === '-' ? '0' : perSite);
   console.log(`${domain}: custom 123/4567 saved, back to ${original}`);
