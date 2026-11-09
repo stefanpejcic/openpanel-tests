@@ -379,6 +379,8 @@ test('database wizard', async ({ page }) => {
 
 
 test('remote access', async ({ page }) => {
+  // enabling and disabling each restart mysql, plus the 10s wait below, so it runs right at the default 30s
+  test.setTimeout(2 * 60_000);
   await page.goto('/mysql/remote-mysql');
 
   const statusText = page.locator('dd p.text-lg.font-semibold');

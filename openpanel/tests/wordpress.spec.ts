@@ -387,7 +387,7 @@ test('general options', async ({ page }) => {
   const saveResponsePromise = page.waitForResponse(
     response =>
       response.url().includes('/wordpress/wp-cli/update_site_information') &&
-      response.request().method() === 'GET',
+      response.request().method() === 'POST',
     { timeout: 30_000 }
   );
 
