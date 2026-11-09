@@ -62,13 +62,19 @@ test.describe('processes table', () => {
       const col = columns[i];
       const header = table.locator('th', { hasText: col.name });
 
-      await header.locator(`a[href*="sort=${col.asc}"]`).click();
-      await expect(page).toHaveURL(new RegExp(`sort=${col.asc}`));
+      // toHaveURL passes as soon as the URL changes, the ~300 row table is still streaming in then,
+      // so wait for the new page to finish loading or a cut-off half of the table gets read
+      await Promise.all([
+        page.waitForURL(new RegExp(`sort=${col.asc}(&|$)`), { waitUntil: 'load' }),
+        header.locator(`a[href*="sort=${col.asc}"]`).click(),
+      ]);
 
       const asc = normalize(await getColumnValues(col.name));
 
-      await header.locator(`a[href*="sort=${col.desc}"]`).click();
-      await expect(page).toHaveURL(new RegExp(`sort=${col.desc}`));
+      await Promise.all([
+        page.waitForURL(new RegExp(`sort=${col.desc}(&|$)`), { waitUntil: 'load' }),
+        header.locator(`a[href*="sort=${col.desc}"]`).click(),
+      ]);
 
       const desc = normalize(await getColumnValues(col.name));
 
