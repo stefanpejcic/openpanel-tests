@@ -83,7 +83,33 @@ async function navigateToUserPackages(page: any) {
   await page.waitForLoadState('load');
 }
 
+// a run that died between create and delete leaves the plan behind, and creating it again is refused as a duplicate
+async function deletePlanIfExists(page: any, planName: string) {
+  await page.goto('/plans');
+  const row = page.locator('tr.user-row:not([data-cluster-node])').filter({
+    has: page.locator('td', { hasText: new RegExp(`^${planName}$`) }),
+  }).first();
+  if (!(await row.count())) return;
+
+  const menuButton = row.locator('.plan-menu-btn').first();
+  const dropdown = page.locator('#plan-menu');
+  await expect(async () => {
+    if (await dropdown.isHidden()) await menuButton.click();
+    await expect(dropdown).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
+
+  const deleteForm = dropdown.locator('#plan-menu-delete form');
+  await expect(deleteForm).toHaveAttribute('action', new RegExp(`/plan/delete/${planName}$`));
+  await Promise.all([
+    page.waitForURL(/\/plans/),
+    deleteForm.evaluate((f: HTMLFormElement) => f.submit()),
+  ]);
+  await expect(page.getByText(/plan deleted successfully/i)).toBeVisible();
+}
+
 test('create new hosting plan and verify all fields', async ({ page }) => {
+  for (const leftover of ['probni', 'probniRenamed']) await deletePlanIfExists(page, leftover);
+
   await page.goto('/dashboard');
   await expect(page).toHaveURL(/dashboard/);
 
