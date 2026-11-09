@@ -153,9 +153,19 @@ test.describe('auth', () => {
 test.describe('users', () => {
   test('GET /api/users lists users', async () => {
     requireToken();
-    const body = await getOk('/api/users');
-    expect(body).toBeTruthy();
-    console.log('GET /api/users returned a user list');
+    const res = await api.get('/api/users', { headers: authHeaders() });
+    expect(res.ok(), `GET /api/users -> ${res.status()}`).toBeTruthy();
+    const raw = await res.text();
+    const body = JSON.parse(raw);
+    expect(Array.isArray(body.users)).toBeTruthy();
+    // it used to always come back empty for token requests; the test server always has the panel suite's testinguser
+    expect(body.users.length, 'GET /api/users returned no accounts').toBeGreaterThan(0);
+    for (const u of body.users) {
+      expect(u.username).toBeTruthy();
+      expect(u.plan).toBeTruthy();
+    }
+    expect(raw).not.toMatch(/"password"|"otp_secret"|\$2[aby]\$/);
+    console.log(`GET /api/users returned ${body.users.length} users`);
   });
 
   test('mutating verbs on /api/users require auth', async () => {
