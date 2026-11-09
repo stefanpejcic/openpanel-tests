@@ -39,6 +39,9 @@ sed -i "s/^enabled_modules=.*/enabled_modules=$(paste -sd, /etc/openpanel/openpa
 # ALLOW PASSWORD RESET
 opencli config update password_reset yes
 
+# ENABLE API ACCESS (openadmin zzz-api_endpoints and settings_api tests need a token)
+grep -qE '^api=on$' /etc/openpanel/openpanel/conf/openpanel.config || opencli config update api on
+
 
 # ENABLE USER PANEL
 if podman container exists openpanel; then

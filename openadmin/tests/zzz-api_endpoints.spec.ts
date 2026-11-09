@@ -64,18 +64,24 @@ async function firstDomain(): Promise<string | null> {
   const list = Array.isArray(body) ? body : body?.domains ?? body?.data ?? [];
   if (!Array.isArray(list) || list.length === 0) return null;
   const d = list[0];
-  return typeof d === 'string' ? d : d?.domain ?? d?.domain_name ?? d?.name ?? null;
+  return typeof d === 'string' ? d : d?.domain_url ?? d?.domain ?? d?.domain_name ?? d?.name ?? null;
 }
 
 /** Discover the first username on the server, or null. */
 async function firstUser(): Promise<string | null> {
   const res = await api.get('/api/users', { headers: authHeaders() });
-  if (!res.ok()) return null;
-  const body = await res.json().catch(() => null);
+  const body = res.ok() ? await res.json().catch(() => null) : null;
   const list = Array.isArray(body) ? body : body?.users ?? body?.data ?? [];
-  if (!Array.isArray(list) || list.length === 0) return null;
-  const u = list[0];
-  return typeof u === 'string' ? u : u?.username ?? u?.user ?? null;
+  if (Array.isArray(list) && list.length > 0) {
+    const u = list[0];
+    return typeof u === 'string' ? u : u?.username ?? u?.user ?? null;
+  }
+  // GET /api/users comes back empty for token requests, so take the owner of the first domain
+  const domains = await api.get('/api/domains', { headers: authHeaders() });
+  if (!domains.ok()) return null;
+  const dbody = await domains.json().catch(() => null);
+  const dlist = Array.isArray(dbody) ? dbody : dbody?.domains ?? [];
+  return dlist.find((d: any) => d?.username)?.username ?? null;
 }
 
 test.beforeAll(async () => {
@@ -1063,6 +1069,283 @@ test.describe('support & import', () => {
     const res = await api.get('/api/import/logs/transfer/pw_nonexistent.log', { headers: authHeaders() });
     expect(res.status(), 'nonexistent log should not 500').toBeLessThan(500);
     console.log(`import/logs/transfer (nonexistent) -> ${res.status()}`);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Endpoints added since the original list: read-only ones for real, safe      */
+/* round trips (login, autologin, notification pause/resume, re-saving a       */
+/* setting with its current value) for real, everything else auth-only         */
+/* -------------------------------------------------------------------------- */
+
+/** Every value of a JSON object/array body, so a test can assert it isn't an empty shell. */
+function nonEmpty(body: any) {
+  expect(body, 'response body').toBeTruthy();
+  if (Array.isArray(body)) return;
+  expect(typeof body === 'object' && Object.keys(body).length > 0, `expected a non-empty object, got ${JSON.stringify(body)}`).toBeTruthy();
+}
+
+test.describe('login endpoint', () => {
+  test('POST /api/login issues a short-lived sso link for valid credentials', async () => {
+    requireToken();
+    const res = await anon.post('/api/login', { data: { username: USERNAME, password: PASSWORD } });
+    expect(res.ok(), `POST /api/login -> ${res.status()}`).toBeTruthy();
+    const body = await res.json();
+    expect(body.token).toBeTruthy();
+    expect(body.login_path).toMatch(/^\/login\/sso\//);
+    expect(body.expires_in).toBeGreaterThan(0);
+  });
+
+  test('POST /api/login rejects invalid credentials', async () => {
+    requireToken();
+    const res = await anon.post('/api/login', { data: { username: USERNAME, password: 'definitely-wrong' } });
+    expect(res.status()).toBe(401);
+  });
+});
+
+test.describe('user extras', () => {
+  test('GET /api/users/<username> returns that user', async () => {
+    requireToken();
+    const user = await firstUser();
+    test.skip(!user, 'no users exist on this environment');
+    const body: any = await getOk(`/api/users/${user}`);
+    expect(JSON.stringify(body)).toContain(user!);
+  });
+
+  test('POST /api/users/<username>/autologin returns a user panel login link', async () => {
+    requireToken();
+    const user = await firstUser();
+    test.skip(!user, 'no users exist on this environment');
+    const res = await api.post(`/api/users/${user}/autologin`, { headers: authHeaders(), data: {} });
+    expect(res.ok(), `autologin -> ${res.status()}`).toBeTruthy();
+    const body = await res.json();
+    expect(body.link).toMatch(new RegExp(`/login_autologin\\?username=${user}&admin_token=`));
+  });
+
+  test('GET /api/users/<username>/export/status reports progress and archives', async () => {
+    requireToken();
+    const user = await firstUser();
+    test.skip(!user, 'no users exist on this environment');
+    const body: any = await getOk(`/api/users/${user}/export/status`);
+    expect(typeof body.in_progress).toBe('boolean');
+    expect(Array.isArray(body.backups)).toBeTruthy();
+  });
+
+  test('user update, permissions reset and export actions require auth', async () => {
+    await expectAuthRequired('post', '/api/users/someuser');
+    await expectAuthRequired('put', '/api/users/someuser');
+    await expectAuthRequired('get', '/api/users/someuser');
+    await expectAuthRequired('post', '/api/users/someuser/autologin');
+    await expectAuthRequired('post', '/api/users/someuser/permissions/reset');
+    await expectAuthRequired('get', '/api/users/someuser/export/status');
+    await expectAuthRequired('post', '/api/users/someuser/export/create');
+    await expectAuthRequired('get', '/api/users/someuser/export/download/backup.tar.gz');
+    await expectAuthRequired('post', '/api/users/someuser/export/delete');
+    // suspend/unsuspend and delete only run for real with RUN_MUTATING=1
+    await expectAuthRequired('patch', '/api/users/someuser');
+    await expectAuthRequired('delete', '/api/users/someuser');
+    // the reachability check itself needs a configured DNS slave
+    await expectAuthRequired('get', '/api/dns/cluster/192.0.2.1');
+  });
+});
+
+test.describe('usage', () => {
+  for (const kind of ['cpu', 'memory', 'server', 'disk']) {
+    test(`GET /api/usage/${kind} returns usage data`, async () => {
+      requireToken();
+      nonEmpty(await getOk(`/api/usage/${kind}`));
+    });
+  }
+
+  test('GET /api/usage/memory has totals', async () => {
+    requireToken();
+    const body: any = await getOk('/api/usage/memory');
+    expect(body.human_readable_info?.total).toBeTruthy();
+  });
+
+  test('GET /api/usage/server lists mounted filesystems', async () => {
+    requireToken();
+    const body: any = await getOk('/api/usage/server');
+    expect(Array.isArray(body) && body.some((d: any) => d.mountpoint === '/')).toBeTruthy();
+  });
+
+  test('usage endpoints require auth', async () => {
+    for (const kind of ['cpu', 'memory', 'server', 'disk']) await expectAuthRequired('get', `/api/usage/${kind}`);
+  });
+});
+
+test.describe('notifications pause', () => {
+  test('pause for 10m, status shows it, resume clears it', async () => {
+    requireToken();
+    const before: any = await getOk('/api/notifications/pause');
+    test.skip(before.paused === true, 'notifications are already paused here, not touching them');
+
+    try {
+      const pause = await api.post('/api/notifications/pause', { headers: authHeaders(), data: { duration: '10m' } });
+      expect(pause.ok(), `pause -> ${pause.status()}`).toBeTruthy();
+      const paused: any = await getOk('/api/notifications/pause');
+      expect(paused.paused).toBe(true);
+      expect(paused.until).toBeGreaterThan(Date.now() / 1000);
+    } finally {
+      // always resume, a failed assertion must not leave the server's notifications paused
+      const resume = await api.post('/api/notifications/resume', { headers: authHeaders(), data: {} });
+      expect(resume.ok(), `resume -> ${resume.status()}`).toBeTruthy();
+    }
+    const after: any = await getOk('/api/notifications/pause');
+    expect(after.paused).toBe(false);
+  });
+
+  test('POST /api/notifications/pause rejects an unknown duration', async () => {
+    requireToken();
+    const res = await api.post('/api/notifications/pause', { headers: authHeaders(), data: { duration: '99y' } });
+    expect(res.ok()).toBeFalsy();
+    const after: any = await getOk('/api/notifications/pause');
+    expect(after.paused).toBe(false);
+  });
+
+  test('pause endpoints require auth', async () => {
+    await expectAuthRequired('get', '/api/notifications/pause');
+    await expectAuthRequired('post', '/api/notifications/pause');
+    await expectAuthRequired('post', '/api/notifications/resume');
+  });
+});
+
+test.describe('server swap', () => {
+  test('GET /api/server/swap lists swap devices', async () => {
+    requireToken();
+    const body: any = await getOk('/api/server/swap');
+    expect(Array.isArray(body.devices)).toBeTruthy();
+  });
+
+  test('GET /api/server/swap/action-status reports the last action', async () => {
+    requireToken();
+    const body: any = await getOk('/api/server/swap/action-status');
+    expect(typeof body.done).toBe('boolean');
+  });
+
+  test('swap endpoints require auth', async () => {
+    await expectAuthRequired('get', '/api/server/swap');
+    await expectAuthRequired('get', '/api/server/swap/action-status');
+    await expectAuthRequired('post', '/api/server/swap/action/create');
+  });
+});
+
+test.describe('podman', () => {
+  for (const path of ['/api/services/podman', '/api/services/podman/disk-usage']) {
+    test(`GET ${path} returns disk usage`, async () => {
+      requireToken();
+      expect(JSON.stringify(await getOk(path))).toContain('Images');
+    });
+  }
+
+  for (const [path, key] of [['/api/services/podman/images', 'Repository'], ['/api/services/podman/volumes', 'Name'], ['/api/services/podman/networks', 'Name']]) {
+    test(`GET ${path} lists items`, async () => {
+      requireToken();
+      const body: any = await getOk(path);
+      expect(Array.isArray(body) && body.length > 0, `${path} returned ${JSON.stringify(body).slice(0, 200)}`).toBeTruthy();
+      expect(body[0][key]).toBeDefined();
+    });
+  }
+
+  for (const path of ['/api/services/podman/images/action-status', '/api/services/podman/images/bulk-status']) {
+    test(`GET ${path} reports the last action`, async () => {
+      requireToken();
+      const body: any = await getOk(path);
+      expect(typeof body.done).toBe('boolean');
+    });
+  }
+
+  test('image check-update and vulnerabilities need a ref and answer for a real image', async () => {
+    requireToken();
+    for (const path of ['/api/services/podman/images/check-update', '/api/services/podman/images/vulnerabilities']) {
+      const noRef = await api.get(path, { headers: authHeaders() });
+      expect(noRef.status(), `${path} without ref`).toBe(400);
+    }
+    const images: any = await getOk('/api/services/podman/images');
+    const img = images.find((i: any) => i.Repository && i.Repository !== '<none>' && i.Tag && i.Tag !== '<none>');
+    test.skip(!img, 'no tagged podman image on this environment');
+    const ref = encodeURIComponent(`${img.Repository}:${img.Tag}`);
+    const upd: any = await getOk(`/api/services/podman/images/check-update?ref=${ref}`);
+    expect(typeof upd.available).toBe('boolean');
+    const vul: any = await getOk(`/api/services/podman/images/vulnerabilities?ref=${ref}`);
+    expect(typeof vul.checked).toBe('boolean');
+  });
+
+  test('podman endpoints require auth', async () => {
+    for (const p of ['', '/images', '/volumes', '/networks', '/disk-usage', '/images/action-status', '/images/check-update', '/images/bulk-status', '/images/vulnerabilities']) {
+      await expectAuthRequired('get', `/api/services/podman${p}`);
+    }
+    await expectAuthRequired('post', '/api/services/podman/images/pull/abc123');
+    await expectAuthRequired('post', '/api/services/podman/images/bulk/delete');
+  });
+});
+
+test.describe('backups', () => {
+  test('GET /api/backups/system lists archives', async () => {
+    requireToken();
+    const body: any = await getOk('/api/backups/system');
+    expect(Array.isArray(body.archives)).toBeTruthy();
+  });
+
+  test('GET /api/backups/user returns the schedule', async () => {
+    requireToken();
+    const body: any = await getOk('/api/backups/user');
+    expect(body.schedule_choice).toBeTruthy();
+  });
+
+  test('GET /api/backups/user/configuration returns backup.env', async () => {
+    requireToken();
+    const body: any = await getOk('/api/backups/user/configuration');
+    expect(body.backup_env).toContain('BACKUP_');
+  });
+
+  for (const path of ['/api/backups/system/action-status', '/api/backups/user/action-status']) {
+    test(`GET ${path} reports the last action`, async () => {
+      requireToken();
+      const body: any = await getOk(path);
+      expect(typeof body.done).toBe('boolean');
+    });
+  }
+
+  test('backup endpoints require auth', async () => {
+    for (const p of ['/system', '/system/action-status', '/user', '/user/configuration', '/user/action-status']) await expectAuthRequired('get', `/api/backups${p}`);
+    for (const p of ['/system/settings', '/system/run', '/system/restore/x.tar.gz', '/system/delete/x.tar.gz', '/user/settings', '/user/configuration', '/user/run']) {
+      await expectAuthRequired('post', `/api/backups${p}`);
+    }
+  });
+});
+
+test.describe('templates, resellers, services, import', () => {
+  test('GET /api/domains/vhost-templates returns the templates', async () => {
+    requireToken();
+    const body: any = await getOk('/api/domains/vhost-templates');
+    nonEmpty(body);
+    expect(JSON.stringify(body)).toContain('<DOMAIN_NAME>');
+  });
+
+  test('GET /api/plans/resellers lists reseller plans', async () => {
+    requireToken();
+    expect(Array.isArray(await getOk('/api/plans/resellers'))).toBeTruthy();
+  });
+
+  test('reseller setting: GET, then POST the same value back', async () => {
+    requireToken();
+    const body: any = await getOk('/api/settings/resellers/enabled');
+    expect(typeof body.enabled).toBe('boolean');
+    const res = await api.post('/api/settings/resellers/enabled', { headers: authHeaders(), data: { enabled: body.enabled } });
+    expect(res.ok(), `POST resellers/enabled -> ${res.status()}`).toBeTruthy();
+    expect((await res.json()).enabled).toBe(body.enabled);
+  });
+
+  test('template, reseller, service and import endpoints require auth', async () => {
+    await expectAuthRequired('get', '/api/domains/vhost-templates');
+    await expectAuthRequired('post', '/api/domains/vhost-templates');
+    await expectAuthRequired('get', '/api/plans/resellers');
+    await expectAuthRequired('post', '/api/plans/resellers');
+    await expectAuthRequired('get', '/api/settings/resellers/enabled');
+    await expectAuthRequired('post', '/api/settings/resellers/enabled');
+    await expectAuthRequired('post', '/api/service/restart/nginx');
+    await expectAuthRequired('post', '/api/import/upload');
   });
 });
 
