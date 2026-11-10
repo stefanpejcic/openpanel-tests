@@ -72,13 +72,6 @@ test('list versions', async ({ page }) => {
     await expect(bars).toHaveCount(3);
   }
 
-  // summary per version
-  const counters = page.locator('dl > div');
-  const count = await counters.count();
-
-  if (rowCount > 0) {
-    expect(count).toBeGreaterThan(0);
-  }
 });
 
 

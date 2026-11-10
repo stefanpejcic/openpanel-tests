@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { generate } from 'otplib';
-import { withProjectPage } from '../../helpers';
+import { confirmDialog, withProjectPage } from '../../helpers';
 
 const USERNAME = process.env.PANEL_USERNAME;
 const PASSWORD = process.env.PANEL_PASSWORD;
@@ -72,6 +72,7 @@ test('enable 2FA', async ({ page }) => {
 test('disable 2FA', async ({ page }) => {
   await page.goto(`/account/2fa`);
   await page.click('button:has-text("Click to disable 2FA")');
+  await confirmDialog(page);
   await expect(page.getByText('2FA is currently disabled')).toBeVisible();
   // VERIFY dashboard shows 2FA disabled
   await page.goto(`/dashboard?view=overview`);

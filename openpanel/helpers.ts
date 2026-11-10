@@ -296,3 +296,10 @@ export async function makeFile(page: Page, filePath: string, content: string) {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(/saved successfully/i).first()).toBeVisible();
 }
+
+// data-confirm forms open the opConfirm dialog before submitting
+export async function confirmDialog(page: Page) {
+  const ok = page.locator('[role=alertdialog] button[data-act="ok"], [role=dialog] button[data-act="ok"]').first();
+  await ok.waitFor({ state: 'visible', timeout: 5000 });
+  await ok.click();
+}

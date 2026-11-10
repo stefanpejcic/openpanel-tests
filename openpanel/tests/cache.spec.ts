@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ensureDomains } from '../helpers';
+import { confirmDialog, ensureDomains } from '../helpers';
 
 async function navigateToPage(page: any, service: string) {
   await page.goto(`/cache/${service}`);
@@ -172,6 +172,7 @@ for (const service of services) {
     if (initialStatus?.trim() === 'Running') {
       const disableBtnPre = page.locator('button', { hasText: 'Click to Disable' });
       await disableBtnPre.click();
+      await confirmDialog(page);
       await expect(page.locator('text=is now disabled')).toBeVisible();
       await expect(page.locator('#service-page-status')).toHaveText('Disabled');
     }
@@ -249,21 +250,22 @@ for (const service of services) {
     await navigateToPage(page, service.name);
     
     const statsContainer = page.locator('#service-page-stats');
-    await expect(statsContainer.locator('span.font-medium').filter({ hasText: '--' })).toHaveCount(0, { timeout: 15000 });
-    const getStat = (label) => statsContainer.locator('div', { hasText: label }).locator('span.font-medium').last();
-    
-    const statItems = statsContainer.locator('div.flex.items-center.justify-between');
-          
+    // stats are a dl of dt/dd rows, labels may be sentence case
+    await expect(statsContainer.locator('dd').filter({ hasText: '--' })).toHaveCount(0, { timeout: 15000 });
+    await expect(statsContainer.locator('dd').first()).toBeVisible({ timeout: 15000 });
+    const statItems = statsContainer.locator('div:has(> dt)');
     const count = await statItems.count();
-    
     const stats = {};
+    const canon = ['ID', 'Name', 'CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'Block I/O', 'PIDs'];
     for (let i = 0; i < count; i++) {
       const item = statItems.nth(i);
-      const label = await item.locator('span').first().innerText();
-      const value = await item.locator('span').last().innerText();
-      stats[label.trim()] = value.trim();
+      const label = (await item.locator('dt').innerText()).trim();
+      const value = (await item.locator('dd').innerText()).trim();
+      const key = canon.find(k => k.toLowerCase() === label.toLowerCase()) || label;
+      stats[key] = value;
     }
-    
+    const getStat = (label) => statsContainer.locator('div:has(> dt)', { has: page.locator('dt', { hasText: new RegExp(`^${label}$`, 'i') }) }).locator('dd');
+
     const requiredKeys = ['ID', 'Name', 'CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'Block I/O', 'PIDs'];
     for (const key of requiredKeys) {
       expect(stats).toHaveProperty(key, expect.any(String));
@@ -298,6 +300,7 @@ for (const service of services) {
     await navigateToPage(page, service.name);
     const disableBtn = page.locator('button', { hasText: 'Click to Disable' });
     await disableBtn.click();
+    await confirmDialog(page);
     await expect(page.locator('text=is now disabled')).toBeVisible();
     await expect(page.locator('#service-page-status')).toHaveText('Disabled');
     await expect(page.locator('.bg-gray-400').first()).toBeVisible();

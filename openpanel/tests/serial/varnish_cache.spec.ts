@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { ensureDomains, withProjectPage } from '../../helpers';
+import { confirmDialog, ensureDomains, withProjectPage } from '../../helpers';
 
 const DOMAIN = 'shared.tests.openpanel.org';
 
@@ -15,6 +15,7 @@ test.afterAll(async ({ browser }, testInfo) => {
     const status = page.locator('#service-page-status');
     if ((await status.textContent())?.trim() !== 'Disabled') {
       await page.getByRole('button', { name: 'Click to Disable' }).click();
+      await confirmDialog(page);
       await expect(status).toHaveText('Disabled', { timeout: 40_000 });
     }
   });
@@ -98,7 +99,7 @@ test('should display container log and show Varnish Cache & Container stats', as
     await expect(label).toBeVisible();
   }
   
-  const metricValues = page.locator('[x-data="varnishStats()"] span.font-medium');
+  const metricValues = page.locator('[x-data="varnishStats()"] dd');
   const count = await metricValues.count();
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {
@@ -151,6 +152,7 @@ test('disable varnish', async ({ page }) => {
   const status = page.locator('#service-page-status');
   await expect(status).not.toHaveText('Disabled');
   await page.getByRole('button', { name: 'Click to Disable' }).click();
+  await confirmDialog(page);
   // Disabling stops/removes both the webserver and varnish containers then
   // recreates the webserver, which routinely takes longer than the 5s
   // default assertion timeout.
