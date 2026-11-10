@@ -116,13 +116,14 @@ test('should display container log and show Varnish Cache & Container stats', as
   await expect(containerSection).toBeVisible();
   const containerStats = page.locator('#service-page-stats');
   await expect(containerStats).toBeVisible();
-  const expectedContainerLabels = ['CPU Usage', 'Memory Usage', 'Memory %', 'Network I/O', 'PIDs'];
+  // dt/dd rows, labels are sentence case now
+  const expectedContainerLabels = ['CPU usage', 'Memory usage', 'Memory %', 'Network I/O', 'PIDs'];
   for (const label of expectedContainerLabels) {
-    const labelEl = containerStats.locator('span.text-sm').filter({ hasText: label });
+    const labelEl = containerStats.locator('dt').filter({ hasText: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}$`, 'i') });
     await expect(labelEl).toBeVisible();
   }
   
-  const containerValues = containerStats.locator('span.font-medium');
+  const containerValues = containerStats.locator('dd');
   const containerCount = await containerValues.count();
   expect(containerCount).toBeGreaterThan(0);
   for (let i = 0; i < containerCount; i++) {

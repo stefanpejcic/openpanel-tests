@@ -322,6 +322,17 @@ test('bulk actions', async ({ page }) => {
   const accounts = ['bulka', 'bulkb'].map(u => `${u}@${FTP_DOMAIN}`);
   const row = (account: string) => page.locator('tbody tr').filter({ hasText: account });
 
+  // leftovers from a run that stopped before the delete step
+  await page.goto('/ftp');
+  const leftovers: string[] = [];
+  for (const account of accounts) if (await row(account).count()) leftovers.push(account);
+  if (leftovers.length) {
+    await bulkSelectAllAndClear(page);
+    await bulkSelect(page, leftovers);
+    await bulkRun(page, 'delete');
+    for (const account of leftovers) await expect(row(account)).toHaveCount(0);
+  }
+
   for (const account of accounts) {
     await page.goto('/ftp/new');
     await page.locator('#new_ftp_username').fill(account.split('@')[0]);
