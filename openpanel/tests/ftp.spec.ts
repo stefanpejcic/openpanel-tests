@@ -60,7 +60,7 @@ test('create account', async ({ page }) => {
   await page.locator('#new_ftp_username').fill(FTP_USER);
   await page.locator('#domain').selectOption({ label: FTP_DOMAIN });
   await page.locator('#password').fill(FTP_PASS);
-  await page.locator('#new_user_path').fill(FTP_PATH);
+  await page.locator('#directory-select').evaluate((el: HTMLInputElement, v) => { el.value = v; }, FTP_PATH); // folder picker input, copied into the hidden path on submit
   await page.getByRole('button', { name: /Create Account/i }).click();
   const created = page.locator('#ftpCreated');
   await expect(created).toContainText(`${FTP_USER}@${FTP_DOMAIN}`);
@@ -327,7 +327,7 @@ test('bulk actions', async ({ page }) => {
     await page.locator('#new_ftp_username').fill(account.split('@')[0]);
     await page.locator('#domain').selectOption({ label: FTP_DOMAIN });
     await page.locator('#password').fill(FTP_PASS);
-    await page.locator('#new_user_path').fill(FTP_PATH);
+    await page.locator('#directory-select').evaluate((el: HTMLInputElement, v) => { el.value = v; }, FTP_PATH); // folder picker input, copied into the hidden path on submit
     await page.getByRole('button', { name: /Create Account/i }).click();
     await expect(page.locator('#ftpCreated')).toContainText(account);
   }

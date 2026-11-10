@@ -20,6 +20,12 @@ test.afterAll(async ({ browser }, testInfo) => {
 // ENABLE
 test('enable 2FA', async ({ page }) => {
   await page.goto(`/account/2fa`);
+  // a setup an earlier run started and never finished replaces the enable button with Cancel setup
+  const cancelSetup = page.getByRole('button', { name: 'Cancel setup' });
+  if (await cancelSetup.isVisible()) {
+    await cancelSetup.click();
+    await page.goto(`/account/2fa`);
+  }
   await expect(page.locator('#twofa_code')).not.toBeVisible();
   await expect(page.getByText('2FA is currently disabled')).toBeVisible();
   await page.click('button:has-text("Click to enable 2FA")');

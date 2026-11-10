@@ -350,6 +350,10 @@ test('revoke privileges', async ({ page }) => {
 
 
 test('database wizard', async ({ page }) => {
+  test.setTimeout(90_000);
+  // leftovers from a run that stopped before the delete tests
+  await deleteRowIfExists(page, '/mysql', 'proba');
+  await deleteRowIfExists(page, '/mysql/users', 'novi_user');
   await page.goto('/mysql/wizard');
   await expect(page).toHaveURL(/.*mysql\/wizard/);
 
@@ -479,7 +483,7 @@ test('configuration editor', async ({ page }) => {
 
 // IMPORT
 test('import', async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150_000);
 
   const tempFilePath = path.join(os.tmpdir(), 'test-import.sql');
 
@@ -493,10 +497,11 @@ INSERT INTO users VALUES (1, 'John');
 
   await page.goto(`/mysql/import/proba`);
   
+  // the db list loads once from /mysql/info, which can be slow right after the configuration editor restarted mysql
   await expect(async () => {
-    const options = await page.locator('select[name="database_name"] option').count();
-    expect(options).toBeGreaterThan(1);
-  }).toPass({ timeout: 5000 });
+    await page.goto(`/mysql/import/proba`);
+    await expect(page.locator('select[name="database_name"] option[value="proba"]')).toBeAttached({ timeout: 10_000 });
+  }).toPass({ timeout: 90_000 });
 
   await expect(page).toHaveURL(/.*mysql\/import\/proba/);
 

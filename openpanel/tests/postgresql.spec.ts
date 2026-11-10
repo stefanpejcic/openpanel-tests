@@ -261,13 +261,12 @@ INSERT INTO users VALUES (1, 'John');
 `;
   fs.writeFileSync(tempFilePath, sqlContent);
 
-  await page.goto('/postgresql/import/stefan_psql');
-  await expect(page).toHaveURL(/postgresql\/import\/stefan_psql/);
-  const [response] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/postgresql/info') && resp.status() === 200),
-      // the general import page is the one that loads /postgresql/info, the sidebar link to it only exists in some menus
-      page.goto('/postgresql/import'),
-    ]);
+  // the configuration editor test right before restarts postgres, so the db list can take a while to load
+  test.setTimeout(120_000);
+  await expect(async () => {
+    await page.goto('/postgresql/import/stefan_psql');
+    await expect(page.locator('select[name="database_name"] option[value="stefan_psql"]')).toBeAttached({ timeout: 10_000 });
+  }).toPass({ timeout: 90_000 });
   await page.locator('select[name="database_name"]').selectOption('stefan_psql');
   await page.locator('input[name="db_file"]').setInputFiles(tempFilePath);
   await page.getByRole('button', { name: 'Upload & Import' }).click();

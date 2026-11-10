@@ -39,10 +39,16 @@ function domainRow(page: Page) {
 }
 
 test('enable varnish', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   await page.goto('/cache/varnish');
   const status = page.locator('#service-page-status');
-  await expect(status).toHaveText('Disabled');
+  // a run that stopped halfway can leave it on
+  if ((await status.textContent())?.trim() !== 'Disabled') {
+    await page.getByRole('button', { name: 'Click to Disable' }).click();
+    await confirmDialog(page);
+    await expect(status).toHaveText('Disabled', { timeout: 40_000 });
+    await page.goto('/cache/varnish');
+  }
   await page.getByRole('button', { name: 'Click to Enable' }).click();
   // Enabling stops/recreates both the webserver and varnish containers,
   // which routinely takes longer than the 5s default assertion timeout.
