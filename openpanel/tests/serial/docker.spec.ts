@@ -55,9 +55,9 @@ test('containers page loads with header and table', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('Containers');
   await expect(page.locator('#containers-table')).toBeVisible();
 
-  // Total CPU and RAM should be shown
-  await expect(page.locator('text=Total CPU')).toBeVisible();
-  await expect(page.locator('text=Total Memory')).toBeVisible();
+  // the subtitle counts running containers out of all of them
+  await expect(page.getByText(/running containers/i)).toBeVisible();
+  await expect(page.locator('#total_records_count')).toHaveText(/\d+/);
 });
 
 test('containers search filters rows', async ({ page }) => {

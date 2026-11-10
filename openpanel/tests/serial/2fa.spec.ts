@@ -43,7 +43,7 @@ test('enable 2FA', async ({ page }) => {
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('2FA is currently enabled')).toBeVisible();
   // VERIFY dashboard shows 2FA enabled
-  await page.goto(`/dashboard`);
+  await page.goto(`/dashboard?view=overview`);
   const dashboardTwofa = page.locator('#dashboard_twofa_content');
   await expect(dashboardTwofa).toBeVisible();
   await expect(dashboardTwofa.locator('b')).toHaveText('enabled');
@@ -74,7 +74,7 @@ test('disable 2FA', async ({ page }) => {
   await page.click('button:has-text("Click to disable 2FA")');
   await expect(page.getByText('2FA is currently disabled')).toBeVisible();
   // VERIFY dashboard shows 2FA disabled
-  await page.goto(`/dashboard`);
+  await page.goto(`/dashboard?view=overview`);
   const dashboardTwofa = page.locator('#dashboard_twofa_content');
   await expect(dashboardTwofa).toBeVisible();
   await expect(dashboardTwofa.locator('b')).toHaveText('disabled');

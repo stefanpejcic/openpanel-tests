@@ -5,8 +5,16 @@ const RUN = process.env.TEST_RUN_ID || Math.random().toString(36).slice(2, 8);
 
 const tokenRow = (page: Page, name: string) => page.locator('#mcp-tokens-table tbody tr', { hasText: name });
 
+// the form and the connect guide start folded behind the Generate token button
+async function openForm(page: Page) {
+  const btn = page.locator('#mcp-add-button');
+  if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click();
+  await expect(page.locator('#mcp-generate-form')).toBeVisible();
+}
+
 async function createToken(page: Page, name: string, readOnly = false) {
   await page.goto('/account/mcp');
+  await openForm(page);
   const form = page.locator('#mcp-generate-form');
   await form.locator('input[name="name"]').fill(name);
   await form.locator('select[name="expires_in_days"]').selectOption('30');
@@ -18,7 +26,8 @@ async function createToken(page: Page, name: string, readOnly = false) {
 
 test('mcp tokens page loads', async ({ page }) => {
   await page.goto('/account/mcp');
-  await expect(page.locator('#mcp-generate-form')).toBeVisible();
+  await expect(page.locator('#mcp-generate-form')).toBeHidden();
+  await openForm(page);
   await expect(page.locator('#mcp-connect-section')).toBeVisible();
 });
 

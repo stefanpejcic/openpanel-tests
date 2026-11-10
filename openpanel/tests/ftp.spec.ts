@@ -39,7 +39,7 @@ async function ftpConnect(host: string, password: string): Promise<ftp.Client> {
 }
 
 async function getFTPCount(page: Page): Promise<number> {
-  const text = await page.locator('#dashboard_usage_ftp').locator('p').nth(1).textContent();
+  const text = await page.locator('#plan_tile_ftp dd').textContent();
   if (!text) throw new Error('Cannot read ftp count');
 
   const match = text.match(/(\d+)\s*\//);

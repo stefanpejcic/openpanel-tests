@@ -1,14 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-async function navigateToDashboardPage(page: any) {
-  await page.goto(`/dashboard`);
+async function navigateToDashboardPage(page: any, view: 'overview' | 'tools' | '' = '') {
+  await page.goto(view ? `/dashboard?view=${view}` : `/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
 }
 
 // OPEN
 test('access dashboard', async ({ page }) => {
   await navigateToDashboardPage(page);
-  await expect(page.getByText(/cpu usage/i)).toBeVisible();
+  // Overview is the default view, its Usage widget lists CPU next to disk, inodes and memory
+  await expect(page.locator('#dashboard_usage')).toBeVisible();
+  await expect(page.locator('#dashboard_usage').getByText(/^CPU$/)).toBeVisible();
   console.log('Dashboard page is accessible');
 });
 
@@ -116,98 +118,44 @@ test('search results', async ({ page }) => {
 });
 
 
-// ICONS TOP/START
-test('icons mode toggle', async ({ page }) => {
+// OVERVIEW/TOOLS SWITCH
+test('overview/tools switch', async ({ page }) => {
+  await page.context().clearCookies({ name: 'dashboard_view' });
   await navigateToDashboardPage(page);
 
-  await page.locator('#user-btn-info').click();
+  const sw = page.locator('#tour-dashboard-view');
+  const overviewBtn = sw.locator('button').nth(0);
+  const toolsBtn = sw.locator('button').nth(1);
 
-  const iconsPosition = page.locator('#tour-icons-position');
-  await expect(iconsPosition).toBeVisible();
+  await expect(overviewBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#dashboard_usage')).toBeVisible();
 
-  const topBtn = iconsPosition.locator('button[title="Top"]');
-  const startBtn = iconsPosition.locator('button[title="Start"]');
-
-  await expect(topBtn).toBeVisible();
-  await expect(startBtn).toBeVisible();
-
-  //
-  // START / list
-  //
-  await startBtn.click();
-
-  await expect(startBtn).toHaveClass(/bg-slate-700/);
-  await expect(topBtn).not.toHaveClass(/bg-slate-700/);
+  await toolsBtn.click();
+  await expect(toolsBtn).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#dashboard-sortable-area')).toBeVisible();
+  await expect(page.locator('#dashboard_usage')).toBeHidden();
 
   await expect
-    .poll(() =>
-      page.evaluate(() => Alpine.store('dashboardIconView').value)
-    )
-    .toBe('list');
+    .poll(async () => (await page.context().cookies()).find(c => c.name === 'dashboard_view')?.value)
+    .toBe('tools');
 
-  await expect
-    .poll(async () => {
-      const cookies = await page.context().cookies();
-      return cookies.find(
-        cookie => cookie.name === 'dashboard_icon_view'
-      )?.value;
-    })
-    .toBe('list');
-
-  //
-  // Verify LIST survives reload
-  //
+  // the choice survives a reload
   await page.reload();
+  await expect(page.locator('#tour-dashboard-view button').nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#dashboard-sortable-area')).toBeVisible();
 
-  await page.locator('#user-btn-info').click();
-
-  const iconsPositionAfterReload = page.locator('#tour-icons-position');
-  await expect(iconsPositionAfterReload).toBeVisible();
-
-  const topBtnAfterReload =
-    iconsPositionAfterReload.locator('button[title="Top"]');
-
-  const startBtnAfterReload =
-    iconsPositionAfterReload.locator('button[title="Start"]');
-
-  await expect(startBtnAfterReload).toHaveClass(/bg-slate-700/);
-  await expect(topBtnAfterReload).not.toHaveClass(/bg-slate-700/);
-
+  await page.locator('#tour-dashboard-view button').nth(0).click();
+  await expect(page.locator('#dashboard_usage')).toBeVisible();
   await expect
-    .poll(() =>
-      page.evaluate(() => Alpine.store('dashboardIconView').value)
-    )
-    .toBe('list');
+    .poll(async () => (await page.context().cookies()).find(c => c.name === 'dashboard_view')?.value)
+    .toBe('overview');
 
-  //
-  // Switch back to TOP / icon
-  //
-  await topBtnAfterReload.click();
-
-  await expect(topBtnAfterReload).toHaveClass(/bg-slate-700/);
-  await expect(startBtnAfterReload).not.toHaveClass(/bg-slate-700/);
-
-  await expect
-    .poll(() =>
-      page.evaluate(() => Alpine.store('dashboardIconView').value)
-    )
-    .toBe('icon');
-
-  await expect
-    .poll(async () => {
-      const cookies = await page.context().cookies();
-      return cookies.find(
-        cookie => cookie.name === 'dashboard_icon_view'
-      )?.value;
-    })
-    .toBe('icon');
-
-  console.log('icons toggle working');
+  console.log('overview/tools switch working');
 });
 
 // SORTABLE
 test('icon sections drag&sort', async ({ page }) => {
-  await navigateToDashboardPage(page);
+  await navigateToDashboardPage(page, 'tools');
 
   const sortable = page.locator('#dashboard-sortable-area');
 
@@ -235,8 +183,9 @@ test('icon sections drag&sort', async ({ page }) => {
   const startX = handleBox!.x + handleBox!.width / 2;
   const startY = handleBox!.y + handleBox!.height / 2;
 
-  const endX = targetBox!.x + targetBox!.width / 2;
-  const endY = targetBox!.y + targetBox!.height + 40; // lower than second section
+  // sections sit two to a row, so drop on the far side of the second one
+  const endX = targetBox!.x + targetBox!.width * 0.8;
+  const endY = targetBox!.y + targetBox!.height / 2;
 
   await page.mouse.move(startX, startY);
   await page.mouse.down();
@@ -268,7 +217,7 @@ test('icon sections drag&sort', async ({ page }) => {
 
 // SECTION CLOSE/OPEN
 test('icon sections open/close', async ({ page }) => {
-  await navigateToDashboardPage(page);
+  await navigateToDashboardPage(page, 'tools');
 
   const firstSectionWrapper = page.locator('#dashboard-sortable-area > [data-id]').nth(0);
   const sectionKey = await firstSectionWrapper.getAttribute('data-id');

@@ -15,7 +15,7 @@ test.beforeAll(async ({ browser }, testInfo) => {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getEmailCount(page: Page): Promise<number> {
-  const text = await page.locator('#dashboard_usage_emails').locator('p').nth(1).textContent();
+  const text = await page.locator('#plan_tile_emails dd').textContent();
   if (!text) throw new Error('Cannot read email count');
   const match = text.match(/(\d+)\s*\//);
   if (!match) throw new Error(`Cannot parse email count from: ${text}`);
@@ -438,11 +438,14 @@ test('connect devices page loads for an email', async ({ page }) => {
   await expect(page).toHaveURL(/emails\/info\/.+@/);
   await expect(page.getByRole('heading', { name: /connect devices/i })).toBeVisible();
 
-  // Server settings table
-  await expect(page.getByText(/incoming server/i)).toBeVisible();
-  await expect(page.getByText(/outgoing server/i)).toBeVisible();
-  await expect(page.getByText(/imap port/i)).toBeVisible();
-  await expect(page.getByText(/smtp port/i)).toBeVisible();
+  // same connection block as after creating an account: sign in, IMAP and SMTP cards, setting downloads
+  const block = page.locator('#emailCreated');
+  await expect(block).toBeVisible();
+  await expect(block.getByText(/incoming \(imap\)/i)).toBeVisible();
+  await expect(block.getByText(/outgoing \(smtp\)/i)).toBeVisible();
+  await expect(block.getByText(/^server$/i)).toHaveCount(2);
+  await expect(block.getByText(/^port$/i)).toHaveCount(2);
+  await expect(block.getByRole('link', { name: /thunderbird/i })).toBeVisible();
 });
 
 test('connect devices back button goes to /emails', async ({ page }) => {

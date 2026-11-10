@@ -294,9 +294,10 @@ test.describe('GET /api/containers/:service/status', () => {
 });
 
 test.describe('GET /api/containers/:service/logs', () => {
-  test('unknown service returns 500', async () => {
+  test('unknown service returns 404', async () => {
     const res = await api.get('/api/containers/definitely-not-a-real-service/logs');
-    expect(res.status()).toBe(500);
+    // podman's "no such container" is answered as not found
+    expect(res.status()).toBe(404);
   });
 });
 
@@ -1098,7 +1099,9 @@ mdescribe('POST /api/cache/varnish restart', () => {
 // ---------------------------------------------------------------------------
 test.describe('GET /api/mysql/databases', () => {
   test('returns databases array', async () => {
-    const res = await api.get('/api/mysql/databases');
+    // the first request on a fresh account starts the database container
+    test.setTimeout(150_000);
+    const res = await api.get('/api/mysql/databases', { timeout: 140_000 });
     expect([200, 500]).toContain(res.status());
     if (res.status() === 200) {
       expect(Array.isArray((await res.json()).databases)).toBe(true);
@@ -1248,7 +1251,9 @@ mdescribe('POST /api/mysql/remote-access toggle', () => {
 // ---------------------------------------------------------------------------
 test.describe('GET /api/postgresql/databases', () => {
   test('returns databases array', async () => {
-    const res = await api.get('/api/postgresql/databases');
+    // the first request on a fresh account starts the database container
+    test.setTimeout(150_000);
+    const res = await api.get('/api/postgresql/databases', { timeout: 140_000 });
     expect([200, 500]).toContain(res.status());
   });
 });

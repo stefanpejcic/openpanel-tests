@@ -13,9 +13,7 @@ async function navigateToMySQLPage(page: any) {
 async function getDatabaseCount(page: Page): Promise<number> {
   await page.goto('/dashboard');
   const text = await page
-    .locator('#dashboard_usage_databases')
-    .locator('p')
-    .nth(1)
+    .locator('#plan_tile_databases dd')
     .textContent();
   if (!text) throw new Error('Cannot read database count');
   const match = text.match(/(\d+)\s*\//);

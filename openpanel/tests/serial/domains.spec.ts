@@ -14,9 +14,7 @@ const DOMAINS = [
 
 async function getDomainCount(page: Page): Promise<number> {
   const text = await page
-    .locator('#dashboard_usage_domains')
-    .locator('p')
-    .nth(1)
+    .locator('#plan_tile_domains dd')
     .textContent();
 
   if (!text) throw new Error('Cannot read domain count');
