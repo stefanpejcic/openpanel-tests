@@ -68,7 +68,9 @@ test('delete reseller (runs last)', async ({ page }) => {
   const dropdown = page.locator('#account-menu');
   await expect(dropdown).toBeVisible();
 
-  await dropdown.getByRole('menuitem', { name: 'Delete' }).click();
+  // plain Delete moves the reseller's accounts to admin, it asks with a native confirm() first
+  page.once('dialog', d => d.accept());
+  await dropdown.getByRole('menuitem', { name: 'Delete', exact: true }).click();
 
   await expect(page.locator(`button.account-menu-btn[data-user="${username}"]`)).toHaveCount(0);
 
