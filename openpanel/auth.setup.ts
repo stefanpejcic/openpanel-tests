@@ -11,6 +11,8 @@ setup('authenticate', async ({ browser }, testInfo) => {
   const style = testInfo.project.metadata.menuStyle === 'classic' ? 'classic' : 'modern';
   const file = style === 'classic' ? AUTH_FILE : AUTH_FILE_MODERN;
   await saveLogin(browser, style, file);
+  // the *.tests.openpanel.org names only resolve to the shared test server, a fresh install can't get certs for them
+  if (testInfo.project.metadata.loginOnly) return;
 
   // all domains up front, an add during the parallel run would restart services under other specs (see SUITE_DOMAINS)
   setup.setTimeout(30 * 60_000);
