@@ -216,13 +216,16 @@ test('processlist', async ({ page }) => {
 
 
 test('configuration editor', async ({ page }) => {
+  // saving restarts postgres
+  test.setTimeout(120_000);
   await page.goto('/postgresql/configuration');
   await expect(page).toHaveURL(/postgresql\/configuration/);
   await expect(page.locator('body')).toContainText(/max_connections|shared_buffers/i);
   await page.locator('#max_connections').fill('110');
   await page.getByRole('button', { name: 'Save Changes' }).click();
-  await expect(page.locator('body')).toContainText(/configuration was edited|restarted/i);
-  await page.waitForLoadState('networkidle');
+  await expect(page.locator('body')).toContainText(/configuration was edited|restarted/i, { timeout: 60_000 });
+  // the page keeps polling, so reload instead of waiting for networkidle
+  await page.goto('/postgresql/configuration');
   await expect(page.locator('#max_connections')).toHaveValue('110');
   console.log('postgresql configuration is saved');
 });
