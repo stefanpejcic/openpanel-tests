@@ -5,6 +5,13 @@ GITHUB_REPO="stefanpejcic/OpenPanel"
 #SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="/root/playwright-test"
 
+# one run at a time: every run reinstalls the same VPS, a second run (cron + manual) wipes the box under the first one
+exec 9>/var/lock/openpanel-os-install.lock
+if ! flock -n 9; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] another os_install.sh run is in progress, exiting"
+    exit 1
+fi
+
 # read shared secrets -- see ../.env.template for the full list
 # (GITHUB_TOKEN, SSH_PRIVATE_KEY, VIRTUALIZOR_API, API_KEY, API_HASH,
 # VPSID, VPS_IP, TEST_PASS, DOCKER_HUB_TOKEN, DISCORD_WEBHOOK)
@@ -316,6 +323,20 @@ install_openpanel() {
     return $?
   fi
 
+
+  if [[ "$exit_code" -ne 0 ]]; then
+    os_log "$os" "ERROR: OpenPanel installation failed on $ip (exit $exit_code)"
+    send_discord "❌ [$os] OpenPanel installation failed on $ip (exit $exit_code)"
+    return 1
+  fi
+
+  os_log "$os" "OpenPanel installation finished on $ip"
+
+  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "touch /etc/openpanel/openadmin/config/quick_start.dismissed" 2>&1
+
+  return 0
+}
+
 start_openpanel_container() {
   local ip="$1"
   local os="$2"
@@ -340,20 +361,6 @@ start_openpanel_container() {
   fi
 
   os_log "$os" "openpanel container started on $ip"
-  return 0
-}
-  
-
-  if [[ "$exit_code" -ne 0 ]]; then
-    os_log "$os" "ERROR: OpenPanel installation failed on $ip (exit $exit_code)"
-    send_discord "❌ [$os] OpenPanel installation failed on $ip (exit $exit_code)"
-    return 1
-  fi
-
-  os_log "$os" "OpenPanel installation finished on $ip"
-
-  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "touch /etc/openpanel/openadmin/config/quick_start.dismissed" 2>&1
-
   return 0
 }
 
@@ -406,7 +413,7 @@ sleep 90
   local pw_out
   local pw_rc
   pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$ADMIN_URL" PANEL_USERNAME="$TEST_ADMIN_USER" PANEL_PASSWORD="$TEST_ADMIN_PASS" \
-    npx playwright test -c openadmin/playwright.config.ts --project=setup --project=tests openadmin/tests/aa-users.spec.ts --grep "create user|test autologin" --reporter=line 2>&1)
+    npx playwright test -c openadmin/playwright.config.ts --project=setup --project=tests openadmin/tests/aa-users.spec.ts --grep "create user|test autologin" --grep-invert "recreate user" --reporter=line 2>&1)
   pw_rc=$?
   {
     echo "----- PLAYWRIGHT OUTPUT -----"

@@ -8,9 +8,14 @@ async function navigateToDashboardPage(page: any, view: 'overview' | 'tools' | '
 // OPEN
 test('access dashboard', async ({ page }) => {
   await navigateToDashboardPage(page);
-  // Overview is the default view, its Usage widget lists CPU next to disk, inodes and memory
-  await expect(page.locator('#dashboard_usage')).toBeVisible();
-  await expect(page.locator('#dashboard_usage').getByText(/^CPU$/)).toBeVisible();
+  // Overview is the default view, its Usage widget always lists disk and inodes
+  const usage = page.locator('#dashboard_usage');
+  await expect(usage).toBeVisible();
+  await expect(usage.getByText(/^Storage$/)).toBeVisible();
+  // CPU and memory only show with the usage module (its "View details" link), a fresh install has it off
+  if (await usage.locator('a[href="/server/usage"]').count()) {
+    await expect(usage.getByText(/^CPU$/)).toBeVisible();
+  }
   console.log('Dashboard page is accessible');
 });
 
