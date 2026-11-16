@@ -41,6 +41,12 @@ export default defineConfig({
       teardown: 'serial',
       metadata: { menuStyle: 'modern' },
     },
+    // login only: no SUITE_DOMAINS and no serial teardown, for checks on a fresh server (opencli/os_install.sh)
+    {
+      name: 'login',
+      testMatch: /auth\.setup\.ts/,
+      metadata: { menuStyle: 'modern', loginOnly: true },
+    },
     {
       name: 'tests',
       testDir: './tests',

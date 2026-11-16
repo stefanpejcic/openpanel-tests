@@ -207,8 +207,8 @@ def update_row(line):
     if not key_prefix:
         return line
 
-    lookup_key = f"{key_prefix}-{os_version}"
-    data = results.get(lookup_key)
+    # OS_MAP keys use the major version, the README can show a point release ("AlmaLinux | 9.7" is almalinux-9)
+    data = results.get(f"{key_prefix}-{os_version}") or results.get(f"{key_prefix}-{os_version.split('.')[0]}")
 
     if data is None:
         return line
@@ -423,7 +423,9 @@ sleep 90
   fi
 
   pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$PANEL_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
-    npx playwright test -c openpanel/playwright.config.ts --project=setup --project=tests openpanel/tests/dashboard.spec.ts --grep "access dashboard" --reporter=line 2>&1)
+    npx playwright test -c openpanel/playwright.config.ts --project=login --reporter=line 2>&1 &&
+    BASE_URL="$PANEL_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
+    npx playwright test -c openpanel/playwright.config.ts --project=tests --no-deps openpanel/tests/dashboard.spec.ts --grep "access dashboard" --reporter=line 2>&1)
   pw_rc=$?
   {
     echo "----- PLAYWRIGHT OUTPUT -----"
@@ -472,7 +474,7 @@ run_test_cycle() {
   run_openadmin_playwright_tests "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
 
   TEST_RESULTS["$os"]="pass"
-  #update_readme_results
+  update_readme_results
 }
 
 ############################################
