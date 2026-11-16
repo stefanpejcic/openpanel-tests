@@ -8,8 +8,10 @@ type State = { module_enabled: boolean; rate_limit: number; domains: Row[]; poli
 const CHROME = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 const GOOGLEBOT = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 
+// openadmin drops idle keep-alive connections after 2s, a GET that lands on one just gets retried
 async function state(page: Page): Promise<State> {
-  const res = await page.request.get('/security/bot-control?output=json');
+  const get = () => page.request.get('/security/bot-control?output=json');
+  const res = await get().catch(e => { if (!/socket hang up|ECONNRESET/.test(String(e))) throw e; return get(); });
   expect(res.ok()).toBeTruthy();
   return res.json();
 }
@@ -90,6 +92,21 @@ async function withDomain(page: Page, fn: (domain: string, api: APIRequestContex
   }
   expect((await state(page)).domains.find(d => d.domain === domain)?.policy).toBe(target!.policy);
   console.log(`${domain}: back on ${target!.policy}`);
+}
+
+// bearer token for /api/security/bot-control, undefined while the API is off in settings; no keep-alive, a POST on a connection openadmin just closed isn't retried
+async function apiAs(username: string, password: string): Promise<APIRequestContext | undefined> {
+  const anon = await pwRequest.newContext({ baseURL: process.env.BASE_URL, ignoreHTTPSErrors: true });
+  const login = await anon.post('/api/', { data: { username, password } });
+  const token = login.ok() ? (await login.json()).access_token : undefined;
+  await anon.dispose();
+  if (!token) return undefined;
+  return pwRequest.newContext({ baseURL: process.env.BASE_URL, ignoreHTTPSErrors: true, extraHTTPHeaders: { Authorization: `Bearer ${token}`, Connection: 'close' } });
+}
+
+async function apiPost(api: APIRequestContext, data: object) {
+  const res = await api.post('/api/security/bot-control', { data });
+  return { status: res.status(), body: await res.json().catch(() => ({})) };
 }
 
 test('page loads with module badge, traffic report and per-site policies', async ({ page }) => {
@@ -189,6 +206,60 @@ test('a lower rate limit set by the admin is what caddy enforces, then put back'
   console.log(`rate limit back on ${original}/min`);
 });
 
+test('API shows the same state and changes the limit and policies like the page', async ({ page }) => {
+  test.setTimeout(240_000);
+  const api = await apiAs(process.env.PANEL_USERNAME!, process.env.PANEL_PASSWORD!);
+  test.skip(!api, 'API is off in OpenAdmin settings');
+  try {
+    const anon = await pwRequest.newContext({ baseURL: process.env.BASE_URL, ignoreHTTPSErrors: true });
+    expect((await anon.get('/api/security/bot-control')).status(), 'no token must not get in').toBe(404);
+    await anon.dispose();
+    const res = await api!.get('/api/security/bot-control');
+    expect(res.status()).toBe(200);
+    const viaApi: State = await res.json();
+    const viaPage = await state(page);
+    expect(viaApi.rate_limit).toBe(viaPage.rate_limit);
+    expect(viaApi.domains.map(d => `${d.domain}:${d.policy}`).sort()).toEqual(viaPage.domains.map(d => `${d.domain}:${d.policy}`).sort());
+
+    for (const [data, code] of [
+      [{ action: 'set_rate_limit', rate_limit: 0 }, 400],
+      [{ action: 'set_rate_limit', rate_limit: 'lots' }, 400],
+      [{ action: 'bogus', policy: 'block' }, 400],
+      [{ action: 'set_policy', domain: 'not-on-this-server.example', policy: 'block' }, 404],
+    ] as const) {
+      expect((await apiPost(api!, data)).status, JSON.stringify(data)).toBe(code);
+    }
+    expect((await state(page)).rate_limit, 'a rejected API call changed the limit').toBe(viaPage.rate_limit);
+
+    const original = viaPage.rate_limit;
+    const lower = original > 3 ? 3 : original + 1;
+    try {
+      const set = await apiPost(api!, { action: 'set_rate_limit', rate_limit: lower });
+      expect(set.status, set.body.error).toBe(200);
+      expect((await state(page)).rate_limit).toBe(lower);
+      await page.goto('/security/bot-control');
+      await expect(page.locator('#rate_limit')).toHaveValue(String(lower));
+    } finally {
+      expect((await apiPost(api!, { action: 'set_rate_limit', rate_limit: original })).status).toBe(200);
+    }
+    expect((await state(page)).rate_limit).toBe(original);
+
+    await withDomain(page, async (domain, http) => {
+      const { gpt } = crawlers();
+      const before = (await state(page)).domains.find(d => d.domain === domain)!.policy;
+      const r = await apiPost(api!, { action: 'set_policy', domain, policy: 'block' });
+      expect(r.status, r.body.error).toBe(200);
+      expect((await state(page)).domains.find(d => d.domain === domain)?.policy).toBe('block');
+      expect(await hit(http, domain, gpt)).toBe(403);
+      expect(await hit(http, domain, CHROME)).not.toBe(403);
+      expect((await apiPost(api!, { action: 'set_policy', domain, policy: before })).status).toBe(200);
+      console.log(`API: limit ${original} -> ${lower} -> ${original}, ${domain} blocked for GPTBot and put back on ${before}`);
+    });
+  } finally {
+    await api?.dispose();
+  }
+});
+
 async function loginAs(browser: Browser, username: string, password: string): Promise<Page> {
   const context = await browser.newContext({ baseURL: process.env.BASE_URL, ignoreHTTPSErrors: true });
   const page = await context.newPage();
@@ -244,6 +315,25 @@ test('a reseller sees only their own domains and can not change the module or th
         headers: { Referer: new URL('/security/bot-control', process.env.BASE_URL).toString() },
       });
       expect((await state(page)).rate_limit, 'a reseller changed the rate limit').toBe(admin.rate_limit);
+    }
+
+    const rapi = await apiAs(username, password);
+    if (rapi) {
+      const st = await rapi.get('/api/security/bot-control');
+      expect(st.status()).toBe(200);
+      expect((await st.json()).domains, 'reseller API lists domains that are not theirs').toHaveLength(0);
+      for (const data of [{ action: 'set_rate_limit', rate_limit: 77 }, { action: 'disable_module' }, { action: 'enable_module' }]) {
+        expect((await apiPost(rapi, data)).status, JSON.stringify(data)).toBe(403);
+      }
+      if (admin.domains.length) {
+        expect((await apiPost(rapi, { action: 'set_policy', domain: admin.domains[0].domain, policy: 'block' })).status).toBe(404);
+      }
+      const after = await state(page);
+      expect(after.rate_limit).toBe(admin.rate_limit);
+      expect(after.module_enabled).toBe(admin.module_enabled);
+      expect(after.domains.map(d => d.policy)).toEqual(admin.domains.map(d => d.policy));
+      await rapi.dispose();
+      console.log(`reseller ${username} over the API: 0 domains, 403 on limit and module, 404 on the admin's domain`);
     }
     console.log(`reseller ${username}: page opens with 0 domains, no module or limit controls, limit stays ${admin.rate_limit}`);
     await reseller.context().close();

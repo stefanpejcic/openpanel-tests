@@ -146,7 +146,7 @@ test('API lists policies with the rate limit and only touches own domains', asyn
   const login = await anon.post('/api/login', { data: { username: process.env.PANEL_USERNAME, password: process.env.PANEL_PASSWORD } });
   test.skip(login.status() !== 200, `API login answered ${login.status()}, the api feature is off for this account`);
   const { token } = await login.json();
-  const api = await pwRequest.newContext({ baseURL: process.env.BASE_URL, ignoreHTTPSErrors: true, extraHTTPHeaders: { Authorization: `Bearer ${token}` } });
+  const api = await pwRequest.newContext({ baseURL: process.env.BASE_URL, ignoreHTTPSErrors: true, extraHTTPHeaders: { Authorization: `Bearer ${token}`, Connection: 'close' } });
   try {
     const list = await api.get('/api/bot-control');
     test.skip(list.status() === 403, 'bot_control or api feature is off for this account');
@@ -164,6 +164,24 @@ test('API lists policies with the rate limit and only touches own domains', asyn
       const s = await stats.json();
       expect(s.report.window).toBe('1h');
       expect(s.rate_limit).toBe(body.rate_limit);
+
+      const before = body.domains[0].policy;
+      const http = await pwRequest.newContext();
+      try {
+        const { gpt } = crawlers();
+        const set = await api.post(`/api/bot-control/${domain}`, { data: { policy: 'block' } });
+        expect(set.status(), await set.text()).toBe(200);
+        await listDomains(page);
+        await expect(policySelect(page, domain)).toHaveValue('block');
+        const code = await hit(http, domain, gpt);
+        // only meaningful on a domain that answers plain http, others redirect everyone
+        if (code !== 301 && code !== 308) expect(code).toBe(403);
+      } finally {
+        expect((await api.post(`/api/bot-control/${domain}`, { data: { policy: before } })).status()).toBe(200);
+        await http.dispose();
+      }
+      expect((await (await api.get('/api/bot-control')).json()).domains.find((d: { domain: string }) => d.domain === domain).policy).toBe(before);
+      console.log(`API: ${domain} set to block and put back on ${before}`);
     }
   } finally {
     await api.dispose();
