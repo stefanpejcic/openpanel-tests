@@ -34,7 +34,7 @@ test('page loads with module badge, traffic report and per-site policies', async
   await page.goto('/security/bot-control');
   await expect(page.getByRole('heading', { name: 'AI & bot control' })).toBeVisible();
   await expect(page.getByText(/^Module (enabled|disabled)$/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: "Who's hitting me" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Who's hitting the server" })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Per-site AI crawler policies' })).toBeVisible();
 
   const s = await state(page);
