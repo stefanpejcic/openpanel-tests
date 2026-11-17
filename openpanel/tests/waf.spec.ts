@@ -131,7 +131,8 @@ test('waf on/off and disabled rules for domain', async ({ page }) => {
 
   await openDomainPage(page, domain);
 
-  const ruleId = '941100 941110 941160 941390 949110';
+  // 949110 (anomaly score) can't be disabled per domain since 2.0.25, the XSS rules alone keep the score under the limit
+  const ruleId = '941100 941110 941160 941390';
   await saveExceptions(page, domain, '#removed_rules', ruleId);
 
   await expectAllowed(page, blockedUrl);
