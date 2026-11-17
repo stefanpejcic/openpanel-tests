@@ -84,7 +84,8 @@ async function saveExceptions(
 
   // Wait for the actual save request instead of guessing with waitForLoadState
   const [response] = await Promise.all([
-    page.waitForResponse(r => r.request().method() === 'POST'),
+    // only the save itself, any other POST (other specs, background calls) let the reload race the save
+    page.waitForResponse(r => r.request().method() === 'POST' && r.url().includes('/server/waf')),
     details.getByRole('button', { name: /save/i }).click(),
   ]);
   expect(response.status()).toBeLessThan(400);
