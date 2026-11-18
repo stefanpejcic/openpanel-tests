@@ -78,3 +78,46 @@ test('custom limits on a domain are saved and then put back', async ({ page }) =
   await save(original, perIP === '-' ? '0' : perIP, perSite === '-' ? '0' : perSite);
   console.log(`${domain}: custom 123/4567 saved, back to ${original}`);
 });
+
+// a low per-IP limit is what caddy enforces: past it the same visitor gets 429 within the minute, then it's put back
+test('a custom per-IP limit is enforced with 429', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/domains/ratelimit');
+  const table = page.locator('#ratelimit_table');
+  const [domainCol, settingCol, ipCol, siteCol] = [await colIndex(table, 'Domain'), await colIndex(table, 'Setting'), await colIndex(table, 'Per IP'), await colIndex(table, 'Per domain')];
+  const rows = page.locator('#ratelimit_table tbody tr:has(button:text("Edit"))');
+  let row = null as null | ReturnType<typeof rows.nth>;
+  let domain = '';
+  for (let i = 0; i < Math.min(await rows.count(), 10); i++) {
+    const d = (await rows.nth(i).locator('td').nth(domainCol).innerText()).trim();
+    const r = await page.request.get(`https://${d}/`, { maxRedirects: 0, timeout: 10_000 }).catch(() => null);
+    if (r && r.status() < 500) { row = rows.nth(i); domain = d; break; }
+  }
+  test.skip(!row, 'no reachable domain to test against');
+  const mode = (await row!.locator('td').nth(settingCol).innerText()).trim().toLowerCase();
+  const original = mode.startsWith('custom') ? 'custom' : mode.startsWith('off') ? 'off' : 'default';
+  const [perIP, perSite] = [(await row!.locator('td').nth(ipCol).innerText()).trim(), (await row!.locator('td').nth(siteCol).innerText()).trim()];
+
+  const save = async (m: string, ip?: string, site?: string) => {
+    await page.goto('/domains/ratelimit');
+    await page.locator('#ratelimit_table tbody tr', { hasText: domain }).getByRole('button', { name: 'Edit' }).click();
+    await page.locator(`input[name="mode"][value="${m}"]`).check();
+    if (m === 'custom') {
+      await page.locator('#edit_per_ip').fill(ip!);
+      await page.locator('#edit_per_site').fill(site!);
+    }
+    await page.locator('form:has(input[name="action"][value="domain"])').getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(`Rate limit for ${domain} updated.`)).toBeVisible({ timeout: 60_000 });
+  };
+
+  try {
+    await save('custom', '5', '100000');
+    await expect(async () => {
+      const codes: number[] = [];
+      for (let i = 0; i < 15; i++) codes.push((await page.request.get(`https://${domain}/?pw=${i}`, { maxRedirects: 0 })).status());
+      expect(codes).toContain(429);
+    }).toPass({ timeout: 90_000 });
+  } finally {
+    await save(original, perIP === '-' ? '0' : perIP, perSite === '-' ? '0' : perSite);
+  }
+});
