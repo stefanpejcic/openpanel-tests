@@ -232,14 +232,16 @@ test.describe('lists, file manager and DNS', () => {
   test('file manager files per page, buttons style, size limits and extensions', async () => {
     await user.context().clearCookies({ name: 'filemanager_view' });
     await user.goto('/files');
-    expect(await user.locator('#filemanager_table tbody tr').count()).toBeLessThanOrEqual(3);
+    // only file rows, the new file/folder drawers are rows too
+    expect(await user.locator('#filemanager_table tbody tr[data-row-index]').count()).toBeLessThanOrEqual(3);
+    await expect(user.locator('a[href*="page=2"]').first()).toBeAttached();
     const wantView = orig('filemanager_buttons_style') === 'modern' ? 'classic' : 'modern';
     await expect.poll(() => user.evaluate(() => (window as any).Alpine?.store('filemanagerView')?.value)).toBe(wantView);
     const html = await user.content();
     // the template pads these with spaces
-    expect(html).toMatch(/editSizeLimit:\s*6 \* 1024 \* 1024/);
-    expect(html).toMatch(/viewSizeLimit:\s*7 \* 1024 \* 1024/);
-    expect(html).toMatch(/downloadSizeLimit:\s*8 \* 1024 \* 1024/);
+    expect(html).toMatch(/editSizeLimit:\s*6\s*\*\s*1024\s*\*\s*1024/);
+    expect(html).toMatch(/viewSizeLimit:\s*7\s*\*\s*1024\s*\*\s*1024/);
+    expect(html).toMatch(/downloadSizeLimit:\s*8\s*\*\s*1024\s*\*\s*1024/);
     expect(html).toMatch(/Max size:\s*9 MB/);
     expect(html).toMatch(new RegExp(`extensions:\\s*'${editExt}'`));
     expect(html).toMatch(new RegExp(`images:\\s*'${imgExt}'`));
