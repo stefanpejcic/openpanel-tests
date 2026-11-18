@@ -281,7 +281,8 @@ test.describe('users, databases and security', () => {
       await setOpenpanelFields(page, {
         forbidden_usernames: `${await fu.inputValue()}\n${forbidden}`.trim(),
         restricted_domains: `${await rd.inputValue()}\n${restrictedDomain}`.trim(),
-        mysql_restricted_databases: `${orig('mysql_restricted_databases')} ${restrictedDb}`.trim(),
+        // with the prefix enforced the name that gets checked is <user>_name
+      mysql_restricted_databases: `${orig('mysql_restricted_databases')} ${restrictedDb} ${PANEL_USER}_${restrictedDb}`.trim(),
         mysql_enforce_username_prefix: true,
         password_strength: '100',
         captcha_provider: 'turnstile',
@@ -316,9 +317,16 @@ test.describe('users, databases and security', () => {
   test('restricted MySQL databases', async () => {
     await user.goto('/mysql/new');
     await user.locator('#database_name').fill(restrictedDb);
-    await user.getByRole('button', { name: 'Create Database' }).click();
-    await expect(user.getByText(/reserved/i).first()).toBeVisible({ timeout: 30_000 });
+    // the form refuses it before sending
+    await expect(user.getByText('This is a system database that can not be used.')).toBeVisible();
+    await expect(user.getByRole('button', { name: 'Create Database' })).toBeDisabled();
+    // and the server too when the form is skipped
+    const csrf = await user.locator('input[name="csrf_token"]').first().inputValue();
+    await user.request.post('/mysql/new', { form: { csrf_token: csrf, database_name: restrictedDb }, headers: { Referer: user.url() } });
+    await user.goto('/mysql');
+    await expect(user.locator('main')).not.toContainText(restrictedDb);
   });
+
 
   test('MySQL username prefix is added to new database names', async () => {
     const name = `pwprefix${stamp}`;
@@ -337,9 +345,16 @@ test.describe('users, databases and security', () => {
     await user.goto('/mysql/user');
     await user.locator('[name="db_user"]').fill(`pwweak${stamp}`);
     await user.locator('[name="password"]').fill('abc12345');
-    await user.locator('[name="password"]').press('Enter');
-    await expect(user.getByText('Password does not meet the required strength.')).toBeVisible({ timeout: 30_000 });
+    // the form already refuses it
+    await expect(user.getByText('Set a password that passes the strength check.')).toBeVisible();
+    await expect(user.getByRole('button', { name: 'Create user' })).toBeDisabled();
+    // and so does the server when the form is skipped
+    const csrf = await user.locator('input[name="csrf_token"]').first().inputValue();
+    await user.request.post('/mysql/user', { form: { csrf_token: csrf, db_user: `pwweak${stamp}`, password: 'abc12345' }, headers: { Referer: user.url() } });
+    await user.goto('/mysql/users');
+    await expect(user.locator('main')).not.toContainText(`pwweak${stamp}`);
   });
+
 
   test('captcha on the login page', async ({ browser }) => {
     const login = await openUserPanelLoggedOut(browser, userPanelOrigin(user));
@@ -348,15 +363,21 @@ test.describe('users, databases and security', () => {
   });
 
   test('enforce 2FA sends users to the 2FA setup first', async ({ page }) => {
-    test.setTimeout(300_000);
-    await changeOpenpanelSettings(page, { twofa_enforce: true });
-    await restartOpenPanel(page);
-    // the session from before the restart is still valid, the next page should be the 2FA setup
-    await expect(async () => {
-      await user.goto('/domains');
-      await expect(user).toHaveURL(/2fa|twofa|two-factor/i, { timeout: 5_000 });
-    }).toPass({ timeout: 120_000 });
+    try {
+      await changeOpenpanelSettings(page, { twofa_enforce: true });
+      await restartOpenPanel(page);
+      // the session from before the restart is still valid, the next page should be the 2FA setup
+      await expect(async () => {
+        await user.goto('/domains');
+        await expect(user).toHaveURL(/2fa|twofa|two-factor/i, { timeout: 5_000 });
+      }).toPass({ timeout: 120_000 });
+    } finally {
+      // later batches log in as the user, they can't with 2FA enforced
+      await changeOpenpanelSettings(page, { twofa_enforce: false });
+      await restartOpenPanel(page);
+    }
   });
+
 
   test('values that can not be exercised safely are saved and read back', async ({ page }) => {
     // rate limits would ban the test runner's IP, short sessions log it out, the rest only change timeouts
