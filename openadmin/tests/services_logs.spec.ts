@@ -65,3 +65,29 @@ test('edit log paths page validates JSON before submitting', async ({ page }) =>
 
   console.log('edit log paths rejected invalid JSON client-side');
 });
+
+// a log added on the settings page is offered in the viewer and loads, the original list goes back after
+// truncate isn't exercised, it would empty a real log on the server
+test('a log added in the log settings shows up in the viewer', async ({ page }) => {
+  await page.goto('/services/logs/edit');
+  const field = page.locator('textarea[name="data"]');
+  const original = await field.inputValue();
+  const list = JSON.parse(original);
+  const label = `PW log ${Date.now() % 100000}`;
+  const save = async (text: string) => {
+    await page.goto('/services/logs/edit');
+    await page.locator('textarea[name="data"]').fill(text);
+    await page.locator('form button[type="submit"]').last().click();
+    await expect(page.getByText('Config file updated successfully.')).toBeVisible();
+  };
+  try {
+    await save(JSON.stringify({ ...list, [label]: '/var/log/openpanel/admin/access.log' }, null, 2));
+    await page.goto('/services/logs');
+    await page.locator('#log-select').selectOption(label);
+    await expect(page.locator('#log-content')).not.toHaveText('Select a log file to view its content here.', { timeout: 15_000 });
+  } finally {
+    await save(original);
+  }
+  await page.goto('/services/logs');
+  await expect(page.locator(`#log-select option[value="${label}"]`)).toHaveCount(0);
+});
