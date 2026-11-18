@@ -83,3 +83,56 @@ test('monitored services link to notifications settings', async ({ page }) => {
   await expect(monitoredLink).toHaveText('Monitored');
   console.log('monitored service links to notifications settings');
 });
+
+// stopping a service through its row really stops it and starting brings it back, FTP is used since nothing else depends on it
+test('stop and start a service from its row', async ({ page }) => {
+  test.setTimeout(300_000);
+  const name = 'openadmin_ftp';
+  const row = () => page.locator('#exiting_users tbody tr:not([data-cluster-node])').filter({ has: page.getByRole('button', { name: new RegExp(`(Start|Stop) ${name}$`, 'i') }) }).first();
+  await page.goto('/services');
+  test.skip(await row().count() === 0, 'no FTP service row');
+  const act = async (verb: 'Stop' | 'Start') => {
+    await page.goto('/services');
+    await row().getByRole('button', { name: new RegExp(`^${verb} ${name}$`, 'i') }).first().click();
+    const ok = page.locator('[role="alertdialog"] [data-act="ok"], [role="dialog"] [data-act="ok"]');
+    if (await ok.isVisible().catch(() => false)) await ok.click();
+    await expect(async () => {
+      await page.goto('/services');
+      await expect(row().getByRole('button', { name: new RegExp(`^${verb === 'Stop' ? 'Start' : 'Stop'} ${name}$`, 'i') }).first()).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 180_000 });
+  };
+  const wasRunning = await row().getByRole('button', { name: new RegExp(`^Stop ${name}$`, 'i') }).count() > 0;
+  try {
+    if (wasRunning) { await act('Stop'); await act('Start'); }
+    else { await act('Start'); await act('Stop'); }
+  } finally {
+    const running = await row().getByRole('button', { name: new RegExp(`^Stop ${name}$`, 'i') }).count() > 0;
+    if (running !== wasRunning) await act(wasRunning ? 'Start' : 'Stop');
+  }
+});
+
+// Edit services is the list the status page shows, an added entry becomes a row
+test('a service added in Edit services shows on the status page', async ({ page }) => {
+  await page.goto('/services/edit');
+  const field = page.locator('textarea[name="data"]');
+  const original = await field.inputValue();
+  const list = JSON.parse(original);
+  const label = `PW service ${Date.now() % 100000}`;
+  const copy = Array.isArray(list) ? { ...list[0], name: label } : null;
+  test.skip(!copy, 'services.json is not a list');
+  const save = async (text: string) => {
+    await page.goto('/services/edit');
+    await page.locator('textarea[name="data"]').fill(text);
+    await page.locator('form button[type="submit"]').last().click();
+    await expect(page.getByText('Config file updated successfully.')).toBeVisible();
+  };
+  try {
+    await save(JSON.stringify([...list, copy], null, 2));
+    await page.goto('/services');
+    await expect(page.locator('#exiting_users')).toContainText(label);
+  } finally {
+    await save(original);
+  }
+  await page.goto('/services');
+  await expect(page.locator('#exiting_users')).not.toContainText(label);
+});
