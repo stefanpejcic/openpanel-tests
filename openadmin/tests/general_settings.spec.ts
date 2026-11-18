@@ -32,12 +32,15 @@ async function saveGeneral(page: Page, values: Partial<General>) {
   await expect(page.getByRole('alert').filter({ hasText: /settings updated|no changes/i }).first()).toBeVisible({ timeout: 60_000 });
 }
 
-// a domain of PANEL_USER, the /openpanel path redirect is served on user domains
+// any user domain that answers, the /openpanel path redirect is served on all of them
 async function userDomain(page: Page): Promise<string | null> {
-  await page.goto(`/users/${PANEL_USER}`);
-  const html = await page.content();
-  const m = html.match(/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.tests\.openpanel\.org/g);
-  return m?.find(d => !d.startsWith('server.')) ?? null;
+  await page.goto('/domains');
+  const names = await page.locator('tr[data-domain]').evaluateAll(trs => trs.map(tr => tr.getAttribute('data-domain') || ''));
+  for (const d of names.filter(Boolean).slice(0, 15)) {
+    const r = await page.request.get(`https://${d}/`, { maxRedirects: 0, timeout: 8_000 }).catch(() => null);
+    if (r && r.status() < 500) return d;
+  }
+  return null;
 }
 
 test.beforeAll(async ({ browser }, testInfo) => {
