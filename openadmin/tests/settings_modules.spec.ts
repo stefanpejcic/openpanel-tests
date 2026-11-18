@@ -118,11 +118,14 @@ async function status(user: Page, path: string): Promise<number> {
 
 async function saveModules(page: Page, on: Set<string>) {
   await page.goto('/settings/modules');
-  const boxes = page.locator('#tour-modules-grid input[type="checkbox"][role="switch"]');
-  for (const box of await boxes.all()) {
-    const name = await box.getAttribute('name');
-    if (name) await box.setChecked(on.has(name), { force: true });
-  }
+  // same as the page's Enable all / Disable all: each card's state is set, collapsed areas included
+  await page.evaluate(names => {
+    document.querySelectorAll('[data-row]:not([data-locked])').forEach(el => {
+      const name = el.querySelector('input[name]')?.getAttribute('name');
+      if (name) (window as any).Alpine.$data(el).enabled = names.includes(name);
+    });
+    document.querySelector('form:has(#tour-modules-grid)')?.dispatchEvent(new CustomEvent('modules-dirty', { bubbles: true }));
+  }, [...on]);
   // no flash on save, the POST answering is the signal
   const saved = page.waitForResponse(r => r.url().includes('/settings/modules') && r.request().method() === 'POST');
   await page.locator('#tour-save-modules-btn').click();
