@@ -107,3 +107,50 @@ export async function userExists(page: Page, username: string): Promise<boolean>
   const r = await page.goto(`/users/${username}`);
   return !!r && r.status() < 400 && page.url().includes(`/users/${username}`);
 }
+
+// same as the OpenPanel snapshot but for any settings form
+export async function snapshotForm(page: Page, path: string, form = 'main form[method="POST" i], main form[method="post"]'): Promise<Snapshot> {
+  await page.goto(path);
+  return page.locator(form).first().evaluate(f => [...new FormData(f as HTMLFormElement).entries()]
+    .filter(([k, v]) => typeof v === 'string' && k !== 'csrf_token')
+    .map(([k, v]) => [k, v as string] as [string, string]));
+}
+
+export async function restoreForm(page: Page, path: string, snap: Snapshot) {
+  await page.goto(path);
+  const status = await page.evaluate(async ([p, entries]) => {
+    const body = new URLSearchParams(entries as [string, string][]);
+    body.set('csrf_token', (document.querySelector('input[name=csrf_token]') as HTMLInputElement).value);
+    return (await fetch(p as string, { method: 'POST', body })).status;
+  }, [path, snap] as const);
+  expect(status, `restoring ${path}`).toBe(200);
+}
+
+// a throwaway account for checks that only apply to new users
+export async function createUser(page: Page, username: string, password = 'Pw-Test-Pass-2026!') {
+  await page.goto('/user/new');
+  await page.fill('[name="admin_username"]', username);
+  await page.fill('[name="admin_password"]', password);
+  await page.fill('[name="admin_email"]', `${username}@example.com`);
+  await page.click('#CreateUserButton');
+  await expect(page.getByText('user created successfully')).toBeVisible({ timeout: 240_000 });
+}
+
+export async function deleteUser(page: Page, username: string) {
+  const res = await page.request.get(`/users/${username}`, { maxRedirects: 0 });
+  if (res.status() !== 200) return;
+  await page.goto(`/users/${username}#delete`);
+  await page.locator('[x-model="confirmationText"]:visible').fill(username);
+  await page.getByRole('button', { name: /delete account permanently/i }).click();
+  await expect(page.getByText(`User '${username}' deleted successfully`, { exact: false })).toBeVisible({ timeout: 120_000 });
+}
+
+export async function loginAsUser(browser: Browser, testInfo: TestInfo, username: string): Promise<Page> {
+  const context = await browser.newContext(testInfo.project.use as any);
+  const page = await context.newPage();
+  await expect(async () => {
+    await page.goto(`/login/token/${username}`);
+    await expect(page).toHaveURL(/:\d+\/(dashboard|onboarding)/, { timeout: 15_000 });
+  }).toPass({ timeout: 180_000 });
+  return page;
+}
