@@ -9,6 +9,8 @@ import {
 // and the result is checked in the user panel as PANEL_USER, the original settings go back at the end
 
 // one worker runs them in order, a failure restarts the worker and afterAll puts the settings back first
+// user panel pages right after an OpenPanel restart can take a while
+test.describe.configure({ timeout: 180_000 });
 let original: Snapshot;
 const orig = (name: string) => original.find(([k]) => k === name)?.[1] ?? '';
 const flip = (name: string) => orig(name) !== 'yes';
@@ -234,10 +236,11 @@ test.describe('lists, file manager and DNS', () => {
     const wantView = orig('filemanager_buttons_style') === 'modern' ? 'classic' : 'modern';
     await expect.poll(() => user.evaluate(() => (window as any).Alpine?.store('filemanagerView')?.value)).toBe(wantView);
     const html = await user.content();
-    expect(html).toContain('editSizeLimit: 6 * 1024 * 1024');
-    expect(html).toContain('viewSizeLimit: 7 * 1024 * 1024');
-    expect(html).toContain('downloadSizeLimit: 8 * 1024 * 1024');
-    expect(html).toContain('Max size: 9 MB');
+    // the template pads these with spaces
+    expect(html).toMatch(/editSizeLimit:\s*6 \* 1024 \* 1024/);
+    expect(html).toMatch(/viewSizeLimit:\s*7 \* 1024 \* 1024/);
+    expect(html).toMatch(/downloadSizeLimit:\s*8 \* 1024 \* 1024/);
+    expect(html).toMatch(/Max size:\s*9 MB/);
     expect(html).toMatch(new RegExp(`extensions:\\s*'${editExt}'`));
     expect(html).toMatch(new RegExp(`images:\\s*'${imgExt}'`));
     expect(html).toMatch(new RegExp(`archives:\\s*'${arcExt}'`));
