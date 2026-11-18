@@ -31,10 +31,21 @@ export default defineConfig({
       dependencies: ['setup'],
     },
     {
+      // issue #1357, Delete unused has to run before any plan, user or service exists
+      name: 'podman-cleanup',
+      testDir: './tests',
+      testMatch: /0-podman_delete_unused\.spec\.ts/,
+      dependencies: ['cluster-setup'],
+      use: {
+        storageState: path.join(__dirname, '../.auth/session.json'),
+      },
+    },
+    {
       name: 'tests',
       testDir: './tests',
       testMatch: /.*\.spec\.ts/,
-      dependencies: ['cluster-setup'],
+      testIgnore: /0-podman_delete_unused\.spec\.ts/,
+      dependencies: ['podman-cleanup'],
       use: {
         storageState: path.join(__dirname, '../.auth/session.json'),
       },
@@ -46,7 +57,7 @@ export default defineConfig({
             testDir: './tests',
             testMatch: /.*\.spec\.ts/,
             // the cluster page and the switcher only exist on the master
-            testIgnore: /cluster\.spec\.ts/,
+            testIgnore: [/cluster\.spec\.ts/, /0-podman_delete_unused\.spec\.ts/],
             // not on tests, a failed master spec would skip the whole slave run
             dependencies: ['cluster-setup'],
             use: {
