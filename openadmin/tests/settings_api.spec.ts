@@ -48,3 +48,34 @@ test('api explorer sends a safe GET request and shows the response', async ({ pa
   await expect(op.locator('.responses-wrapper .live-responses-table .response-col_status').first()).toBeVisible({ timeout: 15_000 });
   console.log('api explorer executed a GET request and showed the response');
 });
+
+// switching it off answers every /api route with 404 right away, on brings them back, it's put back the way it was
+test('turning API access off and on closes and opens the API', async ({ page }) => {
+  await page.goto('/settings/api');
+  test.skip(await page.getByText('API Access is Disabled because BasicAuth is enabled').isVisible().catch(() => false), 'BasicAuth is on');
+  const wasOn = await page.getByRole('button', { name: 'Disable API access' }).isVisible().catch(() => false);
+  const probe = async () => (await page.request.get('/api/settings/notifications', { maxRedirects: 0 })).status();
+
+  const set = async (on: boolean) => {
+    await page.goto('/settings/api');
+    const btn = page.getByRole('button', { name: on ? 'Enable API access' : 'Disable API access' });
+    if (await btn.isVisible().catch(() => false)) {
+      await btn.click();
+      const ok = page.getByRole('alertdialog').getByRole('button').filter({ hasText: /disable|enable|continue/i });
+      if (await ok.isVisible().catch(() => false)) await ok.click();
+      await page.waitForLoadState();
+    }
+  };
+
+  try {
+    await set(false);
+    await expect(page.getByRole('button', { name: 'Enable API access' })).toBeVisible();
+    await expect.poll(probe).toBe(404);
+    await set(true);
+    await expect(page.getByRole('button', { name: 'Disable API access' })).toBeVisible();
+    // on, but without a token it's refused instead of missing
+    await expect.poll(probe).not.toBe(404);
+  } finally {
+    await set(wasOn);
+  }
+});
