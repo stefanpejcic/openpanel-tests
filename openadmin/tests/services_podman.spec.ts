@@ -182,3 +182,20 @@ test('vulnerability details of an image load', async ({ page }) => {
   const body = await res.json();
   expect(body).toBeTruthy();
 });
+
+// deleting an unused image from its row removes it, only images the tests pull (alpine, busybox) are touched
+test('an unused test image is deleted from its row', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/services/podman#images');
+  const rows = page.locator('#podman-images-tbody tr');
+  const target = rows.filter({ hasText: /alpine|busybox/ }).filter({ hasText: 'Unused' }).first();
+  test.skip(await target.count() === 0, 'no unused alpine/busybox image, the Delete unused spec pulls one');
+  const name = (await target.locator('td').nth(1).innerText()).trim().split('\n')[0];
+  await target.locator('[role="menuitem"]', { hasText: 'Delete' }).dispatchEvent('click');
+  const ok = page.getByRole('alertdialog').getByRole('button', { name: /delete/i });
+  if (await ok.isVisible().catch(() => false)) await ok.click();
+  await expect(async () => {
+    await page.goto('/services/podman#images');
+    await expect(page.locator('#podman-images-tbody tr').filter({ hasText: name }).filter({ hasText: 'Unused' })).toHaveCount(0, { timeout: 3_000 });
+  }).toPass({ timeout: 120_000 });
+});
