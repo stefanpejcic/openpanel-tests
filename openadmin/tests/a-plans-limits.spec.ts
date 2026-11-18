@@ -17,7 +17,9 @@ let user: Page;
 const LIMITS = {
   description: `PW limits ${stamp}`, domains_limit: '1', websites_limit: '1', db_limit: '1', email_limit: '1', ftp_limit: '1',
   disk_limit: '3', inodes_limit: '250000', cpu: '1', ram: '1', bandwidth: '50', max_email_quota: '1', max_hourly_email: '25',
+  upsell_url: `https://example.com/upgrade-${stamp}`,
 };
+let upsellPlan = '';
 
 async function planRow(page: Page) {
   await page.goto('/plans');
@@ -47,7 +49,11 @@ test.afterAll(async ({ browser }, testInfo) => {
 
 test('a plan is created with every limit', async ({ page }) => {
   await page.goto('/plans/new');
-  await fillPlan(page, { name: PLAN, ...LIMITS });
+  // any other plan is the upgrade
+  const upsell = page.locator('select[name="upsell_plan_id"] option').filter({ hasNotText: /^\s*$/ });
+  const opt = await upsell.evaluateAll(o => o.map(x => ({ v: (x as HTMLOptionElement).value, t: x.textContent?.trim() ?? '' })).find(x => x.v));
+  await fillPlan(page, { name: PLAN, ...LIMITS, ...(opt ? { upsell_plan_id: opt.v } : {}) });
+  upsellPlan = opt?.t ?? '';
   await page.locator('form button[type="submit"]').last().click();
   await expect(page.getByRole('alert').first()).toBeVisible({ timeout: 60_000 });
   const row = await planRow(page);
@@ -82,6 +88,13 @@ test('domains limit', async () => {
   await user.getByRole('textbox', { name: 'Domain*' }).fill(DOMAIN2);
   await user.getByRole('button', { name: 'Add Domain' }).click();
   await expect(user.getByText(/domain limit reached/i).first()).toBeVisible({ timeout: 120_000 });
+});
+
+test('at a limit the upgrade page offers the upsell plan and URL', async () => {
+  test.skip(!upsellPlan, 'there is no other plan to upgrade to');
+  await user.goto('/dashboard/upgrade');
+  await expect(user.locator(`a[href="${LIMITS.upsell_url}"]`).first()).toBeVisible();
+  await expect(user.locator('main')).toContainText(upsellPlan);
 });
 
 test('databases limit', async () => {
