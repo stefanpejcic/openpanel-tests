@@ -37,7 +37,8 @@ export async function setOpenpanelFields(page: Page, values: Record<string, stri
       await page.locator(`#${name}_switch`).setChecked(value, { force: true });
       continue;
     }
-    const el = page.locator(`${FORM} [name="${name}"], [form="changePanelSettings"][name="${name}"]`).first();
+    // the form is never closed in the template, so its fields belong to it without being inside it in the DOM
+    const el = page.locator(`[name="${name}"]:not([type="hidden"])`).first();
     const tag = await el.evaluate(e => e.tagName);
     if (tag === 'SELECT') await el.selectOption(value);
     else await el.fill(value);
