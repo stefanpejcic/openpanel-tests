@@ -127,8 +127,9 @@ export async function restoreForm(page: Page, path: string, snap: Snapshot) {
 }
 
 // a throwaway account for checks that only apply to new users
-export async function createUser(page: Page, username: string, password = 'Pw-Test-Pass-2026!') {
+export async function createUser(page: Page, username: string, password = 'Pw-Test-Pass-2026!', plan?: string) {
   await page.goto('/user/new');
+  if (plan) await page.locator(`input[name="plan_name"][value="${plan}"]`).check({ force: true });
   await page.fill('[name="admin_username"]', username);
   await page.fill('[name="admin_password"]', password);
   await page.fill('[name="admin_email"]', `${username}@example.com`);
