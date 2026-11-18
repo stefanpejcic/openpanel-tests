@@ -50,7 +50,7 @@ test.describe('code reaches the user panel', () => {
   const js = `window.pwCustomJs${stamp} = true;`;
   const header = `<meta name="pw-header" content="${stamp}">`;
   const footer = `<div id="pw-footer-${stamp}">footer ${stamp}</div>`;
-  const section = { section_title: `PW Section ${stamp}`, section_position: 'top', items: [{ label: `PW Link ${stamp}`, url: 'https://openpanel.com/', icon: 'bi bi-star' }] };
+  const section = { section_title: `PW Section ${stamp}`, section_position: 'before_domains', items: [{ label: `PW Link ${stamp}`, url: 'https://openpanel.com/', icon: 'bi bi-star' }] };
   // the startup script runs before the footer is read, so its line shows up next to the saved one
   const startup = `echo '<div id="pw-startup-${stamp}"></div>' >> /etc/openpanel/openpanel/custom_code/in_footer.html`;
   let user: Page;
@@ -95,8 +95,9 @@ test.describe('code reaches the user panel', () => {
   test('custom dashboard section', async () => {
     test.skip(!enterprise, 'needs an Enterprise license');
     await user.goto('/dashboard');
-    await expect(user.getByText(section.section_title)).toBeVisible();
-    await expect(user.locator('a', { hasText: `PW Link ${stamp}` })).toHaveAttribute('href', 'https://openpanel.com/');
+    // it sits in the dashboard's tools view, which may not be the one open
+    await expect(user.getByText(section.section_title).first()).toBeAttached();
+    await expect(user.locator('a', { hasText: `PW Link ${stamp}` }).first()).toHaveAttribute('href', 'https://openpanel.com/');
   });
 
   test('the before startup script runs when OpenPanel starts', async () => {
