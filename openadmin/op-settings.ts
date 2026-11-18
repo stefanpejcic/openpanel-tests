@@ -71,13 +71,24 @@ export async function restartOpenPanel(page: Page) {
 
 // a tab logged into the user panel as PANEL_USER through the admin's Login as user link
 export async function openUserPanel(browser: Browser, testInfo: TestInfo): Promise<Page> {
-  const context = await browser.newContext(testInfo.project.use as any);
-  const page = await context.newPage();
+  return loginAsUser(browser, testInfo, PANEL_USER);
+}
+
+// logs in through the admin's Login as user link, then hands back a tab whose relative URLs go to the user panel
+async function userPanelTab(browser: Browser, testInfo: TestInfo, username: string): Promise<Page> {
+  const admin = await browser.newContext(testInfo.project.use as any);
+  const page = await admin.newPage();
   await expect(async () => {
-    await page.goto(`/login/token/${PANEL_USER}`);
-    await expect(page).toHaveURL(/:2083\/(dashboard|onboarding)/, { timeout: 15_000 });
+    await page.goto(`/login/token/${username}`);
+    await expect(page).toHaveURL(/:\d+\/(dashboard|onboarding)/, { timeout: 15_000 });
   }).toPass({ timeout: 180_000 });
-  return page;
+  const origin = new URL(page.url()).origin;
+  const state = await admin.storageState();
+  await admin.close();
+  const context = await browser.newContext({ baseURL: origin, ignoreHTTPSErrors: true, storageState: state });
+  const tab = await context.newPage();
+  await tab.goto('/dashboard');
+  return tab;
 }
 
 export function userPanelOrigin(page: Page): string {
@@ -148,11 +159,5 @@ export async function deleteUser(page: Page, username: string) {
 }
 
 export async function loginAsUser(browser: Browser, testInfo: TestInfo, username: string): Promise<Page> {
-  const context = await browser.newContext(testInfo.project.use as any);
-  const page = await context.newPage();
-  await expect(async () => {
-    await page.goto(`/login/token/${username}`);
-    await expect(page).toHaveURL(/:\d+\/(dashboard|onboarding)/, { timeout: 15_000 });
-  }).toPass({ timeout: 180_000 });
-  return page;
+  return userPanelTab(browser, testInfo, username);
 }
