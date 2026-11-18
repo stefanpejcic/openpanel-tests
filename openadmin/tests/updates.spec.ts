@@ -40,25 +40,40 @@ test('check updates page', async ({ page, context }) => {
 });
   
 
-test('update notification preferences', async ({ page }) => {
+// every preference is saved, then the one the server had is put back, test servers keep auto updates off
+test('update preferences are saved and the original is put back', async ({ page }) => {
   await page.goto('/settings/updates');
-  await expect(page).toHaveURL(/settings\/updates/);
-
-  const combobox = page.getByRole('combobox');
+  const combobox = page.locator('select[name="preference"]');
   const saveBtn = page.getByRole('button', { name: 'Save' });
+  const original = await combobox.inputValue();
 
-  const options = ['major_only', 'minor_only', 'none', 'minor_and_major'];
-
-  for (const option of options) {
-    await combobox.selectOption(option);
+  try {
+    for (const option of ['major_only', 'minor_only', 'none', 'minor_and_major']) {
+      await combobox.selectOption(option);
+      await saveBtn.click();
+      await expect(page.getByText(/saved successfully/i)).toBeVisible();
+      await page.reload();
+      await expect(combobox).toHaveValue(option);
+    }
+  } finally {
+    await combobox.selectOption(original);
     await saveBtn.click();
     await expect(page.getByText(/saved successfully/i)).toBeVisible();
-
-    await expect(combobox).toHaveValue(option);
   }
+  await page.reload();
+  await expect(combobox).toHaveValue(original);
 });
 
-
+// it replaces the running build, so only where that's wanted
+test('update now starts the update and writes its log', async ({ page }) => {
+  test.skip(process.env.OPENADMIN_TEST_UPDATE_NOW !== '1', 'set OPENADMIN_TEST_UPDATE_NOW=1, it updates the server');
+  test.setTimeout(900_000);
+  await page.goto('/settings/updates');
+  await page.getByRole('button', { name: /update now/i }).click();
+  const ok = page.getByRole('alertdialog').getByRole('button').filter({ hasText: /update|continue/i });
+  if (await ok.isVisible().catch(() => false)) await ok.click();
+  await expect(page.getByText('Update process started successfully.', { exact: false })).toBeVisible({ timeout: 60_000 });
+});
 
 test('check changelog link', async ({ page, context }) => {
   await page.goto('/settings/updates');
