@@ -4,7 +4,7 @@ import { type Snapshot, snapshotForm, restoreForm, restartOpenPanel, openUserPan
 // a module that's off isn't registered in the user panel, so its pages are gone,
 // every module currently on is switched off, checked as testinguser, then switched back on and checked again
 
-// a page per module, POST-only routes answer 405 to GET while registered
+// a page per module, each one only exists while its module is on
 const PAGES: Record<string, string> = {
   docker: '/containers',
   terminal: '/containers/terminal',
@@ -98,7 +98,7 @@ const PAGES: Record<string, string> = {
   java: '/java/install',
   autoinstaller: '/auto-installer',
   wordpress: '/wordpress',
-  website_builder: '/website-builder/remove',
+  website_builder: '/website-builder/install',
 };
 
 // modules OpenAdmin lists that the panel doesn't register on its own, only the plan's feature set gates them
