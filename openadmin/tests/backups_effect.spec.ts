@@ -72,8 +72,12 @@ test('an account made while backups are admin run has them managed by the admini
     await setSchedule(page, 'daily');
     await createUser(page, NEW_USER);
     const user = await loginAsUser(browser, testInfo, NEW_USER);
+    // nothing to set up on such an account, it lands on restore and the destination settings are refused
     await user.goto('/backups');
-    await expect(user.getByText('Backups are managed by your administrator')).toBeVisible();
+    await expect(user).toHaveURL(/\/backups\/list/);
+    const r = await user.request.get('/backups/settings?output=json');
+    expect(r.status()).toBe(403);
+    expect(await r.text()).toContain('managed by your administrator');
     await user.context().close();
   } finally {
     await setSchedule(page, original);
