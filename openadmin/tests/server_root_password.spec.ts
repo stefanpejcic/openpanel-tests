@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/server/root-password');
 
   if (await page.getByText('Forbidden', { exact: true }).isVisible().catch(() => false)) {
-    test.skip(true, 'Got "Forbidden" response — skipping, likely auth/session issue');
+    test.skip(true, 'only the Super Administrator can open Root password, the test login is a regular admin');
   }
 });
 

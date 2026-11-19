@@ -43,7 +43,7 @@ test('keys tab is only shown when pubkey auth is enabled', async ({ page }) => {
     await expect(keysTab).toBeVisible();
     await keysTab.click();
     await expect(page).toHaveURL(/#keys/);
-    await expect(page.getByText('Add New SSH Key')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add SSH key' })).toBeVisible();
     await expect(page.locator('textarea[name="new_key"]')).toBeVisible();
     console.log('pubkey auth enabled, keys tab shows authorized keys management');
   } else {
