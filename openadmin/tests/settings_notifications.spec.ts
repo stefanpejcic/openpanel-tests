@@ -88,7 +88,10 @@ test('every action toggle is saved', async ({ page }) => {
 test('a RAM threshold over the usage raises an alert on the next check', async ({ page }) => {
   // disk is left alone, going over it makes sentinel empty Trash and prune images
   test.setTimeout(720_000);
-  await save(page, { ram: '1' });
+  // 10 is the lowest the form takes, RAM in use is always above it
+  await page.goto('/settings/notifications');
+  const min = (await page.locator('input[name="ram"]').getAttribute('min')) ?? '10';
+  await save(page, { ram: min });
   const before = await seen(page);
   await expect.poll(async () => (await fresh(page, before)).some(n => n.title === 'High Memory Usage!'), { timeout: 600_000, intervals: [15_000] }).toBe(true);
 });
