@@ -56,9 +56,11 @@ test('the options list is what users can change on PHP > Options', async ({ page
   await saveField(page, 'options', [...lines, OPTION].join('\n'), 'PHP options saved successfully!');
   expect(await read(page, 'options')).toContain(OPTION);
 
-  // read on every request, no restart
+  // read on every request, no restart; the list is per PHP version
+  await page.goto('/settings/defaults');
+  const def = await page.locator('select[name="DEFAULT_PHP_VERSION"]').inputValue();
   const user = await openUserPanel(browser, testInfo);
-  await user.goto('/php/options');
+  await user.goto(`/php/${def}/options`);
   await expect(user.locator('main')).toContainText(OPTION);
 
   await saveField(page, 'options', lines.join('\n'), 'PHP options saved successfully!');
@@ -80,7 +82,7 @@ test('a new account gets the default php.ini', async ({ page, browser }, testInf
 
   await createUser(page, NEW_USER);
   const user = await loginAsUser(browser, testInfo, NEW_USER);
-  await user.goto(`/php/php_ini_editor/${def}`);
+  await user.goto(`/php/${def}/editor`);
   expect(await user.content()).toContain(marker);
   await user.context().close();
 });
