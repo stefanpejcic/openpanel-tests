@@ -10,11 +10,12 @@ test('domain logs selector page loads when no domain chosen', async ({ page }) =
 
 test('domain access logs table loads with search/columns for a real domain', async ({ page }) => {
   await page.goto('/domains');
-  const vhostLink = page.locator('a[href^="/domains/vhost/"]').first();
-  const count = await vhostLink.count();
+  // the row links are built in the browser, the row itself has the domain and its owner
+  const row = page.locator('tr[data-domain][data-owner]').first();
+  const count = await row.count();
   test.skip(count === 0, 'No domains available to inspect logs for');
 
-  const href = await vhostLink.getAttribute('href');
+  const href = `/domains/vhost/${await row.getAttribute('data-owner')}/${await row.getAttribute('data-domain')}`;
   const parts = href!.split('/').filter(Boolean); // ['domains', 'vhost', username, domain]
   const username = parts[2];
   const domain = parts[3];
@@ -43,11 +44,12 @@ test('domain access logs table loads with search/columns for a real domain', asy
 
 test('domain goaccess stats page loads or shows not-yet-generated message', async ({ page }) => {
   await page.goto('/domains');
-  const vhostLink = page.locator('a[href^="/domains/vhost/"]').first();
-  const count = await vhostLink.count();
+  // the row links are built in the browser, the row itself has the domain and its owner
+  const row = page.locator('tr[data-domain][data-owner]').first();
+  const count = await row.count();
   test.skip(count === 0, 'No domains available to inspect stats for');
 
-  const href = await vhostLink.getAttribute('href');
+  const href = `/domains/vhost/${await row.getAttribute('data-owner')}/${await row.getAttribute('data-domain')}`;
   const parts = href!.split('/').filter(Boolean);
   const username = parts[2];
   const domain = parts[3];

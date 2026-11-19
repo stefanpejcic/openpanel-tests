@@ -2,10 +2,11 @@ import { test, expect } from '@playwright/test';
 
 async function firstDomainEditorUrl(page, attr: 'vhost' | 'caddy') {
   await page.goto('/domains');
-  const link = page.locator(`a[href^="/domains/${attr}/"]`).first();
-  const count = await link.count();
-  if (count === 0) return null;
-  return link.getAttribute('href');
+  // the row links are built in the browser, the row has the domain and its owner
+  const row = page.locator('tr[data-domain][data-owner]').first();
+  if (await row.count() === 0) return null;
+  const domain = await row.getAttribute('data-domain');
+  return attr === 'vhost' ? `/domains/vhost/${await row.getAttribute('data-owner')}/${domain}` : `/domains/caddy/${domain}`;
 }
 
 test('vhost editor loads, edits, saves, and reverts', async ({ page }) => {

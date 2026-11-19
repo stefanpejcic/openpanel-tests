@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 
 async function firstDomainSslUrl(page) {
   await page.goto('/domains');
-  const link = page.locator('a[href^="/domains/ssl/"]').first();
-  const count = await link.count();
-  if (count === 0) return null;
-  return link.getAttribute('href');
+  // the row links are built in the browser, the row has the domain
+  const row = page.locator('tr[data-domain]').first();
+  if (await row.count() === 0) return null;
+  return `/domains/ssl/${await row.getAttribute('data-domain')}`;
 }
 
 test('ssl management page loads for a domain', async ({ page }) => {
