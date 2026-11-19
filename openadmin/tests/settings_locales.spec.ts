@@ -57,7 +57,8 @@ test('the default locale is the login page language', async ({ page, browser }, 
   await setDefault(page, de!);
   if (!origin) await userLanguages(browser, testInfo);
   // the panel's cached default is dropped on save, no restart
-  const login = await openUserPanelLoggedOut(browser, origin);
+  // a browser language with no translation, so the server default decides
+  const login = await openUserPanelLoggedOut(browser, origin, 'xx-XX');
   await expect(async () => {
     await login.reload();
     await expect(login.getByText('Kennwort vergessen?')).toBeVisible({ timeout: 3_000 });
