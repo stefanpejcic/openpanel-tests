@@ -87,7 +87,9 @@ test('domains limit', async () => {
   await user.goto('/domains/new');
   await user.getByRole('textbox', { name: 'Domain*' }).fill(DOMAIN2);
   await user.getByRole('button', { name: 'Add Domain' }).click();
-  await expect(user.getByText(/domain limit reached/i).first()).toBeVisible({ timeout: 120_000 });
+  // the reason is in the log, which opens on its own after an error
+  await expect(user.locator('#statusMessage')).toContainText(/domain limit reached/i, { timeout: 120_000 });
+  await expect(user.locator('#statusMessage')).toBeVisible();
 });
 
 test('at a limit the upgrade page offers the upsell plan and URL', async () => {
