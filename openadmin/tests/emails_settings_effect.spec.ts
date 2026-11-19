@@ -6,11 +6,13 @@ import net from 'net';
 
 const host = new URL(process.env.BASE_URL!).hostname;
 
+// podman's port forward accepts the connection either way, only a running POP3 sends its +OK greeting
 function portOpen(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const s = net.connect(port, host);
     s.setTimeout(5_000, () => { s.destroy(); resolve(false); });
-    s.on('connect', () => { s.end(); resolve(true); });
+    s.on('data', d => { s.destroy(); resolve(d.toString().startsWith('+OK')); });
+    s.on('close', () => resolve(false));
     s.on('error', () => resolve(false));
   });
 }

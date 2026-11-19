@@ -37,7 +37,7 @@ const login = async (pass: string) => /a0 OK/.test(await imap([`LOGIN "${EMAIL}"
 function rcpt(): Promise<string> {
   return new Promise(resolve => {
     const s = net.connect(25, host);
-    const steps = [`EHLO pw.example.com`, `MAIL FROM:<pw@example.com>`, `RCPT TO:<${EMAIL}>`, 'QUIT'];
+    const steps = [`EHLO pw.example.com`, `MAIL FROM:<>`, `RCPT TO:<${EMAIL}>`, 'QUIT'];
     let buf = '';
     let step = 0;
     s.setTimeout(20_000, () => { s.destroy(); resolve(buf); });
@@ -58,7 +58,7 @@ function rcpt(): Promise<string> {
 async function api(page: Page, path: string, body: object) {
   await page.goto('/emails/accounts');
   const token = await page.locator('meta[name="csrf-token"]').getAttribute('content');
-  const r = await page.request.post(path, { data: body, headers: { 'X-CSRF-Token': token ?? '', Referer: page.url() } });
+  const r = await page.request.post(path, { data: body, headers: { 'X-CSRFToken': token ?? '', Referer: page.url() } });
   expect(r.status(), `${path} -> ${await r.text()}`).toBeLessThan(400);
 }
 
