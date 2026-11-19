@@ -3,6 +3,7 @@ import http from 'http';
 import os from 'os';
 import { type Snapshot, snapshotForm, restoreForm, createUser, deleteUser, withAdminPage } from '../op-settings';
 
+// the form is never closed in the template, its fields belong to it without being inside it, so they're found by name
 // Settings > Notifications: event toggles decide whether an action is logged, thresholds raise alerts on the next
 // sentinel run (every 5 minutes), the rest is saved and read back, the original settings go back at the end
 
@@ -19,10 +20,10 @@ async function notes(page: Page): Promise<Note[]> {
 async function save(page: Page, values: Record<string, string | boolean>) {
   await page.goto('/settings/notifications');
   for (const [k, v] of Object.entries(values)) {
-    if (typeof v === 'boolean') await page.locator(`${FORM} input[type="checkbox"][name="${k}"]`).setChecked(v, { force: true });
-    else await page.locator(`${FORM} [name="${k}"]`).fill(v);
+    if (typeof v === 'boolean') await page.locator(`input[type="checkbox"][name="${k}"]`).setChecked(v, { force: true });
+    else await page.locator(`[name="${k}"]:not([type="hidden"])`).fill(v);
   }
-  await page.getByRole('button', { name: 'Save changes' }).click();
+  await page.locator('#tour-save-changes-btn').click();
   await expect(page.getByText('Settings updated successfully.')).toBeVisible({ timeout: 60_000 });
 }
 
@@ -70,17 +71,17 @@ test('an enabled action is logged and a disabled one is not', async ({ page }) =
 
 test('every action toggle is saved', async ({ page }) => {
   await page.goto('/settings/notifications');
-  const boxes = page.locator(`${FORM} input[type="checkbox"][id]`);
+  const boxes = page.locator(`input[type="checkbox"][id]`);
   // services is a list and the mail_ ones are SMTP options, both are covered elsewhere
   const names = [...new Set((await boxes.evaluateAll(b => b.map(x => (x as HTMLInputElement).name)))
     .filter(n => n && n !== 'services' && !n.startsWith('mail_')))];
   expect(names.length).toBeGreaterThan(30);
   const flipped: Record<string, boolean> = {};
-  for (const n of names) flipped[n] = !(await page.locator(`${FORM} input[type="checkbox"][name="${n}"]`).first().isChecked());
+  for (const n of names) flipped[n] = !(await page.locator(`input[type="checkbox"][name="${n}"]`).first().isChecked());
   await save(page, flipped);
   await page.reload();
   for (const [n, v] of Object.entries(flipped)) {
-    expect(await page.locator(`${FORM} input[type="checkbox"][name="${n}"]`).first().isChecked(), n).toBe(v);
+    expect(await page.locator(`input[type="checkbox"][name="${n}"]`).first().isChecked(), n).toBe(v);
   }
 });
 
@@ -100,22 +101,22 @@ test('thresholds, connection limits, email and SMTP settings are saved', async (
   };
   const present: Record<string, string> = {};
   await page.goto('/settings/notifications');
-  for (const [k, v] of Object.entries(values)) if (await page.locator(`${FORM} [name="${k}"]`).count()) present[k] = v;
+  for (const [k, v] of Object.entries(values)) if (await page.locator(`[name="${k}"]:not([type="hidden"])`).count()) present[k] = v;
   await save(page, present);
   await page.reload();
-  for (const [k, v] of Object.entries(present)) await expect(page.locator(`${FORM} [name="${k}"]`).first(), k).toHaveValue(v);
+  for (const [k, v] of Object.entries(present)) await expect(page.locator(`[name="${k}"]:not([type="hidden"])`).first(), k).toHaveValue(v);
 });
 
 test('SSH whitelist is saved and bad entries are refused', async ({ page }) => {
   await page.goto('/settings/notifications');
-  const field = page.locator(`${FORM} [name="ssh_whitelist"]`);
+  const field = page.locator(`[name="ssh_whitelist"]`);
   test.skip(await field.count() === 0, 'no SSH whitelist field');
   await save(page, { ssh_whitelist: '203.0.113.7\n198.51.100.0/24' });
   await page.reload();
   await expect(field).toHaveValue(/203\.0\.113\.7[\s\S]*198\.51\.100\.0\/24/);
   await page.goto('/settings/notifications');
   await field.fill('not-an-ip');
-  await page.getByRole('button', { name: 'Save changes' }).click();
+  await page.locator('#tour-save-changes-btn').click();
   await expect(page.getByText('Invalid IP/CIDR: not-an-ip')).toBeVisible();
 });
 
