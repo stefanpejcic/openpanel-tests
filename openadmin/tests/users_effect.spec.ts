@@ -86,7 +86,8 @@ test('a language set by the admin is the one the user panel uses', async ({ page
   await page.goto(`/users/${username}`);
   const csrf = await page.locator('input[name="csrf_token"]').first().inputValue();
   const r = await page.request.post(`/users/${username}/account-setting/locale`, { form: { csrf_token: csrf, value: 'de' }, headers: { Referer: page.url() } });
-  test.skip(r.status() >= 400, 'German is not installed');
+  // errors come back as a flash on the redirected page, not a status
+  test.skip(/not-installed locale/.test(await r.text()), 'German is not installed');
   const u = await loginAsUser(browser, testInfo, username);
   await u.goto('/dashboard');
   await expect(u.locator('html')).toHaveAttribute('lang', /^de/);
