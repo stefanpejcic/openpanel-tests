@@ -98,7 +98,8 @@ export function userPanelOrigin(page: Page): string {
 // a logged out tab on the user panel, for the login page checks
 // acceptLanguage picks the visitor's browser language, it wins over the server default when installed
 export async function openUserPanelLoggedOut(browser: Browser, origin: string, acceptLanguage?: string): Promise<Page> {
-  const context = await browser.newContext({ ignoreHTTPSErrors: true, ...(acceptLanguage ? { extraHTTPHeaders: { 'Accept-Language': acceptLanguage } } : {}) });
+  // chromium sends its own Accept-Language over extraHTTPHeaders, locale is what changes it
+  const context = await browser.newContext({ ignoreHTTPSErrors: true, ...(acceptLanguage ? { locale: acceptLanguage } : {}) });
   const page = await context.newPage();
   await expect(async () => {
     const r = await page.goto(`${origin}/login`);
