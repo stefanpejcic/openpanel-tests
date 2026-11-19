@@ -62,3 +62,25 @@ test('every job carries its command so a save edits the right line', async ({ pa
     await expect(row).toContainText(command.trim().split(/\s+/).slice(0, 2).join(' '));
   }
 });
+
+// the switch adds or comments out the "echo cron executed" part of the line, docker-backup is used since it never runs (31 Feb)
+test('logging on a job can be turned off and back on', async ({ page }) => {
+  await page.goto('/server/crons');
+  const row = page.locator('#crons_table tbody tr[id]', { has: page.locator('input[name$="_command"][value*="docker-backup"]') });
+  test.skip(await row.count() === 0, 'no docker-backup cron job');
+  const box = row.locator('input[name$="_logging"]');
+  const was = await box.isChecked();
+  const set = async (on: boolean) => {
+    await page.goto('/server/crons');
+    await box.setChecked(on, { force: true });
+    await page.getByRole('button', { name: /save/i }).click();
+    await expect(page.getByText('Cron jobs updated successfully')).toBeVisible({ timeout: 30_000 });
+    await page.goto('/server/crons');
+    await expect(box).toBeChecked({ checked: on });
+  };
+  try {
+    await set(!was);
+  } finally {
+    await set(was);
+  }
+});
