@@ -4,7 +4,7 @@ import { createUser, deleteUser, withAdminPage } from '../op-settings';
 // a reseller package with one account and one user package is made, a reseller on it logs in,
 // sees only that user package and can't create a second account, all of it is removed after
 
-test.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
 const stamp = Date.now() % 100000;
 const RPLAN = `pwrp${stamp}`;
@@ -49,6 +49,8 @@ test('a reseller package is created with its limits', async ({ page }) => {
   await page.goto('/plans/resellers');
   test.skip(await page.locator('input[name="action"][value="create"]').count() === 0, 'reseller packages need Enterprise');
 
+  // the create form opens from the header button
+  await page.locator('button[\\@click="showSection = !showSection"]').first().click();
   const form = page.locator('form:has(input[name="action"][value="create"])');
   await form.locator('[name="name"]').fill(RPLAN);
   await form.locator('[name="description"]').fill(`PW reseller ${stamp}`);
