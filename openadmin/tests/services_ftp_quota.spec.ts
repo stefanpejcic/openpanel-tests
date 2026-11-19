@@ -16,8 +16,9 @@ test('an FTP quota set by the admin shows for the user', async ({ page, browser 
     await user.locator('[name="username"]').fill(FTP);
     await user.locator('[name="password"]').fill('Pw-Ftp-Pass-2026!');
     await user.locator('form[action="/ftp/new"] button[type="submit"]').click();
-    await expect(user.getByText(/created|added/i).first()).toBeVisible({ timeout: 120_000 });
-    await user.goto('/ftp');
+    await expect(user).toHaveURL(/created=/, { timeout: 120_000 });
+    // the created page already lists the account
+    await user.waitForLoadState();
     full = (await user.locator(`text=/${FTP}@[^\\s]+/`).first().innerText()).trim().split(/\s/)[0];
 
     // the admin list is cached, refresh it first
@@ -27,6 +28,8 @@ test('an FTP quota set by the admin shows for the user', async ({ page, browser 
     await page.goto('/services/ftp');
     const form = page.locator(`form[action="/services/ftp/quota"]:has(input[name="user"][value="${full}"])`);
     await expect(form).toHaveCount(1, { timeout: 30_000 });
+    // the quota field opens from the row's Set quota button
+    await page.locator('tr', { has: page.locator(`input[name="user"][value="${full}"]`) }).getByRole('button', { name: 'Set quota' }).click();
     await form.locator('input[name="quota"]').fill('123');
     await form.locator('input[name="quota"]').press('Enter');
     await expect(page.getByRole('alert').first()).toBeVisible({ timeout: 60_000 });
