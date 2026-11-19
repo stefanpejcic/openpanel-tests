@@ -4,9 +4,10 @@ import tls from 'tls';
 import { openUserPanel } from '../op-settings';
 
 // what the admin does to a mailbox on Emails > Accounts is checked over IMAP and SMTP:
-// a new password works and the old one doesn't, a quota is what IMAP reports, a receive restriction refuses mail
+// a new password works and the old one doesn't, a quota is what IMAP reports, receive and send restrictions refuse mail,
+// a deleted mailbox can't log in
 
-test.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
 const host = new URL(process.env.BASE_URL!).hostname;
 const stamp = Date.now() % 100000;
@@ -50,6 +51,30 @@ function rcpt(): Promise<string> {
     s.on('close', () => {
       const r = buf.split('\r\n').filter(l => /^\d{3} /.test(l));
       resolve(r[3] ?? buf);
+    });
+    s.on('error', () => resolve(buf));
+  });
+}
+
+// the reply to RCPT TO when the mailbox itself sends over authenticated SMTP on 465
+function submit(pass: string): Promise<string> {
+  return new Promise(resolve => {
+    const s = tls.connect({ host, port: 465, servername: host, rejectUnauthorized: false });
+    const auth = Buffer.from(`\0${EMAIL}\0${pass}`).toString('base64');
+    const steps = ['EHLO pw.example.com', `AUTH PLAIN ${auth}`, `MAIL FROM:<${EMAIL}>`, `RCPT TO:<${EMAIL}>`, 'QUIT'];
+    let buf = '';
+    let step = 0;
+    s.setTimeout(20_000, () => { s.destroy(); resolve(buf); });
+    s.on('data', d => {
+      buf += d.toString();
+      const lines = buf.trimEnd().split('\r\n');
+      const last = lines[lines.length - 1];
+      if (/^\d{3} /.test(last) && step < steps.length) s.write(steps[step++] + '\r\n');
+    });
+    s.on('close', () => {
+      const r = buf.split('\r\n').filter(l => /^\d{3} /.test(l));
+      // greeting, EHLO, AUTH, MAIL, RCPT
+      resolve(/^235/.test(r[2] ?? '') ? (r[4] ?? buf) : `auth failed: ${r[2] ?? buf}`);
     });
     s.on('error', () => resolve(buf));
   });
@@ -112,4 +137,20 @@ test('a receive restriction refuses mail and lifting it accepts it again', async
     await api(page, '/emails/api/restrict', { email: EMAIL, action: 'del', type: 'receive' });
   }
   await expect.poll(() => rcpt(), { timeout: 60_000, intervals: [3_000] }).toMatch(/^250/);
+});
+
+test('a send restriction refuses the mailbox sending and lifting it lets it send again', async ({ page }) => {
+  expect(await submit(P2)).toMatch(/^250/);
+  await api(page, '/emails/api/restrict', { email: EMAIL, action: 'add', type: 'send' });
+  try {
+    await expect.poll(() => submit(P2), { timeout: 60_000, intervals: [3_000] }).toMatch(/^5\d\d/);
+  } finally {
+    await api(page, '/emails/api/restrict', { email: EMAIL, action: 'del', type: 'send' });
+  }
+  await expect.poll(() => submit(P2), { timeout: 60_000, intervals: [3_000] }).toMatch(/^250/);
+});
+
+test('a mailbox deleted by the admin can no longer log in', async ({ page }) => {
+  await api(page, '/emails/api/delete', { emails: [EMAIL] });
+  await expect.poll(() => login(P2), { timeout: 60_000, intervals: [3_000] }).toBe(false);
 });

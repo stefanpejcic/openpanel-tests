@@ -83,3 +83,38 @@ test('an account made while backups are admin run has them managed by the admini
     await setSchedule(page, original);
   }
 });
+
+// a run writes into the Destination from Settings, a fresh folder holds exactly the one new archive
+test('a system backup goes to the destination set in Settings', async ({ page }) => {
+  test.setTimeout(600_000);
+  const dest = `/etc/openpanel/backups/system-pw${stamp}`;
+  await page.goto('/backups/system#settings');
+  const destination = page.locator('#destination');
+  const original = await destination.inputValue();
+  const setDestination = async (value: string) => {
+    await page.goto('/backups/system#settings');
+    await page.getByRole('tab', { name: 'Settings' }).click();
+    await destination.fill(value);
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('alert').first()).toContainText(/Backup settings saved/);
+  };
+  await setDestination(dest);
+  try {
+    await page.goto('/backups/system');
+    expect(await archives(page).count()).toBe(0);
+    await page.getByRole('button', { name: /run backup now/i }).first().click();
+    await confirmDialog(page);
+    await expect(async () => {
+      await page.goto('/backups/system');
+      expect(await archives(page).count()).toBe(1);
+    }).toPass({ timeout: 480_000, intervals: [10_000] });
+    await archives(page).first().click();
+    await confirmDialog(page);
+    await expect(async () => {
+      await page.goto('/backups/system');
+      expect(await archives(page).count()).toBe(0);
+    }).toPass({ timeout: 120_000 });
+  } finally {
+    await setDestination(original);
+  }
+});
