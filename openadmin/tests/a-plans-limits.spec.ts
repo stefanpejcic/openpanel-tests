@@ -4,7 +4,7 @@ import { createUser, deleteUser, loginAsUser, withAdminPage } from '../op-settin
 // a plan with every limit at 1 is created through the form, a user on it tries to go over each limit
 // in the user panel, the plan is edited and the user gets the new limit right away, all of it is removed after
 
-test.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
 const stamp = Date.now() % 100000;
 const PLAN = `pwplan${stamp}`;
@@ -100,42 +100,57 @@ test('at a limit the upgrade page offers the upsell plan and URL', async () => {
 });
 
 test('databases limit', async () => {
-  for (const [i, ok] of [[1, true], [2, false]] as const) {
+  // a new account's MariaDB starts in the background on first visit, the form shows once it's up
+  await expect(async () => {
     await user.goto('/mysql/new');
-    await user.locator('#database_name').fill(`pwdb${i}`);
-    await user.getByRole('button', { name: 'Create Database' }).click();
-    if (ok) await expect(user).toHaveURL(/created=/, { timeout: 60_000 });
-    else await expect(user.getByText('Database limit reached for your hosting plan.')).toBeVisible({ timeout: 60_000 });
+    await expect(user.locator('#database_name')).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 170_000, intervals: [10_000] });
+  await user.locator('#database_name').fill('pwdb1');
+  await user.getByRole('button', { name: 'Create Database' }).click();
+  await expect(user).toHaveURL(/created=/, { timeout: 60_000 });
+  // at the limit a second one is refused, either straight away on the page or when submitted
+  await user.goto('/mysql/new');
+  const button = user.getByRole('button', { name: 'Create Database' });
+  if (await user.locator('#database_name').isVisible() && await button.isEnabled()) {
+    await user.locator('#database_name').fill('pwdb2');
+    await button.click();
   }
+  await expect(user.getByText(/database limit reached|maximum number of databases/i).first()).toBeVisible({ timeout: 30_000 });
+  await user.goto('/mysql');
+  expect(await user.content()).not.toContain('pwdb2"');
 });
 
 test('email accounts limit and max mailbox size', async () => {
   test.setTimeout(240_000);
   await user.goto('/emails/new');
   // the mailbox size can't go over the plan's max_email_quota
-  const gb = user.locator('[name="gb"]');
-  if (await gb.count()) {
-    const max = await gb.getAttribute('max');
-    if (max) expect(Number(max)).toBeLessThanOrEqual(Number(LIMITS.max_email_quota));
-  }
+  await expect(user.getByText(`Maximum allowed: ${LIMITS.max_email_quota}G`)).toBeVisible();
   for (const [i, ok] of [[1, true], [2, false]] as const) {
     await user.goto('/emails/new');
     await user.locator('[name="username"]').fill(`pw${i}`);
     await user.locator('[name="password"]').fill('Pw-Mail-Pass-2026!');
     await user.getByRole('button', { name: /create email/i }).click();
     if (ok) await expect(user.getByText(/created|added/i).first()).toBeVisible({ timeout: 120_000 });
-    else await expect(user.getByText(/email account limit reached/i).first()).toBeVisible({ timeout: 60_000 });
+    else await expect(user.getByText(/email account limit reached|max number of email accounts/i).first()).toBeVisible({ timeout: 60_000 });
   }
 });
 
-test('FTP accounts limit', async () => {
-  test.setTimeout(240_000);
+test('FTP accounts limit', async ({ page }) => {
+  test.setTimeout(300_000);
+  // the FTP server may have been stopped by another test, it's started the way the Services page does
+  await page.goto('/services');
+  const csrf = await page.locator('input[name="csrf_token"]').first().inputValue();
+  await page.request.post('/service/start/openadmin_ftp', { form: { csrf_token: csrf }, headers: { Referer: page.url() }, timeout: 120_000 });
+  await expect(async () => {
+    await user.goto('/ftp/new');
+    await expect(user.locator('form[action="/ftp/new"]')).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 120_000, intervals: [5_000] });
   for (const [i, ok] of [[1, true], [2, false]] as const) {
     await user.goto('/ftp/new');
     await user.locator('[name="username"]').fill(`pwftp${i}`);
     await user.locator('[name="password"]').fill('Pw-Ftp-Pass-2026!');
     await user.locator('form[action="/ftp/new"] button[type="submit"]').click();
-    if (ok) await expect(user.getByText(/created|added/i).first()).toBeVisible({ timeout: 120_000 });
+    if (ok) await expect(user).toHaveURL(/created=/, { timeout: 120_000 });
     else await expect(user.getByText('FTP account limit reached for your hosting plan.')).toBeVisible({ timeout: 60_000 });
   }
 });
