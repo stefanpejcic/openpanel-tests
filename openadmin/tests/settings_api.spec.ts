@@ -54,7 +54,8 @@ test('turning API access off and on closes and opens the API', async ({ page }) 
   await page.goto('/settings/api');
   test.skip(await page.getByText('API Access is Disabled because BasicAuth is enabled').isVisible().catch(() => false), 'BasicAuth is on');
   const wasOn = await page.getByRole('button', { name: 'Disable API access' }).isVisible().catch(() => false);
-  const probe = async () => (await page.request.get('/api/settings/notifications', { maxRedirects: 0 })).status();
+  // without a token both states answer 404, only the off one says the API is disabled
+  const probe = async () => (await (await page.request.get('/api/settings/notifications', { maxRedirects: 0 })).text()).includes('API access is disabled') ? 'off' : 'on';
 
   const set = async (on: boolean) => {
     await page.goto('/settings/api');
@@ -70,11 +71,10 @@ test('turning API access off and on closes and opens the API', async ({ page }) 
   try {
     await set(false);
     await expect(page.getByRole('button', { name: 'Enable API access' })).toBeVisible();
-    await expect.poll(probe).toBe(404);
+    await expect.poll(probe).toBe('off');
     await set(true);
     await expect(page.getByRole('button', { name: 'Disable API access' })).toBeVisible();
-    // on, but without a token it's refused instead of missing
-    await expect.poll(probe).not.toBe(404);
+    await expect.poll(probe).toBe('on');
   } finally {
     await set(wasOn);
   }
