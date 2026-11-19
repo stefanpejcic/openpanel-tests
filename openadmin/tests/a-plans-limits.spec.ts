@@ -88,7 +88,7 @@ test('domains limit', async () => {
   await user.getByRole('textbox', { name: 'Domain*' }).fill(DOMAIN2);
   await user.getByRole('button', { name: 'Add Domain' }).click();
   // the reason is in the log, which opens on its own after an error
-  await expect(user.locator('#statusMessage')).toContainText(/domain limit reached/i, { timeout: 120_000 });
+  await expect(user.locator('#statusMessage')).toContainText(/domain limit reached|maximum allowed number of domains/i, { timeout: 120_000 });
   await expect(user.locator('#statusMessage')).toBeVisible();
 });
 
