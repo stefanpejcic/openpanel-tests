@@ -3,10 +3,10 @@
 GITHUB_REPO="stefanpejcic/OpenPanel"
 
 #SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIPT_DIR="/root/playwright-test"
+SCRIPT_DIR="${SCRIPT_DIR:-/root/playwright-test}"
 
 # one run at a time: every run reinstalls the same VPS, a second run (cron + manual) wipes the box under the first one
-exec 9>/var/lock/openpanel-os-install.lock
+exec 9>"${OS_INSTALL_LOCK:-/var/lock/openpanel-os-install.lock}"
 if ! flock -n 9; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] another os_install.sh run is in progress, exiting"
     exit 1
@@ -61,7 +61,7 @@ declare -A TEST_INSTALL_TIME
 #############################################################
 # LOGGING SETUP
 #############################################################
-LOG_DIR="/root/os-logs"
+LOG_DIR="${LOG_DIR:-/root/os-logs}"
 RUN_TS="$(date '+%Y%m%d-%H%M%S')"
 RUN_DIR="$LOG_DIR/$RUN_TS"
 mkdir -p "$RUN_DIR"

@@ -1,0 +1,65 @@
+name: OS install test
+
+# Reinstalls the dedicated test VPS through the Virtualizor API across a set of
+# operating systems, installs OpenPanel on each, checks it comes up, and pushes
+# the OS results table to stefanpejcic/OpenPanel's README (+ Discord). Replaces
+# the old cron on the runner box. Runs daily and on demand.
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 01:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      os:
+        description: "Single OS key to test, e.g. ubuntu-26 (empty = all in OS_MAP)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  # the script reinstalls the same VPS; never two at once
+  group: os-install-test
+  cancel-in-progress: false
+
+jobs:
+  os-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq sshpass
+
+      - name: Run OS install test
+        working-directory: ${{ github.workspace }}
+        env:
+          # path overrides so the script runs off the checkout, not /root
+          SCRIPT_DIR: ${{ github.workspace }}
+          LOG_DIR: ${{ github.workspace }}/os-logs
+          OS_INSTALL_LOCK: ${{ runner.temp }}/os-install.lock
+          SSH_PRIVATE_FILE: ${{ runner.temp }}/id_test
+          # secrets become env directly -- the script's missing .env is harmless
+          GITHUB_TOKEN: ${{ secrets.OPENPANEL_README_TOKEN }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          VIRTUALIZOR_API: ${{ secrets.VIRTUALIZOR_API }}
+          API_KEY: ${{ secrets.VIRTUALIZOR_API_KEY }}
+          API_HASH: ${{ secrets.VIRTUALIZOR_API_HASH }}
+          VPSID: ${{ secrets.TEST_VPSID }}
+          VPS_IP: ${{ secrets.TEST_VPS_IP }}
+          TEST_PASS: ${{ secrets.TEST_VPS_PASS }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          PANEL_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          PANEL_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          mkdir -p "$LOG_DIR"
+          bash opencli/os_install.sh "${{ inputs.os }}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: os-install-logs
+          path: os-logs/
+          if-no-files-found: ignore
