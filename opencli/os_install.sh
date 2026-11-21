@@ -157,6 +157,24 @@ wait_for_ssh() {
   return 1
 }
 
+# after a reinstall is triggered the box keeps answering on the OLD OS for a bit;
+# wait for it to actually go down (reimage started) before waiting for it to come
+# back, or we'd start installing on the old OS and get killed mid-reboot
+wait_for_ssh_down() {
+  local ip="$1"
+  local os="$2"
+  os_log "$os" "Waiting for $ip to go down (reinstall to start)..."
+  for i in {1..60}; do
+    if ! /usr/bin/nc -z -w3 "$ip" 22 2>>"$RUN_DIR/${os}.log"; then
+      os_log "$os" "$ip is down — reimage in progress"
+      return 0
+    fi
+    sleep 10
+  done
+  os_log "$os" "WARN: $ip never went down 10m after reinstall trigger, proceeding anyway"
+  return 0
+}
+
 update_readme_results() {
   log "Updating README OS table with test results..."
 
@@ -289,7 +307,7 @@ install_openpanel() {
   local ip="$1"
   local os="$2"
   local attempt="${3:-1}"
-  local max_attempts=2
+  local max_attempts=3
 
   os_log "$os" "Starting OpenPanel installation on $ip (attempt $attempt/$max_attempts)..."
 
@@ -465,8 +483,11 @@ run_test_cycle() {
   TEST_TIMESTAMPS["$os"]=$(date '+%Y-%m-%d %H:%M UTC')
 
   reinstall_os "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
-  sleep 60
+  sleep 30
+  wait_for_ssh_down "$VPS_IP" "$os"
   wait_for_ssh "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
+  # let the fresh OS settle (cloud-init / first boot) before installing
+  sleep 30
 
   local install_start install_end
   install_start=$(date +%s)
