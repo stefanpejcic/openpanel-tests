@@ -26,6 +26,12 @@ const INSTALLER_SPECS = /[\\/](drupal|joomla|matomo|mediawiki|moodle|nextcloud|o
 export default defineConfig({
   testDir: '.',
 
+  // A whole-suite wall clock, opt-in via env so the cron runner (which sets
+  // nothing) is unchanged. CI sets PW_GLOBAL_TIMEOUT so a stuck action can't
+  // sit until the job's hard cap: Playwright aborts cleanly at this point and
+  // still emits the json/html reports, so we get partial results + the log.
+  globalTimeout: process.env.PW_GLOBAL_TIMEOUT ? Number(process.env.PW_GLOBAL_TIMEOUT) : undefined,
+
   use: {
     baseURL: BASE_URL,
     ignoreHTTPSErrors: true,

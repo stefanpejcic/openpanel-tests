@@ -15,6 +15,11 @@ if (!BASE_URL) {
 export default defineConfig({
   testDir: '.',
 
+  // opt-in whole-suite wall clock (CI sets PW_GLOBAL_TIMEOUT); the cron runner
+  // leaves it unset and is unaffected. Lets CI abort a stuck run cleanly with
+  // reports written, instead of hanging to the job's hard timeout.
+  globalTimeout: process.env.PW_GLOBAL_TIMEOUT ? Number(process.env.PW_GLOBAL_TIMEOUT) : undefined,
+
   use: {
     baseURL: BASE_URL,
     ignoreHTTPSErrors: true,
