@@ -534,10 +534,21 @@ test('terminal page - selecting service redirects', async ({ page }) => {
   }
 });
 
+// the user's newest php-fpm service from the terminal picker, so a new default PHP version doesn't break the terminal tests
+async function newestPhpFpm(page: Page): Promise<string> {
+  await page.goto('/containers/terminal');
+  const values = await page.locator('select#service-select option:not([disabled])').evaluateAll(
+    opts => opts.map(o => (o as HTMLOptionElement).value).filter(v => /^php-fpm-\d+\.\d+$/.test(v)));
+  expect(values.length, 'a running php-fpm service').toBeGreaterThan(0);
+  const ver = (v: string) => v.replace('php-fpm-', '').split('.').map(Number);
+  values.sort((a, b) => ver(b)[0] - ver(a)[0] || ver(b)[1] - ver(a)[1]);
+  return values[0];
+}
+
 test('terminal', async ({ page }) => {
   test.setTimeout(90_000);
 
-  await page.goto('/containers/terminal/php-fpm-8.5');
+  await page.goto(`/containers/terminal/${await newestPhpFpm(page)}`);
   const terminalOutput = page.locator('.xterm-rows');
   // keys typed before the shell has attached are lost, e.g. right after the container was restarted
   await expect(terminalOutput).toContainText(/[#$]\s*$/, { timeout: 30_000 });
@@ -553,7 +564,7 @@ test('terminal', async ({ page }) => {
 });
 
 test('terminal - reconnect button appears after disconnect', async ({ page }) => {
-  await page.goto('/containers/terminal/php-fpm-8.5');
+  await page.goto(`/containers/terminal/${await newestPhpFpm(page)}`);
   await page.waitForTimeout(2000);
 
   // Status dot and text should be present
