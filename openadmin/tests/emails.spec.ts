@@ -193,13 +193,12 @@ test('emails queue search filters rows', async ({ page }) => {
     return;
   }
 
+  // the search runs on the server so a queue of tens of thousands of messages stays paged
   await searchInput.fill('zzznomatch_xyz_unique');
-  const rows = page.locator('tbody tr[x-show]');
-  for (const row of await rows.all()) {
-    await expect(row).toBeHidden();
-  }
-
-  await searchInput.fill('');
+  await Promise.all([page.waitForURL(/[?&]q=zzznomatch_xyz_unique/), searchInput.press('Enter')]);
+  await expect(page.locator('#email_queue tbody tr')).toHaveCount(1);
+  await expect(page.locator('#email_queue tbody')).toContainText(/No messages match\.|Queue is empty\./);
+  await expect(searchInput).toHaveValue('zzznomatch_xyz_unique');
 });
 
 test('emails queue bulk actions visible when messages exist', async ({ page }) => {
