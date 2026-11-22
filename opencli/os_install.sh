@@ -137,6 +137,15 @@ reinstall_os() {
     send_discord "❌ [$os] Reinstall failed (curl exit $rc)"
     return 1
   fi
+  # Virtualizor answers 200 even when it refuses, e.g. {"Invalid IP access":"<runner ip>"} when the API key doesn't allow this IP
+  local api_err
+  api_err=$(echo "$resp" | jq -r 'if type == "object" then (.["Invalid IP access"] // empty | "Invalid IP access from \(.)"), (.error // empty | tostring) else empty end' 2>/dev/null | head -1)
+  # a silent refusal is still caught by wait_for_ssh_down when the box never goes down
+  if [[ -n "$api_err" ]]; then
+    os_log "$os" "ERROR: Virtualizor refused the reinstall for $os: $api_err"
+    send_discord "❌ [$os] Virtualizor refused the reinstall: $api_err"
+    return 1
+  fi
   os_log "$os" "Reinstall triggered for $os"
 }
 
@@ -171,8 +180,10 @@ wait_for_ssh_down() {
     fi
     sleep 10
   done
-  os_log "$os" "WARN: $ip never went down 10m after reinstall trigger, proceeding anyway"
-  return 0
+  # installing on the old OS would test nothing and report a stale result
+  os_log "$os" "ERROR: $ip never went down 10m after reinstall trigger, the reinstall didn't happen"
+  send_discord "❌ [$os] $ip never went down after the reinstall trigger"
+  return 1
 }
 
 update_readme_results() {
@@ -322,6 +333,12 @@ install_openpanel() {
     echo "----- INSTALL EXIT CODE: $exit_code -----"
   } >> "$RUN_DIR/${os}.log"
   os_log "$os" "Install command exit code: $exit_code"
+  # 255 is ssh itself failing, a refused key is not a reboot so retrying won't help
+  if [[ "$exit_code" -eq 255 ]] && grep -q "Permission denied" <<<"$install_out"; then
+    os_log "$os" "ERROR: SSH key refused by $ip ($(grep -m1 'Permission denied' <<<"$install_out"))"
+    send_discord "❌ [$os] SSH key refused, install not started"
+    return 1
+  fi
 
   if [[ "$exit_code" -eq 255 ]]; then
     if [[ "$attempt" -ge "$max_attempts" ]]; then
@@ -484,7 +501,7 @@ run_test_cycle() {
 
   reinstall_os "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
   sleep 30
-  wait_for_ssh_down "$VPS_IP" "$os"
+  wait_for_ssh_down "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
   wait_for_ssh "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
   # let the fresh OS settle (cloud-init / first boot) before installing
   sleep 30
@@ -557,3 +574,6 @@ else
   send_discord "All OS tests passed in $TOTAL_DURATION (logs: $RUN_DIR)"
 fi
 log "========================================="
+
+# a failed OS must fail the run, otherwise the workflow shows green
+[[ ${#FAILED[@]} -eq 0 ]] || exit 1
