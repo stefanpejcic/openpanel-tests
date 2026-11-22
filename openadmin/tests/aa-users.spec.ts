@@ -1,21 +1,28 @@
 // NOT FINISHED!
 import { test, expect } from '@playwright/test';
+import { withAdminPage } from '../op-settings';
 
 async function navigateToUsersPage(page: any) {
   await page.goto(`/users`);
   await expect(page).toHaveURL(/users/);
 }
 
-// a full run ends with "recreate user" and a stopped one can end anywhere, so testinguser may already exist
-async function removeTestingUserIfPresent(page: any) {
-  const res = await page.request.get('/users/testinguser', { maxRedirects: 0 });
+// its own throwaway account, testinguser belongs to the user panel suite and must survive this spec
+// a full run ends with "recreate user" and a stopped one can end anywhere, so pwaausers may already exist
+async function removeTestUserIfPresent(page: any) {
+  const res = await page.request.get('/users/pwaausers', { maxRedirects: 0 });
   if (res.status() !== 200) return;
-  await page.goto('/users/testinguser#delete');
-  await page.locator('[x-model="confirmationText"]:visible').fill('testinguser');
+  await page.goto('/users/pwaausers#delete');
+  await page.locator('[x-model="confirmationText"]:visible').fill('pwaausers');
   await page.getByRole('button', { name: /delete account permanently/i }).click();
-  await expect(page.getByText("User 'testinguser' deleted successfully", { exact: false })).toBeVisible({ timeout: 60_000 });
-  console.log('removed testinguser left by an earlier run');
+  await expect(page.getByText("User 'pwaausers' deleted successfully", { exact: false })).toBeVisible({ timeout: 60_000 });
+  console.log('removed pwaausers left by an earlier run');
 }
+
+test.afterAll(async ({ browser }, testInfo) => {
+  test.setTimeout(120_000);
+  await withAdminPage(browser, testInfo, removeTestUserIfPresent);
+});
 
 
 
@@ -32,12 +39,12 @@ test('create user', async ({ page }) => {
   // etc.) is noticeably slower than the CLI equivalent and can occasionally
   // take well over a minute under load -- give it plenty of room.
   test.setTimeout(210_000);
-  await removeTestingUserIfPresent(page);
+  await removeTestUserIfPresent(page);
 
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
 
-  await page.fill('[name="admin_username"]', 'testinguser');
+  await page.fill('[name="admin_username"]', 'pwaausers');
   await page.fill('[name="admin_password"]', 'testingpassword');
   await page.fill('[name="admin_email"]', 'stefan@test.rs');
 
@@ -55,7 +62,7 @@ test('test autologin', async ({ page, context }) => {
   // own timeout doesn't cut that short (default is 30s).
   test.setTimeout(90_000);
 
-  const impersonateLink = page.locator('a[href="/login/token/testinguser"]');
+  const impersonateLink = page.locator('a[href="/login/token/pwaausers"]');
 
   await expect(async () => {
     await navigateToUsersPage(page);
@@ -86,8 +93,8 @@ test('test autologin', async ({ page, context }) => {
 
 
 test('open single user', async ({ page }) => {
-  await page.goto('/users/testinguser');
-  await expect(page).toHaveURL(/\/users\/testinguser/);
+  await page.goto('/users/pwaausers');
+  await expect(page).toHaveURL(/\/users\/pwaausers/);
 
   const nav = page.getByRole('navigation', {
     name: 'core navigation links',
@@ -118,8 +125,8 @@ test('open single user', async ({ page }) => {
 });
 
 test('test tabs', async ({ page }) => {
-  await page.goto('/users/testinguser');
-  await expect(page).toHaveURL(/\/users\/testinguser/);
+  await page.goto('/users/pwaausers');
+  await expect(page).toHaveURL(/\/users\/pwaausers/);
 
   const nav = page.getByRole('navigation', {
     name: 'core navigation links',
@@ -349,7 +356,7 @@ test('test tabs', async ({ page }) => {
   );
 
   await expect(suspendConfirmation).toBeVisible();
-  await suspendConfirmation.fill('testinguser');
+  await suspendConfirmation.fill('pwaausers');
 
   await expect(
     suspendPanel.getByRole('button', {
@@ -378,7 +385,7 @@ test('test tabs', async ({ page }) => {
   );
 
   await expect(deleteConfirmation).toBeVisible();
-  await deleteConfirmation.fill('testinguser');
+  await deleteConfirmation.fill('pwaausers');
 
   await expect(
     deletePanel.getByRole('button', {
@@ -399,7 +406,7 @@ test('test tabs', async ({ page }) => {
   await expect(activityPanel).toBeVisible();
 
   const activityLink = activityPanel.locator(
-    'a[href="/json/user-activity/testinguser?raw=true"]'
+    'a[href="/json/user-activity/pwaausers?raw=true"]'
   );
 
   await expect(activityLink).toBeVisible();
@@ -417,7 +424,7 @@ test('test tabs', async ({ page }) => {
   await expect(loginPanel).toBeVisible();
 
   const loginLogLink = loginPanel.locator(
-    'a[href="/json/user-logins/testinguser?raw=true"]'
+    'a[href="/json/user-logins/pwaausers?raw=true"]'
   );
 
   await expect(loginLogLink).toBeVisible();
@@ -477,8 +484,8 @@ test('toggle columns', async ({ page }) => {
 test('delete user', async ({ page }) => {
   await navigateToUsersPage(page);
 
-  await page.goto('/users/testinguser#delete');
-  await expect(page).toHaveURL(/\/users\/testinguser#delete$/);
+  await page.goto('/users/pwaausers#delete');
+  await expect(page).toHaveURL(/\/users\/pwaausers#delete$/);
 
   await expect(page.getByText('delete user account', { exact: false })).toBeVisible();
 
@@ -492,22 +499,22 @@ test('delete user', async ({ page }) => {
   // https://github.com/stefanpejcic/OpenPanel/issues/948
   await confirmationInput.click();
   await confirmationInput.press('Enter');
-  await expect(page).toHaveURL(/\/users\/testinguser#delete$/);
-  await expect(page.getByText("User 'testinguser' deleted successfully", {exact: false,})).not.toBeVisible();
+  await expect(page).toHaveURL(/\/users\/pwaausers#delete$/);
+  await expect(page.getByText("User 'pwaausers' deleted successfully", {exact: false,})).not.toBeVisible();
   console.log('submit is not working without confirmation (issue #948)');
 
   // valid deletion
-  await confirmationInput.fill('testinguser');
+  await confirmationInput.fill('pwaausers');
   await expect(deleteButton).toBeEnabled();
   await expect(
   page.getByRole('button', { name: /delete account permanently/i })
 ).toHaveCount(1);
   await deleteButton.click();
   await expect(page).toHaveURL(/\/users\/?$/);
-  await expect(page.getByText("User 'testinguser' deleted successfully", {exact: false,})).toBeVisible();
+  await expect(page.getByText("User 'pwaausers' deleted successfully", {exact: false,})).toBeVisible();
 
   const userRows = page.locator('table tbody tr:not([data-cluster-node])');
-  await expect(userRows.filter({ hasText: 'testinguser' })).toHaveCount(0);
+  await expect(userRows.filter({ hasText: 'pwaausers' })).toHaveCount(0);
 
   console.log('delete user is working');
 });
@@ -520,7 +527,7 @@ test('recreate user', async ({ page }) => {
   await page.goto(`/user/new`);
   await expect(page).toHaveURL(/user\/new/);
 
-  await page.fill('[name="admin_username"]', 'testinguser');
+  await page.fill('[name="admin_username"]', 'pwaausers');
   await page.fill('[name="admin_password"]', 'testingpassword');
   await page.fill('[name="admin_email"]', 'stefan@test.rs');
 
