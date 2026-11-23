@@ -117,7 +117,8 @@ test('delete single notification requires a second confirm click', async ({ page
 test('manage link and turn off link point at the right pages', async ({ page }) => {
   await page.goto('/notifications');
 
-  const manage = page.locator('#notifications_table tbody a[title][aria-label]').first();
+  // the manage link is the first item in the row's three dot menu
+  const manage = page.locator('#notifications_table tbody .nt-menu-list a.nt-manage').first();
   if ((await manage.count()) > 0) {
     const href = await manage.getAttribute('href');
     expect(href).toMatch(/^\//);
