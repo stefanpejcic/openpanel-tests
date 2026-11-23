@@ -64,40 +64,89 @@ test('search filters the notifications table', async ({ page }) => {
 test('acknowledge a single unread notification', async ({ page }) => {
   await page.goto('/notifications');
 
-  const unreadRow = page.locator('#tour-notifications-table tbody tr').filter({ has: page.locator('a[title="Click to Acknowledge notification"]') }).first();
-  const count = await unreadRow.count();
-  test.skip(count === 0, 'No unread notifications to acknowledge');
+  const ack = page.locator('#notifications_table tbody button[aria-label^="Acknowledge "]').first();
+  test.skip((await ack.count()) === 0, 'No unread notifications to acknowledge');
 
-  await unreadRow.locator('a[title="Click to Acknowledge notification"]').click();
-  await page.waitForLoadState();
+  const unreadBefore = await page.locator('#notifications_table tbody button[aria-label^="Acknowledge "]').count();
+  await ack.click();
+  await page.waitForLoadState('load');
+  await expect(page.locator('#notifications_table tbody button[aria-label^="Acknowledge "]')).toHaveCount(unreadBefore - 1);
 
   console.log('acknowledged a single unread notification');
+});
+
+test('row menu has settings and delete, and closes on outside click', async ({ page }) => {
+  await page.goto('/notifications');
+
+  const menu = page.locator('details.nt-menu').first();
+  test.skip((await menu.count()) === 0, 'No notifications to open a menu on');
+
+  // the delete confirm used to flash on every row while the page loaded
+  await expect(page.getByText('Click again to delete')).toHaveCount(0);
+
+  await menu.locator('summary').click();
+  const list = menu.locator('[role=menu]');
+  await expect(list).toBeVisible();
+  await expect(list.getByRole('menuitem', { name: /Turn off these alerts|Notification settings/ })).toHaveAttribute('href', /^\/settings\/notifications/);
+  await expect(list.getByRole('menuitem', { name: 'Delete' })).toBeVisible();
+
+  await page.mouse.click(5, 5);
+  await expect(list).toBeHidden();
+
+  console.log('row menu opens with its actions and closes on outside click');
 });
 
 test('delete single notification requires a second confirm click', async ({ page }) => {
   await page.goto('/notifications');
 
-  const deleteLink = page.locator('a[title="Click to Delete notification"]').first();
-  const count = await deleteLink.count();
-  test.skip(count === 0, 'No notifications to test delete-confirm flow on');
+  const menu = page.locator('details.nt-menu').first();
+  test.skip((await menu.count()) === 0, 'No notifications to test delete-confirm flow on');
 
-  await deleteLink.click();
-  await expect(page.getByText('Confirm', { exact: true }).first()).toBeVisible();
+  const rowsBefore = await page.locator('details.nt-menu').count();
+  await menu.locator('summary').click();
+  const del = menu.locator('.nt-del');
+  await del.click();
+  await expect(del).toHaveText('Click again to delete');
+  await expect(page.locator('details.nt-menu')).toHaveCount(rowsBefore);
 
-  // do not click again -- this is a destructive action; just verify the confirm gate exists
-  await page.waitForTimeout(3100); // confirm state auto-reverts after 3s
+  // do not click again, just check the confirm gate and that it reverts
+  await expect(del).toHaveText('Delete', { timeout: 5000 });
   console.log('delete notification requires a second confirming click (not confirmed)');
+});
+
+test('manage link and turn off link point at the right pages', async ({ page }) => {
+  await page.goto('/notifications');
+
+  const manage = page.locator('#notifications_table tbody a[title][aria-label]').first();
+  if ((await manage.count()) > 0) {
+    const href = await manage.getAttribute('href');
+    expect(href).toMatch(/^\//);
+    const resp = await page.request.get(href!);
+    expect(resp.status()).toBe(200);
+  }
+
+  const off = page.getByRole('menuitem', { name: 'Turn off these alerts', includeHidden: true }).first();
+  test.skip((await off.count()) === 0, 'No notification with a settings toggle on this environment');
+
+  const href = (await off.getAttribute('href'))!;
+  expect(href).toMatch(/^\/settings\/notifications#\w+$/);
+  await page.goto(href);
+  // the anchor is the field that turns the alert off
+  const id = href.split('#')[1];
+  await expect(page.locator(`[id="${id}"]`)).toHaveCount(1);
+
+  console.log(`manage link opens and turn off link lands on #${id}`);
 });
 
 test('acknowledge all button is present and submits without confirmation', async ({ page }) => {
   await page.goto('/notifications');
 
-  const ackAllButton = page.getByRole('button', { name: 'Acknowledge All' });
+  const ackAllButton = page.getByRole('button', { name: 'Acknowledge all', exact: true });
   await expect(ackAllButton).toBeVisible();
 
   await ackAllButton.click();
-  await page.waitForLoadState();
-  await expect(page.locator('a[title="Click to Acknowledge notification"]')).toHaveCount(0);
+  await page.waitForLoadState('load');
+  await expect(page.locator('#notifications_table tbody button[aria-label^="Acknowledge "]')).toHaveCount(0);
 
   console.log('acknowledge all marked all notifications as read');
 });
@@ -107,7 +156,7 @@ test('delete all button requires a second confirm click (not confirmed)', async 
   // we only verify the two-click confirm gate, never actually confirm the deletion.
   await page.goto('/notifications');
 
-  const deleteAllButton = page.getByRole('button', { name: 'Delete All' });
+  const deleteAllButton = page.getByRole('button', { name: 'Delete all', exact: true });
   await expect(deleteAllButton).toBeVisible();
 
   await deleteAllButton.click();
