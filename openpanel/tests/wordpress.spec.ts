@@ -3,7 +3,8 @@ import { openSiteTab } from '../site-tabs';
 import { bulkReply, bulkRun, bulkSelect, bulkSelectAllAndClear, ensureDomains, expectInstallSuccess } from '../helpers';
 
 // own domain, the waf, maintenance and remove tests change what it serves
-const domain = 'wordpress.tests.openpanel.org';
+// WP_DOMAIN runs it on another account's domain, e.g. a fresh one for the quota test (openpanel-tests/opencli/quota.sh)
+const domain = process.env.WP_DOMAIN || 'wordpress.tests.openpanel.org';
 
 test.beforeAll(async ({ browser }, testInfo) => {
   await ensureDomains(browser, testInfo, domain);
@@ -124,9 +125,10 @@ test('wp-admin - install scrollchart plugin', async ({ page }) => {
     console.log('Installing Scrollchart plugin...');
     await installButton.click();
 
-    await expect(scrollchartCard).toContainText(/Installed|Activate/i, {
-      timeout: 60000,
-    });
+    // usually the card updates over ajax, sometimes wp-admin goes to the classic update.php page instead
+    await expect(
+      scrollchartCard.filter({ hasText: /Installed|Activate/i }).or(page.getByText(/Successfully installed the plugin/i)).first()
+    ).toBeVisible({ timeout: 60000 });
   } else {
     console.log('Plugin may already be installed.');
   }
@@ -138,6 +140,29 @@ test('wp-admin - install scrollchart plugin', async ({ page }) => {
   });
 
   console.log('SUCCESS: Scrollchart found on Installed Plugins page');
+});
+
+test('wp-admin - upload media', async ({ page }) => {
+  test.setTimeout(5 * 60 * 1000);
+  // 5 MB of plain text, a .txt WordPress accepts without image processing, unique per run
+  const name = `quota-upload-${process.env.TEST_RUN_ID || Date.now()}.txt`;
+  const line = 'openpanel quota upload test '.repeat(4) + '\n';
+  const buffer = Buffer.from(line.repeat(Math.ceil((5 * 1024 * 1024) / line.length)));
+
+  // the plain form instead of the drag and drop uploader, the domain's rate limit can answer 429 for a bit after the earlier tests
+  await expect(async () => {
+    await page.goto(`${WP_ADMIN.url}/media-new.php?browser-uploader`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await expect(page.locator('#async-upload')).toBeAttached({ timeout: 10000 });
+  }).toPass({ timeout: 150000, intervals: [10000] });
+  await page.locator('#async-upload').setInputFiles({ name, mimeType: 'text/plain', buffer });
+  await Promise.all([
+    page.waitForURL(/upload\.php/, { timeout: 60000 }),
+    page.locator('#html-upload').click(),
+  ]);
+
+  await page.goto(`${WP_ADMIN.url}/upload.php?mode=list&s=${encodeURIComponent(name.replace(/\.txt$/, ''))}`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#the-list')).toContainText(name.replace(/\.txt$/, ''), { timeout: 30000 });
+  console.log(`SUCCESS: ${name} (${buffer.length} bytes) is in the media library`);
 });
 
 test('wp-admin - install nexusslash theme', async ({ page }) => {
