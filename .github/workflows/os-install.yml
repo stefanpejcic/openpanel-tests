@@ -33,6 +33,15 @@ jobs:
       - name: Install prerequisites
         run: sudo apt-get update -qq && sudo apt-get install -y -qq jq sshpass
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # the script's openadmin and openpanel checks run playwright from this checkout
+      - name: Install Playwright
+        run: npm ci && npx playwright install --with-deps chromium
+
       - name: Run OS install test
         working-directory: ${{ github.workspace }}
         env:
