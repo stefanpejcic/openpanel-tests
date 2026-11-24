@@ -36,11 +36,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      # the script's openadmin and openpanel checks run playwright from this checkout
+      # the script's openadmin and openpanel checks run playwright from this checkout, package-lock.json is gitignored
       - name: Install Playwright
-        run: npm ci && npx playwright install --with-deps chromium
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
 
       - name: Run OS install test
         working-directory: ${{ github.workspace }}
