@@ -37,9 +37,13 @@ jobs:
         with:
           node-version: 22
 
-      # the script's openadmin and openpanel checks run playwright from this checkout, package-lock.json is gitignored
+      # the script's openadmin and openpanel checks run playwright from this checkout,
+      # package.json is gitignored so set it up like INSTALL.sh does on the runner box
       - name: Install Playwright
-        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @playwright/test dotenv basic-ftp otplib
+          npx playwright install --with-deps chromium
 
       - name: Run OS install test
         working-directory: ${{ github.workspace }}
