@@ -522,13 +522,24 @@ run_quota_test() {
   local os="$2"
 
   os_log "$os" "Rebooting $ip so the project quotas set up by the installer turn on..."
+  local boot_before boot_now i
+  boot_before=$(vps_ssh "$ip" "cat /proc/sys/kernel/random/boot_id" 2>/dev/null)
   vps_ssh "$ip" "systemctl reboot" >>"$RUN_DIR/${os}.log" 2>&1
-  sleep 15
-  wait_for_ssh_down "$ip" "$os" || return 1
-  wait_for_ssh "$ip" "$os" || return 1
+  # a VPS can be back between two port checks, a new boot id is what says it rebooted
+  for i in {1..60}; do
+    sleep 10
+    boot_now=$(vps_ssh "$ip" "cat /proc/sys/kernel/random/boot_id" 2>/dev/null)
+    [[ -n "$boot_now" && "$boot_now" != "$boot_before" ]] && break
+    boot_now=""
+  done
+  if [[ -z "$boot_now" ]]; then
+    os_log "$os" "ERROR: $ip did not come back with a new boot id 10m after the reboot"
+    send_discord "❌ [$os] $ip did not come back after the reboot for the quota test"
+    return 1
+  fi
+  os_log "$os" "$ip rebooted (attempt $i)"
 
   # opencli reads the plan from the panel database, it comes up with the system containers after the boot
-  local i
   for i in {1..30}; do
     vps_ssh "$ip" "opencli user-quota --update testinguser" >>"$RUN_DIR/${os}.log" 2>&1 && break
     os_log "$os" "opencli user-quota --update testinguser not ready yet, attempt $i/30..."
