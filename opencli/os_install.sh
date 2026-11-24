@@ -491,6 +491,68 @@ $pw_tail
   send_discord "✅ [$os] OpenPanel installed — openadmin create-user + openpanel autologin tests passed on $ip ($ADMIN_URL)"
 }
 
+vps_ssh() {
+  local ip="$1"; shift
+  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "$@"
+}
+
+# run_quota_test <ip> <os>
+# The installer sets up project quotas (ext4: initramfs hook, xfs: rootflags=) and they only turn on at
+# the next boot, so reboot first, then run quota.sh on testinguser (made by the openadmin tests above):
+# plan limits applied, files written by container subuids counted, writes over the limits refused.
+run_quota_test() {
+  local ip="$1"
+  local os="$2"
+
+  os_log "$os" "Rebooting $ip so the project quotas set up by the installer turn on..."
+  vps_ssh "$ip" "systemctl reboot" >>"$RUN_DIR/${os}.log" 2>&1
+  sleep 15
+  wait_for_ssh_down "$ip" "$os" || return 1
+  wait_for_ssh "$ip" "$os" || return 1
+
+  # opencli reads the plan from the panel database, it comes up with the system containers after the boot
+  local i
+  for i in {1..30}; do
+    vps_ssh "$ip" "opencli user-quota --update testinguser" >>"$RUN_DIR/${os}.log" 2>&1 && break
+    os_log "$os" "opencli user-quota --update testinguser not ready yet, attempt $i/30..."
+    sleep 10
+  done
+
+  local out rc
+  out=$(vps_ssh "$ip" "quotaon -pugPv / 2>/dev/null; grep -E '^(GRUB_CMDLINE_LINUX=)' /etc/default/grub 2>/dev/null; cat /proc/cmdline" 2>&1)
+  { echo "----- QUOTA STATE AFTER REBOOT -----"; echo "$out"; } >> "$RUN_DIR/${os}.log"
+
+  if ! /usr/bin/scp -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR \
+      "$SCRIPT_DIR/opencli/quota.sh" root@"$ip":/root/quota.sh >>"$RUN_DIR/${os}.log" 2>&1; then
+    os_log "$os" "ERROR: could not copy quota.sh to $ip"
+    send_discord "❌ [$os] could not copy quota.sh to $ip"
+    return 1
+  fi
+
+  os_log "$os" "Running quota.sh for testinguser..."
+  out=$(vps_ssh "$ip" "QUOTA_USER=testinguser bash /root/quota.sh" 2>&1)
+  rc=$?
+  out=$(sed 's/\x1b\[[0-9;]*m//g' <<<"$out")
+  {
+    echo "----- QUOTA TEST OUTPUT -----"
+    echo "$out"
+    echo "----- QUOTA TEST EXIT CODE: $rc -----"
+  } >> "$RUN_DIR/${os}.log"
+  os_log "$os" "quota.sh exit code: $rc ($(grep -m1 'PASS:' <<<"$out" | xargs))"
+
+  if [[ $rc -ne 0 ]]; then
+    os_log "$os" "ERROR: disk quota test failed on $ip"
+    send_discord "❌ [$os] Disk quota test failed on $ip:
+\`\`\`
+$(grep -E 'FAIL|PASS:|Project quotas:' <<<"$out" | tail -25)
+\`\`\`"
+    return 1
+  fi
+
+  os_log "$os" "SUCCESS: disk quota test passed on $ip"
+  send_discord "✅ [$os] Disk quota test passed after reboot ($(grep -m1 'PASS:' <<<"$out" | xargs))"
+}
+
 run_test_cycle() {
   local os="$1"
   os_log "$os" "========================================="
@@ -517,6 +579,8 @@ run_test_cycle() {
 
 
   run_openadmin_playwright_tests "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
+
+  run_quota_test "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
 
   TEST_RESULTS["$os"]="pass"
   update_readme_results
