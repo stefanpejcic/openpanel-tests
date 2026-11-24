@@ -464,6 +464,23 @@ sleep 90
       send_discord "❌ [$os]  [$os] Playwright admin-user-create tests failed on $ip:\`\`\`$pw_tail\`\`\`"
   fi
 
+  # aa-users.spec deletes its own pwaausers account at the end, the user panel login and quota.sh need one that stays
+  local ua_out
+  ua_out=$(vps_ssh "$ip" "id testinguser >/dev/null 2>&1 || opencli user-add testinguser testingpassword testinguser@example.com 'Standard plan' --no-sentinel" 2>&1)
+  {
+    echo "----- USER-ADD testinguser -----"
+    echo "$ua_out"
+  } >> "$RUN_DIR/${os}.log"
+  if ! vps_ssh "$ip" "id testinguser" >/dev/null 2>&1; then
+    os_log "$os" "ERROR: could not create testinguser on $ip"
+    send_discord "❌ [$os] opencli user-add testinguser failed on $ip:
+\`\`\`
+$(tail -15 <<<"$ua_out")
+\`\`\`"
+    return 1
+  fi
+  os_log "$os" "testinguser created on $ip"
+
   pw_out=$(cd "$SCRIPT_DIR" && BASE_URL="$PANEL_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
     npx playwright test -c openpanel/playwright.config.ts --project=login --reporter=line 2>&1 &&
     BASE_URL="$PANEL_URL" PANEL_USERNAME="testinguser" PANEL_PASSWORD="testingpassword" \
@@ -498,7 +515,7 @@ vps_ssh() {
 
 # run_quota_test <ip> <os>
 # The installer sets up project quotas (ext4: initramfs hook, xfs: rootflags=) and they only turn on at
-# the next boot, so reboot first, then run quota.sh on testinguser (made by the openadmin tests above):
+# the next boot, so reboot first, then run quota.sh on testinguser (made before the user panel login above):
 # plan limits applied, files written by container subuids counted, writes over the limits refused.
 run_quota_test() {
   local ip="$1"
