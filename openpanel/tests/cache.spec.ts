@@ -238,11 +238,14 @@ for (const service of services) {
     const testUrl = `https://${domain}/cache_connection_test_${service.name}.php?nocache=${Math.floor(Math.random() * 100_000)}`;
     // the webserver resolves php-fpm per request and a lookup can miss while podman's dns reloads after a container change
     let body: string | null = '';
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 18; i++) {
       await page.goto(testUrl);
       body = await page.locator('body').textContent();
       // apache shows Proxy Error, nginx 502 Bad Gateway
-      if (!body?.includes('Proxy Error') && !body?.includes('Bad Gateway')) break;
+      const proxyMiss = !!body?.includes('Proxy Error') || !!body?.includes('Bad Gateway');
+      // a fresh opensearch/elasticsearch node reports red (or isn't listening yet) for a while after the container is Running, while its system indices start
+      const searchStarting = /_FAIL:(status_red|could_not_reach_host)/.test(body ?? '');
+      if (!proxyMiss && !searchStarting) break;
       await page.waitForTimeout(5000);
     }
     const expectedOk = `${service.name.toUpperCase()}_OK`;

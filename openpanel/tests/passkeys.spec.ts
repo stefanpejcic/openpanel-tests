@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { confirmDialog } from '../helpers';
 
 // Covers modules/account/passkeys.py — /account/passkeys (list/register/delete) and the
 // /login/passkey/* WebAuthn endpoints. Uses Chromium's CDP virtual authenticator so the
@@ -69,8 +70,9 @@ test('remove a passkey', async ({ page, baseURL }) => {
   const row = page.locator('tr', { hasText: passkeyName });
   await expect(row).toBeVisible();
 
-  page.once('dialog', dialog => dialog.accept());
+  // data-confirm opens the panel's own confirm dialog (static/js/confirm.js), not a browser one
   await row.getByRole('button', { name: 'Remove' }).click();
+  await confirmDialog(page);
 
   await expect(page.locator('tr', { hasText: passkeyName })).toHaveCount(0);
   console.log('passkey removed:', passkeyName);
