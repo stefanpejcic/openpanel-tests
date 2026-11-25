@@ -52,7 +52,7 @@ declare -A OS_MAP=(
   ["almalinux-9"]=1200
   ["almalinux-10"]=1176
 
-  ["rocky-10"]=1182
+  ["rocky-10"]=1206
 
   ["centos-10"]=1179
 )
