@@ -381,8 +381,8 @@ async function createFileWithEditor(page: any, fileName: string) {
   await createFileInRoot(page, fileName, true);
   await page.locator('.view-lines').click();
   await page.getByRole('textbox', { name: 'Editor content;Press Alt+F1' }).fill('nekitext');
+  // the editor saves over AJAX and shows a toast, it stays on the page (no fullscreen toggle since 6039b1d00)
   await page.getByRole('button', { name: 'Save' }).click();
-  await page.locator('#fullscreenButton').click();
   await expect(page.locator('body')).toContainText(/File saved successfully/i);
   console.log('File created with editor successfully');
 }
