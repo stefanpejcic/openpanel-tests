@@ -8,8 +8,11 @@ test('a service limit is saved to the environment and read back', async ({ page 
   const original = await field.inputValue();
   const save = async (v: string) => {
     await page.goto('/services/limits');
-    await page.locator('[name="REDIS_CPUS"]').fill(v);
-    await page.locator('form button[type="submit"]').last().click();
+    // the limit sits behind the pencil next to Allocated
+    await page.getByRole('button', { name: 'Edit REDIS_CPUS' }).click();
+    const input = page.locator('[name="REDIS_CPUS"]');
+    await input.fill(v);
+    await input.locator('xpath=ancestor::form').getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText('New limits saved successfully!', { exact: false })).toBeVisible({ timeout: 30_000 });
   };
   try {

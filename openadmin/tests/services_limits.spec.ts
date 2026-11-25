@@ -4,17 +4,17 @@ import { test, expect } from '@playwright/test';
 // with the new CPU/RAM constraints, which would disrupt mysql/varnish/etc for every
 // other test relying on them in a shared environment.
 
-test('service limits page loads with per-service-group sections', async ({ page }) => {
+test('service limits page loads with a row per service', async ({ page }) => {
   await page.goto('/services/limits');
   await expect(page).toHaveURL(/services\/limits/);
 
   await expect(page.locator('#tour-save-limits-btn')).toBeVisible();
   await expect(page.locator('#tour-first-service-limit')).toBeVisible();
 
-  console.log('service limits page loaded with at least one group section');
+  console.log('service limits page loaded with at least one service row');
 });
 
-test('each service group exposes numeric CPU/RAM and boolean fields', async ({ page }) => {
+test('each service exposes numeric CPU/RAM fields behind its pencil', async ({ page }) => {
   await page.goto('/services/limits');
 
   const numberInputs = page.locator('input[type="number"]');
