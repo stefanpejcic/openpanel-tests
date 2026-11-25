@@ -39,6 +39,9 @@ fi
 TEST_ADMIN_USER="${PANEL_USERNAME:-stefan}"
 TEST_ADMIN_PASS="${PANEL_PASSWORD:-stefan}"
 
+# a full install takes 10-15 min, past this the install or the box hung
+INSTALL_TIMEOUT=2700
+
 declare -A OS_MAP=(
   ["ubuntu-24"]=1108
   ["ubuntu-26"]=1215
@@ -324,15 +327,24 @@ install_openpanel() {
 
   os_log "$os" "Using admin credentials: user=$TEST_ADMIN_USER pass=$TEST_ADMIN_PASS"
 
-  local install_out
-  install_out=$(yes | /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "bash <(/usr/bin/curl -sSL https://openpanel.org) --skip-firewall --skip-dns-server --skip-requirements --skip-panel-check --username=$TEST_ADMIN_USER --password=$TEST_ADMIN_PASS" 2>&1)
+  # its own file written as it runs (uploaded with the logs), a hung or cancelled install still shows how far it got
+  local install_file="$RUN_DIR/${os}.install-$attempt.log"
+  yes | timeout "$INSTALL_TIMEOUT" /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o LogLevel=ERROR root@"$ip" "bash <(/usr/bin/curl -sSL https://openpanel.org) --skip-firewall --skip-dns-server --skip-requirements --skip-panel-check --username=$TEST_ADMIN_USER --password=$TEST_ADMIN_PASS" > "$install_file" 2>&1
   local exit_code=$?
+  local install_out
+  install_out=$(cat "$install_file" 2>/dev/null)
   {
-    echo "----- INSTALL OUTPUT (attempt $attempt) -----"
-    echo "$install_out"
+    echo "----- INSTALL OUTPUT (attempt $attempt): $install_file -----"
+    tail -n 30 "$install_file" 2>/dev/null
     echo "----- INSTALL EXIT CODE: $exit_code -----"
   } >> "$RUN_DIR/${os}.log"
   os_log "$os" "Install command exit code: $exit_code"
+  # 124 is timeout: the install or the box hung (no ssh banner, no progress), give up on this OS and move on
+  if [[ "$exit_code" -eq 124 ]]; then
+    os_log "$os" "ERROR: OpenPanel installation on $ip did not finish in $((INSTALL_TIMEOUT / 60)) minutes"
+    send_discord "❌ [$os] OpenPanel installation hung, no result after $((INSTALL_TIMEOUT / 60)) minutes"
+    return 1
+  fi
   # 255 is ssh itself failing, a refused key is not a reboot so retrying won't help
   if [[ "$exit_code" -eq 255 ]] && grep -q "Permission denied" <<<"$install_out"; then
     os_log "$os" "ERROR: SSH key refused by $ip ($(grep -m1 'Permission denied' <<<"$install_out"))"
@@ -367,7 +379,7 @@ install_openpanel() {
 
   os_log "$os" "OpenPanel installation finished on $ip"
 
-  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "touch /etc/openpanel/openadmin/config/quick_start.dismissed" 2>&1
+  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o LogLevel=ERROR root@"$ip" "touch /etc/openpanel/openadmin/config/quick_start.dismissed" 2>&1
 
   return 0
 }
@@ -380,7 +392,7 @@ start_openpanel_container() {
 
   local out
   # podman-compose, which the installer sets up on every OS: Debian 12's podman 4.3 has no `podman compose` subcommand (added in 4.7), so it exited 125 there
-  out=$(/usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "cd /root && podman-compose up -d openpanel" 2>&1)
+  out=$(/usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o LogLevel=ERROR root@"$ip" "cd /root && podman-compose up -d openpanel" 2>&1)
   local rc=$?
   {
     echo "----- PODMAN COMPOSE OUTPUT -----"
@@ -510,7 +522,7 @@ $pw_tail
 
 vps_ssh() {
   local ip="$1"; shift
-  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR root@"$ip" "$@"
+  /usr/bin/ssh -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o LogLevel=ERROR root@"$ip" "$@"
 }
 
 # run_quota_test <ip> <os>
@@ -550,7 +562,7 @@ run_quota_test() {
   out=$(vps_ssh "$ip" "quotaon -pugPv / 2>/dev/null; grep -E '^(GRUB_CMDLINE_LINUX=)' /etc/default/grub 2>/dev/null; cat /proc/cmdline" 2>&1)
   { echo "----- QUOTA STATE AFTER REBOOT -----"; echo "$out"; } >> "$RUN_DIR/${os}.log"
 
-  if ! /usr/bin/scp -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o LogLevel=ERROR \
+  if ! /usr/bin/scp -i "$SSH_PRIVATE_FILE" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o LogLevel=ERROR \
       "$SCRIPT_DIR/opencli/quota.sh" root@"$ip":/root/quota.sh >>"$RUN_DIR/${os}.log" 2>&1; then
     os_log "$os" "ERROR: could not copy quota.sh to $ip"
     send_discord "❌ [$os] could not copy quota.sh to $ip"
