@@ -67,6 +67,7 @@ export async function addDomain(page: Page, domain: string) {
 // The domains spec, which adds and deletes domains, is in tests/serial/.
 export const SUITE_DOMAINS = [
   'shared.tests.openpanel.org',
+  'cache.tests.openpanel.org',
   'wp.tests.openpanel.org',
   'waf.tests.openpanel.org',
   'capitalize.tests.openpanel.org',
@@ -100,6 +101,28 @@ export async function ensureDomains(browser: Browser, testInfo: TestInfo, ...dom
   testInfo.setTimeout(Math.max(testInfo.timeout, 15 * 60_000));
   await withProjectPage(browser, testInfo, async page => {
     for (const domain of domains) await ensureDomain(page, domain);
+  });
+}
+
+// switches a domain to a PHP version unless it's already on it, for specs whose app or script doesn't
+// work on the default version yet (the 8.6 image has no redis extension and some installers don't support 8.6)
+export async function ensureDomainPhp(browser: Browser, testInfo: TestInfo, domain: string, version: string) {
+  await withProjectPage(browser, testInfo, async page => {
+    // a version change reloads the webserver, same as adding a domain
+    await withLock('domains', async () => {
+      await page.goto('/php/domains');
+      const row = page.locator('tbody tr').filter({ hasText: domain }).first();
+      await expect(row).toBeVisible();
+      const current = (await row.locator('td').nth(2).textContent())?.match(/\d+\.\d+/)?.[0];
+      if (current === version) return;
+      await row.locator('select[name="new_php_version"]').selectOption(version);
+      await Promise.all([
+        page.waitForResponse(res => res.request().method() === 'POST' && res.status() === 200, { timeout: 90_000 }),
+        row.getByRole('button', { name: /change/i }).click(),
+      ]);
+      await expect(page.getByText(new RegExp(`updated from ${current} to ${version}`, 'i'))).toBeVisible();
+      console.log(`${domain} switched from php ${current} to ${version}`);
+    });
   });
 }
 

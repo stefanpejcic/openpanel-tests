@@ -1,12 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { openSiteTab } from '../site-tabs';
-import { ensureDomains, runInstaller } from '../helpers';
+import { ensureDomainPhp, ensureDomains, runInstaller } from '../helpers';
 import { currentWebserver } from '../webserver';
 
 const DOMAIN = 'moodle.tests.openpanel.org';
 
 test.beforeAll(async ({ browser }, testInfo) => {
   await ensureDomains(browser, testInfo, DOMAIN);
+  // the installer doesn't support the default PHP 8.6 yet
+  await ensureDomainPhp(browser, testInfo, DOMAIN, '8.5');
 });
 
 const ADMIN_EMAIL = `admin@${DOMAIN}`;

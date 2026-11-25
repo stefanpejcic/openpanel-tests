@@ -64,7 +64,7 @@ test('create account', async ({ page }) => {
   await page.getByRole('button', { name: /Create Account/i }).click();
   const created = page.locator('#ftpCreated');
   await expect(created).toContainText(`${FTP_USER}@${FTP_DOMAIN}`);
-  await expect(created).toContainText(FTP_PATH);
+  // the connect box has no Directory since a34226741 (clients land in the account root), the path is checked in the row below
   await expect(created.locator('a[href*="/ftp/configuration/filezilla/"]')).toBeVisible();
   await expect(created.locator('a[href*="/ftp/configuration/cyberduck/"]')).toBeVisible();
 

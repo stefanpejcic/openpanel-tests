@@ -47,6 +47,30 @@ else
     echo "$USER_NAME doesn't exist and no password was given, the suite's setup has to create it"
 fi
 
+# the admin suite stops the FTP server and switches IMAP off and back on, a run killed in between
+# (job timeout, cancel, daily reset) leaves them off and the ftp, api and webmail specs fail
+if podman container exists openadmin_ftp 2>/dev/null && [ "$(podman inspect -f '{{.State.Running}}' openadmin_ftp 2>/dev/null)" != "true" ]; then
+    echo "starting openadmin_ftp"
+    (cd /root && podman-compose up -d openadmin_ftp >/dev/null 2>&1)
+fi
+
+MAILENV=/usr/local/mail/openmail/mailserver.env
+if [ -f "$MAILENV" ] && grep -q '^ENABLE_IMAP=0$' "$MAILENV"; then
+    echo "turning IMAP back on (webmail needs it) and recreating the mailserver"
+    sed -i 's/^ENABLE_IMAP=0$/ENABLE_IMAP=1/' "$MAILENV"
+    (
+        cd /usr/local/mail/openmail/ || exit 0
+        rc=$(podman ps --format '{{.Names}}' | grep -qx openadmin_roundcube && echo 1)
+        podman-compose down roundcube mailserver >/dev/null 2>&1
+        podman-compose up -d mailserver >/dev/null 2>&1
+        if [ -n "$rc" ]; then podman-compose up -d roundcube >/dev/null 2>&1; fi
+    )
+    for _ in $(seq 1 60); do
+        timeout 3 bash -c 'exec 3<>/dev/tcp/127.0.0.1/143; head -c 4 <&3' 2>/dev/null | grep -q OK && break
+        sleep 5
+    done
+fi
+
 if [ "$restart" = 1 ]; then
     echo "restarting openpanel for the module changes"
     podman restart openpanel >/dev/null

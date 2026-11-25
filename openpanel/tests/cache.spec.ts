@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { confirmDialog, ensureDomains } from '../helpers';
+import { confirmDialog, ensureDomainPhp, ensureDomains } from '../helpers';
 
 async function navigateToPage(page: any, service: string) {
   await page.goto(`/cache/${service}`);
@@ -30,11 +30,14 @@ const services = [
   },
 ];
 
-// only adds its own test scripts to the docroot, so it shares a domain with other specs
-const domain = 'shared.tests.openpanel.org';
+// own domain, pinned to PHP 8.5: the default 8.6 image has no redis extension yet,
+// so the redis and valkey connection tests would fail with REDIS_EXTENSION_MISSING
+const domain = 'cache.tests.openpanel.org';
+const phpVersion = '8.5';
 
 test.beforeAll(async ({ browser }, testInfo) => {
   await ensureDomains(browser, testInfo, domain);
+  await ensureDomainPhp(browser, testInfo, domain, phpVersion);
 });
 
 // PHP connection test scripts per service
