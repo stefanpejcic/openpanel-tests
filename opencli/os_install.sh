@@ -593,20 +593,6 @@ $(grep -E 'FAIL|PASS:|Project quotas:' <<<"$out" | tail -25)
   send_discord "✅ [$os] Disk quota test passed after reboot ($(grep -m1 'PASS:' <<<"$out" | xargs))"
 }
 
-# wait_for_ssh_key <ip> <os>
-# sshd answers before cloud-init has put the root key in place (Rocky 10 refused it 30s after ssh came up)
-wait_for_ssh_key() {
-  local ip="$1" os="$2" out
-  for i in {1..30}; do
-    out=$(vps_ssh "$ip" true </dev/null 2>&1) && { os_log "$os" "SSH key accepted on $ip (attempt $i)"; return 0; }
-    os_log "$os" "SSH key not accepted yet on $ip, attempt $i/30: $(tail -1 <<<"$out")"
-    sleep 10
-  done
-  os_log "$os" "ERROR: SSH key still refused by $ip after 5 minutes"
-  send_discord "❌ [$os] SSH key still refused by $ip after 5 minutes, install not started"
-  return 1
-}
-
 run_test_cycle() {
   local os="$1"
   os_log "$os" "========================================="
@@ -621,7 +607,6 @@ run_test_cycle() {
   wait_for_ssh "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
   # let the fresh OS settle (cloud-init / first boot) before installing
   sleep 30
-  wait_for_ssh_key "$VPS_IP" "$os" || { TEST_RESULTS["$os"]="fail"; update_readme_results; return 1; }
 
   local install_start install_end
   install_start=$(date +%s)
