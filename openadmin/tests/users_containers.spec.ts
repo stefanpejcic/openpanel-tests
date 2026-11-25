@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // data the user page loads for an account, and a service limit changed and put back
 
-const USER = 'testinguser';
+const USER = process.env.TEST_USER || 'testinguser';
 
 test.beforeEach(async ({ page }) => {
   const res = await page.request.get(`/users/${USER}`);
