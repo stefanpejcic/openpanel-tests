@@ -69,8 +69,12 @@ test('plan usage cards link to the lists searched for the user', async ({ page }
 test('custom message preview renders html and never runs its scripts', async ({ page }) => {
   // the saved message loads after the page, typing before it lands gets overwritten
   const loaded = page.waitForResponse(r => r.url().includes('/get_custom_message_for_user/'));
-  await page.goto(`/users/${USER}#edit`);
+  await page.goto(`/users/${USER}`);
   await loaded;
+  // the message sits next to Server on the overview, its pencil opens the editor with the preview
+  const pencil = page.locator('button[aria-label="Change custom message"]');
+  await pencil.locator('xpath=ancestor::div[@x-data][1]').hover();
+  await pencil.click();
   const textarea = page.locator('#custom_message_for_this_user');
   await expect(textarea).toBeVisible();
 
@@ -110,4 +114,44 @@ test('usage history shows cpu and memory in one column each, cpu as share of the
   await expect(cpuCell).toContainText(`${cores} / ${last.cpu.total.human}`);
   await expect(cpuCell).toContainText(`${pct}%`);
   await expect(firstRow.locator('td').nth(2)).toContainText(`${last.memory.usage_pct}%`);
+});
+
+test('the private note saves when the field is left and can be cleared again', async ({ page }) => {
+  const original = (await (await page.request.get(`/get_user_notes/${USER}`)).json()).notes ?? '';
+  const note = `pw note ${Date.now()}`;
+  const field = page.locator('textarea[aria-label="Private note"]');
+  const setNote = async (text: string) => {
+    await page.goto(`/users/${USER}`);
+    const pencil = page.locator('[aria-label="Edit private note"]');
+    if (await pencil.count()) {
+      await pencil.locator('xpath=..').hover();
+      await pencil.click();
+    } else {
+      await field.click();
+    }
+    await field.fill(text);
+    const saved = page.waitForResponse(r => r.url().includes('/get_user_notes/') && r.request().method() === 'POST');
+    await page.locator('h1').first().click();
+    expect((await saved).ok()).toBeTruthy();
+  };
+  try {
+    await setNote(note);
+    await page.reload();
+    await expect(page.locator('[title="Private note, only admins and resellers see it"]')).toHaveText(note);
+  } finally {
+    await setNote(original);
+  }
+});
+
+test('the overview cards include processes with the plan formula behind its pencil', async ({ page }) => {
+  await page.goto(`/users/${USER}`);
+  for (const label of ['Storage', 'Inodes', 'CPU', 'Memory', 'Processes']) {
+    await expect(page.locator('.op-ring-card', { hasText: label }).first()).toBeVisible();
+  }
+  const pencil = page.locator('button[aria-label="Edit the process limit"]');
+  test.skip(await pencil.count() === 0, 'resellers do not get the pencil');
+  await pencil.locator('xpath=..').hover();
+  await pencil.click();
+  await expect(page.locator('#tasks-max-value')).toBeVisible();
+  await expect(page.getByText('1000 processes per GB')).toBeVisible();
 });

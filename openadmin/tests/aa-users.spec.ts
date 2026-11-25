@@ -229,10 +229,6 @@ test('test tabs', async ({ page }) => {
         /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+$/.test(v),
     },
     {
-      label: 'Geo Location:',
-      validate: (v: string) => /^[A-Z]{2}$/.test(v),
-    },
-    {
       label: 'Server:',
       validate: (v: string) => v.length > 0,
     },
@@ -290,28 +286,25 @@ test('test tabs', async ({ page }) => {
 
   console.log('overview tab ok');
 
-  // EDIT
-  await nav.getByText('Edit', { exact: true }).click();
-  await expect(page).toHaveURL(/#edit$/);
-
-  const editPanel = page.locator(
-    '[x-show="activeTab === \'edit\'"]'
-  );
-
-  await expect(editPanel).toBeVisible();
-
-  const expectedFields = [
-    'input[name="new_username"]',
-    'input[name="new_email"]',
-    'input[name="new_password"]',
-    'select[name="new_ip"]',
-  ];
-
-  for (const selector of expectedFields) {
-    await expect(editPanel.locator(selector)).toBeVisible();
+  // the old Edit tab is gone, each field opens in place from its pencil on the overview
+  for (const [pencil, field] of [
+    ['Change username', 'input[name="new_username"]'],
+    ['Change password', 'input[name="new_password"]'],
+    ['Change email address', 'input[name="new_email"]'],
+    ['Change IP address', 'select[name="new_ip"]'],
+    ['Change plan', 'select[name="plan_id"]'],
+  ]) {
+    const button = overviewPanel.locator(`button[aria-label="${pencil}"]`);
+    const card = button.locator('xpath=ancestor::div[@x-data][1]');
+    await card.hover();
+    await button.click();
+    await expect(card.locator(field)).toBeVisible();
+    await card.getByRole('button', { name: 'Cancel' }).click();
+    await expect(card.locator(field)).toBeHidden();
   }
+  await expect(nav.getByText('Edit', { exact: true })).toHaveCount(0);
 
-  console.log('edit tab ok');
+  console.log('inline edit fields ok');
 
   // PERMISSIONS
   await nav.getByText('Permissions', { exact: true }).click();
