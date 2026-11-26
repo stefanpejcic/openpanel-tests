@@ -71,9 +71,25 @@ if [ -f "$MAILENV" ] && grep -q '^ENABLE_IMAP=0$' "$MAILENV"; then
     done
 fi
 
-if [ "$restart" = 1 ]; then
-    echo "restarting openpanel for the module changes"
-    podman restart openpanel >/dev/null
+# general_settings moves the user panel to 2084 and a custom proxy path, a run that dies before putting them back leaves the whole suite on ERR_CONNECTION_REFUSED
+if [ "$(opencli proxy 2>/dev/null)" != "openpanel" ]; then
+    echo "putting the /openpanel proxy path back"
+    opencli proxy default --no-restart >/dev/null
+fi
+if [ "$(opencli port 2>/dev/null)" != "2083" ]; then
+    echo "moving the user panel back to 2083"
+    opencli port default --no-restart >/dev/null
+    restart=2
+fi
+
+if [ "$restart" != 0 ]; then
+    echo "restarting openpanel"
+    # a port change only applies on recreate, podman restart keeps the old mapping
+    if [ "$restart" = 2 ]; then
+        (cd /root && podman-compose up -d --force-recreate openpanel >/dev/null 2>&1)
+    else
+        podman restart openpanel >/dev/null
+    fi
     for _ in $(seq 1 60); do
         curl -sk -o /dev/null --max-time 3 https://127.0.0.1:2083/login && break
         sleep 2

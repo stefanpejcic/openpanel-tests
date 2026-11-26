@@ -30,6 +30,9 @@ async function saveGeneral(page: Page, values: Partial<General>) {
   }
   await page.getByRole('button', { name: /save settings/i }).click();
   await expect(page.getByRole('alert').filter({ hasText: /settings updated|no changes/i }).first()).toBeVisible({ timeout: 60_000 });
+  // "No changes made" also passes above, so check the save really landed or a missed restore leaves the user panel on the test port
+  const now = await readGeneral(page);
+  for (const [k, v] of Object.entries(values)) expect(String(now[k as keyof General]), `${k} after save`).toBe(String(v));
 }
 
 // any user domain that answers, the /openpanel path redirect is served on all of them
