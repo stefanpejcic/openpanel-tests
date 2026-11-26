@@ -444,8 +444,13 @@ async function editFile(page: any, fileName: string, newContent: string) {
     popup.locator('.monaco-editor .view-lines')
   ).toHaveText(newContent);
 
-  // Save file
-  await popup.locator('#editorcontentvalue').click();
+  // the file manager reloads itself after a save, wait for that too or the next goto gets aborted
+  await Promise.all([
+    popup.waitForResponse(r => r.request().method() === 'POST' && r.url().includes('/file-manager/edit-file/') && r.ok()),
+    page.waitForEvent('load'),
+    popup.locator('#editorcontentvalue').click(),
+  ]);
+  await popup.close();
 
   console.log('File edited successfully');
 }

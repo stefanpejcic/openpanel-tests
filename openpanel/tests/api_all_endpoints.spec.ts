@@ -104,7 +104,10 @@ test('every GET answers without a server error', async () => {
     if (e.path.includes('{') || MAY_BE_UNAVAILABLE.some(rx => rx.test(e.path))) continue;
     const ct = res.headers()['content-type'] || '';
     if (!res.ok() || !/json|text\/plain|octet-stream|csv|zip|gzip/.test(ct)) {
-      notOk.push(`GET ${url} -> ${res.status()} ${ct} ${(await res.text()).slice(0, 160)}`);
+      const body = await res.text();
+      // a feature the plan doesn't include answers 403 on purpose, like /api/deploy/status without pm2
+      if (res.status() === 403 && /doesn't have the '[^']+' feature/.test(body)) continue;
+      notOk.push(`GET ${url} -> ${res.status()} ${ct} ${body.slice(0, 160)}`);
     }
   }
   console.log(`authenticated GET: ${checked} routes checked`);
