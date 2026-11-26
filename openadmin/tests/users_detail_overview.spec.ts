@@ -155,3 +155,29 @@ test('the overview cards include processes with the plan formula behind its penc
   await expect(page.locator('#tasks-max-value')).toBeVisible();
   await expect(page.getByText('1000 processes per GB')).toBeVisible();
 });
+
+test('a saved custom message shows its preview as soon as the editor opens', async ({ page }) => {
+  const original = (await (await page.request.get(`/get_custom_message_for_user/${USER}`)).json().catch(() => ({}))).custom_message ?? '';
+  const csrf = async () => page.locator('meta[name="csrf-token"]').getAttribute('content');
+  const store = async (msg: string) => {
+    const r = await page.request.post(`/get_custom_message_for_user/${USER}`, {
+      data: { custom_message: msg }, headers: { 'X-CSRFToken': (await csrf())!, Accept: 'application/json', Referer: page.url() },
+    });
+    expect(r.ok()).toBeTruthy();
+  };
+  await page.goto(`/users/${USER}`);
+  try {
+    await store('<b>Preview right away</b>');
+    const loaded = page.waitForResponse(r => r.url().includes('/get_custom_message_for_user/'));
+    await page.goto(`/users/${USER}`);
+    await loaded;
+    const pencil = page.locator('button[aria-label="Change custom message"]');
+    await pencil.locator('xpath=ancestor::div[@x-data][1]').hover();
+    await pencil.click();
+    // no typing, it was only drawn while hidden before
+    await expect(page.frameLocator('#custom_message_preview').locator('b')).toHaveText('Preview right away');
+    expect(await page.locator('#custom_message_preview').evaluate(e => (e as HTMLElement).offsetHeight)).toBeGreaterThan(0);
+  } finally {
+    await store(original);
+  }
+});
